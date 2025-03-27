@@ -27,7 +27,6 @@ const WinMediaPlayer = () => {
     const [isShuffled, setIsShuffled] = useState<boolean>(false);
     const [isRepeating, setIsRepeating] = useState<boolean>(false);
     const [visualizerMode, setVisualizerMode] = useState<string>("classic");
-    const [showPlaylist, setShowPlaylist] = useState<boolean>(true);
     const [albumImageCache, setAlbumImageCache] = useState<{ [key: number]: HTMLImageElement }>({});
     const [previousVolume, setPreviousVolume] = useState<number>(80);
     const [customTracks, setCustomTracks] = useState<Array<any>>([]);
@@ -46,42 +45,42 @@ const WinMediaPlayer = () => {
     const dataArrayRef = useRef<Uint8Array | null>(null);
 
     const colorPalettes = [
-        { // Default palette (purple/pink)
+        { 
             from: "#53217d",
             to: "#dcb7df",
             accent: "#7b7aa9",
             bg1: "#2b325b",
             bg2: "#1f203b" 
         },
-        { // Blue/Cyan
+        { 
             from: "#1e3b8a",
             to: "#64dfdf",
             accent: "#5e60ce",
             bg1: "#252b42",
             bg2: "#1a1b35"
         },
-        { // Red/Orange
+        { 
             from: "#850e0e",
             to: "#ffaa5a",
             accent: "#c75146",
             bg1: "#3a2442",
             bg2: "#1f1a2d"
         },
-        { // Green/Yellow
+        { 
             from: "#1e5128",
             to: "#d4e09b",
             accent: "#4a7c59",
             bg1: "#283845",
             bg2: "#1a252f"
         },
-        { // Dark/Gold
+        { 
             from: "#1a1a1a",
             to: "#ffd700",
             accent: "#a1a1a1",
             bg1: "#1a1a1a",
             bg2: "#0f0f0f"
         },
-        { // Neon
+        { 
             from: "#ff00ff",
             to: "#00ffff",
             accent: "#39ff14",
@@ -223,7 +222,6 @@ const WinMediaPlayer = () => {
         setCurrentTrack(newIndex);
         setCurrentTime(0);
         
-        // Maintain the current playback state
         if (isPlaying && audioRef.current) {
             const track = combinedPlaylist[newIndex];
             audioRef.current.src = track?.path || "";
@@ -238,7 +236,6 @@ const WinMediaPlayer = () => {
         setCurrentTrack(newIndex);
         setCurrentTime(0);
         
-        // Maintain the current playback state
         if (isPlaying && audioRef.current) {
             const track = combinedPlaylist[newIndex];
             audioRef.current.src = track?.path || "";
@@ -246,6 +243,28 @@ const WinMediaPlayer = () => {
             audioRef.current.play().catch(err => console.error("Failed to play previous track:", err));
         }
     };
+
+    // Add a dedicated function for handling track end
+    const handleTrackEnd = React.useCallback(() => {
+        if (isRepeating) {
+            if (audioRef.current) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch((err) => console.error("Failed to replay track:", err));
+            }
+        } else {
+            const combinedPlaylist = getCombinedPlaylist();
+            const newIndex = isShuffled ? Math.floor(Math.random() * combinedPlaylist.length) : (currentTrack + 1) % combinedPlaylist.length;
+            setCurrentTrack(newIndex);
+            setCurrentTime(0);
+            
+            if (isPlaying && audioRef.current) {
+                const track = combinedPlaylist[newIndex];
+                audioRef.current.src = track?.path || "";
+                audioRef.current.load();
+                audioRef.current.play().catch(err => console.error("Failed to play next track:", err));
+            }
+        }
+    }, [isRepeating, isShuffled, currentTrack, isPlaying, getCombinedPlaylist]);
 
     const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -293,10 +312,8 @@ const WinMediaPlayer = () => {
     };
 
     const hexToRgb = (hex: string) => {
-        // Remove the # if it exists
         hex = hex.replace(/^#/, '');
         
-        // Parse the hex values
         const bigint = parseInt(hex, 16);
         const r = (bigint >> 16) & 255;
         const g = (bigint >> 8) & 255;
@@ -306,19 +323,15 @@ const WinMediaPlayer = () => {
     };
 
     const startVisualizerAnimation = () => {
-        // Check if animation is already running
         if (animationRef.current !== null) {
             cancelAnimationFrame(animationRef.current);
             animationRef.current = null;
         }
         
-        // Set the animation active state
         setAnimationActive(true);
         
-        // Update the container background
         updateCanvasBackground();
         
-        // Start the animation loop
         const animate = () => {
             if (!canvasRef.current) return;
             
@@ -329,17 +342,14 @@ const WinMediaPlayer = () => {
             const width = canvas.width;
             const height = canvas.height;
             
-            // Clear canvas
             ctx.clearRect(0, 0, width, height);
             
-            // Apply background
             const gradient = ctx.createLinearGradient(0, 0, 0, height);
             gradient.addColorStop(0, getCurrentPalette().bg1);
             gradient.addColorStop(1, getCurrentPalette().bg2);
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, width, height);
             
-            // Draw the current visualizer
             if (visualizerMode === "classic") {
                 drawClassicVisualizer(ctx, width, height);
             } else if (visualizerMode === "bars") {
@@ -350,13 +360,11 @@ const WinMediaPlayer = () => {
                 drawAlbumVisualizer(ctx, width, height);
             }
             
-            // Continue animation loop only if still active
             if (animationActive) {
                 animationRef.current = requestAnimationFrame(animate);
             }
         };
         
-        // Start the animation
         animate();
     };
     
@@ -426,7 +434,6 @@ const WinMediaPlayer = () => {
     const drawModernVisualizer = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
         const time = Date.now() * 0.001;
         
-        // Add theme-colored background
         const bgGradient = ctx.createLinearGradient(0, 0, width, height);
         bgGradient.addColorStop(0, getCurrentPalette().bg2);
         bgGradient.addColorStop(1, getCurrentPalette().bg1);
@@ -441,7 +448,6 @@ const WinMediaPlayer = () => {
             ctx.beginPath();
             ctx.arc(x, y, size, 0, Math.PI * 2);
             
-            // Use theme color with hue shift
             const hue = (time * 20 + i * 2) % 360;
             const themeColor = i % 3 === 0 ? getCurrentPalette().from : 
                                i % 3 === 1 ? getCurrentPalette().accent : 
@@ -459,7 +465,6 @@ const WinMediaPlayer = () => {
                 ctx.lineTo(x, y);
             }
 
-            // Use gradient of theme colors
             ctx.strokeStyle = i % 2 === 0 
                 ? `rgba(${hexToRgb(getCurrentPalette().to)}, ${0.3 - i * 0.05})`
                 : `rgba(${hexToRgb(getCurrentPalette().from)}, ${0.3 - i * 0.05})`;
@@ -585,7 +590,6 @@ const WinMediaPlayer = () => {
         const dataArray = dataArrayRef.current;
         const time = Date.now() * 0.001;
 
-        // Theme-colored background
         const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
         bgGradient.addColorStop(0, getCurrentPalette().bg1);
         bgGradient.addColorStop(1, getCurrentPalette().bg2);
@@ -600,7 +604,6 @@ const WinMediaPlayer = () => {
             for (let i = 0; i < barCount; i++) {
                 const barHeight = Math.abs(Math.sin(i * 0.2 + time * 2)) * 100 + Math.abs(Math.sin(i * 0.1 + time)) * 80;
 
-                // Use theme colors for bars with slight variations
                 const barGradient = ctx.createLinearGradient(0, baseY, 0, baseY - barHeight);
                 barGradient.addColorStop(0, `rgba(${hexToRgb(getCurrentPalette().from)}, 0.9)`);
                 barGradient.addColorStop(0.5, `rgba(${hexToRgb(getCurrentPalette().accent)}, 0.8)`);
@@ -728,25 +731,16 @@ const WinMediaPlayer = () => {
             setDuration(audio.duration);
         };
 
-        const handleEnded = () => {
-            if (isRepeating) {
-                audio.currentTime = 0;
-                audio.play().catch((err) => console.error("Failed to replay track:", err));
-            } else {
-                nextTrack();
-            }
-        };
-
         audio.addEventListener("timeupdate", handleTimeUpdate);
         audio.addEventListener("loadedmetadata", handleLoadedMetadata);
-        audio.addEventListener("ended", handleEnded);
+        audio.addEventListener("ended", handleTrackEnd);
 
         return () => {
             audio.removeEventListener("timeupdate", handleTimeUpdate);
             audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
-            audio.removeEventListener("ended", handleEnded);
+            audio.removeEventListener("ended", handleTrackEnd);
         };
-    }, [isRepeating]);
+    }, [handleTrackEnd]);
 
     useEffect(() => {
         if (!audioRef.current) return;
@@ -759,10 +753,8 @@ const WinMediaPlayer = () => {
                 const track = getCombinedPlaylist()[currentTrack];
                 if (!track) return;
 
-                // Save the current playback position and state
                 const wasPaused = !isPlaying;
                 
-                // Only update source if it's changed
                 if (!audio.src || !audio.src.includes(track.path)) {
                     audio.src = track.path;
                     audio.load();
@@ -816,12 +808,9 @@ const WinMediaPlayer = () => {
         }
     }, [currentTrack, customTracks]);
 
-    // Combined effect for visualizer and themes
     useEffect(() => {
-        // Initialize and handle the animation lifecycle
         startVisualizerAnimation();
         
-        // Cleanup function
         return () => {
             if (animationRef.current !== null) {
                 cancelAnimationFrame(animationRef.current);
@@ -831,9 +820,7 @@ const WinMediaPlayer = () => {
         };
     }, [visualizerMode, currentTrack, currentSkin]);
     
-    // Separate effect for canvas resize
     useEffect(() => {
-        // Handle canvas resize
         const resizeCanvas = () => {
             const canvas = canvasRef.current;
             if (!canvas) return;
@@ -845,10 +832,8 @@ const WinMediaPlayer = () => {
             }
         };
         
-        // Initialize canvas size
         resizeCanvas();
         
-        // Listen for window resize
         window.addEventListener('resize', resizeCanvas);
         
         return () => {
@@ -941,47 +926,35 @@ const WinMediaPlayer = () => {
     const handleNavItemClick = (id: string) => {
         setActiveNavItem(id);
         
-        // Implement actions for each nav item
         switch (id) {
             case "now-playing":
-                // Show the main visualizer view (already the default)
                 break;
             case "media-library":
-                // Show the playlist (already implemented)
-                setShowPlaylist(true);
                 break;
             case "visualizer":
-                // Cycle through visualizer modes
                 cycleVisualizer();
                 break;
             case "equalizer":
-                // Show a simple message about equalizer (placeholder for actual equalizer)
                 alert("Equalizer feature would be implemented here in a full application");
                 break;
             case "skin-chooser":
-                // Open the skin chooser modal (already implemented)
                 setShowSkinChooser(true);
                 break;
             case "info":
-                // Show track information popup
                 setShowTrackInfo(true);
                 break;
         }
     };
 
     const handleSkinSelect = (index: number) => {
-        // Update the skin state
         setCurrentSkin(index);
         
-        // Immediately update the container background for instant visual feedback
         const container = canvasRef.current?.parentElement;
         if (container) {
-            // Use the new skin's colors
             const newPalette = colorPalettes[index];
             container.style.background = `linear-gradient(to bottom, ${newPalette.bg1}, ${newPalette.bg2})`;
         }
         
-        // Close the skin chooser
         setShowSkinChooser(false);
     };
 
@@ -1218,7 +1191,6 @@ const WinMediaPlayer = () => {
                                 className="relative h-12 my-3 bg-[#2D2A42] rounded-md overflow-hidden border border-[var(--from-color)]/30 shadow-inner cursor-pointer"
                                 onClick={handleProgressClick}
                             >
-                                {/* Progress fill */}
                                 <div
                                     className="absolute top-0 left-0 h-full bg-gradient-to-r from-[var(--from-color)] to-[var(--to-color)] rounded-md"
                                     style={{
@@ -1227,7 +1199,6 @@ const WinMediaPlayer = () => {
                                     }}
                                 ></div>
 
-                                {/* Hidden input range */}
                                 <input
                                     type="range"
                                     min="0"
@@ -1292,10 +1263,11 @@ const WinMediaPlayer = () => {
                                     <button
                                         className={`focus:outline-none cursor-pointer transition-colors duration-200 ${
                                             isRepeating
-                                                ? "text-[var(--to-color)]"
+                                                ? "text-[var(--to-color)] scale-110 transform"
                                                 : "text-[var(--accent-color)] hover:text-[var(--to-color)]"
                                         }`}
                                         onClick={() => setIsRepeating(!isRepeating)}
+                                        title={isRepeating ? "Repeat On" : "Repeat Off"}
                                     >
                                         <MdRepeat size={18} />
                                     </button>
@@ -1335,7 +1307,6 @@ const WinMediaPlayer = () => {
 
             <audio ref={audioRef} crossOrigin="anonymous" />
 
-            {/* Skin Chooser Popup */}
             {showSkinChooser && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
                     <div className="bg-[#1f1f2e] p-6 rounded-lg border border-gray-700 shadow-xl w-[400px]">
@@ -1390,7 +1361,6 @@ const WinMediaPlayer = () => {
                 </div>
             )}
 
-            {/* Track Info Popup */}
             {showTrackInfo && getCombinedPlaylist()[currentTrack] && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
                     <div 
@@ -1420,7 +1390,6 @@ const WinMediaPlayer = () => {
                         </div>
                         
                         <div className="flex">
-                            {/* Album Cover */}
                             <div className="w-48 h-48 overflow-hidden rounded-lg relative mr-6 shadow-lg">
                                 <div 
                                     className="absolute inset-0 z-10"
@@ -1441,7 +1410,6 @@ const WinMediaPlayer = () => {
                                 ></div>
                             </div>
                             
-                            {/* Track Details */}
                             <div className="flex-1">
                                 <div className="mb-6">
                                     <h2 
@@ -1477,7 +1445,6 @@ const WinMediaPlayer = () => {
                             </div>
                         </div>
                         
-                        {/* Playback Progress */}
                         <div className="mt-6">
                             <div className="flex justify-between text-sm mb-2">
                                 <span style={{ color: getCurrentPalette().accent }}>{formatTime(currentTime)}</span>
@@ -1493,7 +1460,6 @@ const WinMediaPlayer = () => {
                                 ></div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             )}
