@@ -26,7 +26,6 @@ const WinMediaPlayer = () => {
     const [isMuted, setIsMuted] = useState<boolean>(false);
     const [isShuffled, setIsShuffled] = useState<boolean>(false);
     const [isRepeating, setIsRepeating] = useState<boolean>(false);
-    const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const [visualizerMode, setVisualizerMode] = useState<string>("classic");
     const [showPlaylist, setShowPlaylist] = useState<boolean>(true);
     const [albumImageCache, setAlbumImageCache] = useState<{ [key: number]: HTMLImageElement }>({});
@@ -35,11 +34,13 @@ const WinMediaPlayer = () => {
     const [activeNavItem, setActiveNavItem] = useState<string>("now-playing");
     const [showSkinChooser, setShowSkinChooser] = useState<boolean>(false);
     const [currentSkin, setCurrentSkin] = useState<number>(0);
+    const [animationActive, setAnimationActive] = useState<boolean>(false);
+    const [showTrackInfo, setShowTrackInfo] = useState<boolean>(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const audioRef = useRef<HTMLAudioElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const animationRef = useRef<number>(0);
+    const animationRef = useRef<number | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
     const dataArrayRef = useRef<Uint8Array | null>(null);
@@ -133,12 +134,9 @@ const WinMediaPlayer = () => {
     ];
 
     const navItems = [
-        { id: "media-guide", label: "Media Guide" },
-        { id: "copy-from-cd", label: "Copy from CD" },
-        { id: "media-library", label: "Media Library" },
-        { id: "radio-tuner", label: "Radio Tuner" },
-        { id: "copy-to-cd", label: "Copy to CD or Device" },
+        { id: "visualizer", label: "Visualizer" },
         { id: "skin-chooser", label: "Skin Chooser" },
+        { id: "info", label: "Track Info" },
     ];
 
     const formatTime = (seconds: number) => {
@@ -294,35 +292,91 @@ const WinMediaPlayer = () => {
         setVisualizerMode(modes[nextIndex]);
     };
 
-    const drawVisualizer = () => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
+    const hexToRgb = (hex: string) => {
+        // Remove the # if it exists
+        hex = hex.replace(/^#/, '');
+        
+        // Parse the hex values
+        const bigint = parseInt(hex, 16);
+        const r = (bigint >> 16) & 255;
+        const g = (bigint >> 8) & 255;
+        const b = bigint & 255;
+        
+        return `${r}, ${g}, ${b}`;
+    };
 
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-
-        const width = canvas.width;
-        const height = canvas.height;
-
-        ctx.clearRect(0, 0, width, height);
-
-        const gradient = ctx.createLinearGradient(0, 0, 0, height);
-        gradient.addColorStop(0, getCurrentPalette().bg1);
-        gradient.addColorStop(1, getCurrentPalette().bg2);
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, width, height);
-
-        if (visualizerMode === "classic") {
-            drawClassicVisualizer(ctx, width, height);
-        } else if (visualizerMode === "bars") {
-            drawBarsVisualizer(ctx, width, height);
-        } else if (visualizerMode === "modern") {
-            drawModernVisualizer(ctx, width, height);
-        } else {
-            drawAlbumVisualizer(ctx, width, height);
+    const startVisualizerAnimation = () => {
+        // Check if animation is already running
+        if (animationRef.current !== null) {
+            cancelAnimationFrame(animationRef.current);
+            animationRef.current = null;
         }
+        
+        // Set the animation active state
+        setAnimationActive(true);
+        
+        // Update the container background
+        updateCanvasBackground();
+        
+        // Start the animation loop
+        const animate = () => {
+            if (!canvasRef.current) return;
+            
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Apply background
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, getCurrentPalette().bg1);
+            gradient.addColorStop(1, getCurrentPalette().bg2);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            
+            // Draw the current visualizer
+            if (visualizerMode === "classic") {
+                drawClassicVisualizer(ctx, width, height);
+            } else if (visualizerMode === "bars") {
+                drawBarsVisualizer(ctx, width, height);
+            } else if (visualizerMode === "modern") {
+                drawModernVisualizer(ctx, width, height);
+            } else if (visualizerMode === "album") {
+                drawAlbumVisualizer(ctx, width, height);
+            }
+            
+            // Continue animation loop only if still active
+            if (animationActive) {
+                animationRef.current = requestAnimationFrame(animate);
+            }
+        };
+        
+        // Start the animation
+        animate();
+    };
+    
+    const stopVisualizerAnimation = () => {
+        if (animationRef.current !== null) {
+            cancelAnimationFrame(animationRef.current);
+            animationRef.current = null;
+        }
+        setAnimationActive(false);
+    };
+    
+    const updateCanvasBackground = () => {
+        const container = canvasRef.current?.parentElement;
+        if (container) {
+            container.style.background = `linear-gradient(to bottom, ${getCurrentPalette().bg1}, ${getCurrentPalette().bg2})`;
+        }
+    };
 
-        animationRef.current = requestAnimationFrame(drawVisualizer);
+    const drawVisualizer = () => {
+        startVisualizerAnimation();
     };
 
     const drawClassicVisualizer = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
@@ -367,20 +421,6 @@ const WinMediaPlayer = () => {
             ctx.fillStyle = `rgba(${hexToRgb(getCurrentPalette().to)}, 0.7)`;
             ctx.fill();
         }
-    };
-
-    // Helper function to convert hex to rgb
-    const hexToRgb = (hex: string) => {
-        // Remove the # if it exists
-        hex = hex.replace(/^#/, '');
-        
-        // Parse the hex values
-        const bigint = parseInt(hex, 16);
-        const r = (bigint >> 16) & 255;
-        const g = (bigint >> 8) & 255;
-        const b = bigint & 255;
-        
-        return `${r}, ${g}, ${b}`;
     };
 
     const drawModernVisualizer = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
@@ -776,9 +816,23 @@ const WinMediaPlayer = () => {
         }
     }, [currentTrack, customTracks]);
 
+    // Combined effect for visualizer and themes
     useEffect(() => {
-        drawVisualizer();
+        // Initialize and handle the animation lifecycle
+        startVisualizerAnimation();
         
+        // Cleanup function
+        return () => {
+            if (animationRef.current !== null) {
+                cancelAnimationFrame(animationRef.current);
+                animationRef.current = null;
+            }
+            setAnimationActive(false);
+        };
+    }, [visualizerMode, currentTrack, currentSkin]);
+    
+    // Separate effect for canvas resize
+    useEffect(() => {
         // Handle canvas resize
         const resizeCanvas = () => {
             const canvas = canvasRef.current;
@@ -798,13 +852,10 @@ const WinMediaPlayer = () => {
         window.addEventListener('resize', resizeCanvas);
         
         return () => {
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-            }
             window.removeEventListener('resize', resizeCanvas);
         };
-    }, [visualizerMode, currentTrack]);
-
+    }, []);
+    
     const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
@@ -822,7 +873,7 @@ const WinMediaPlayer = () => {
                 path: fileUrl,
                 isLocal: true,
                 file: file,
-                image: "https://d1csarkz8obe9u.cloudfront.net/posterpreviews/artistic-album-cover-design-template-d12ef0296af80b58363dc0deef077ecc_screen.jpg?ts=1735798846",
+                image: "https://iili.io/HlHy9Yx.png",
             };
         });
 
@@ -889,16 +940,48 @@ const WinMediaPlayer = () => {
 
     const handleNavItemClick = (id: string) => {
         setActiveNavItem(id);
-        // Add specific actions based on nav item clicked
-        if (id === "media-library") {
-            setShowPlaylist(true);
-        } else if (id === "skin-chooser") {
-            setShowSkinChooser(true);
+        
+        // Implement actions for each nav item
+        switch (id) {
+            case "now-playing":
+                // Show the main visualizer view (already the default)
+                break;
+            case "media-library":
+                // Show the playlist (already implemented)
+                setShowPlaylist(true);
+                break;
+            case "visualizer":
+                // Cycle through visualizer modes
+                cycleVisualizer();
+                break;
+            case "equalizer":
+                // Show a simple message about equalizer (placeholder for actual equalizer)
+                alert("Equalizer feature would be implemented here in a full application");
+                break;
+            case "skin-chooser":
+                // Open the skin chooser modal (already implemented)
+                setShowSkinChooser(true);
+                break;
+            case "info":
+                // Show track information popup
+                setShowTrackInfo(true);
+                break;
         }
     };
 
     const handleSkinSelect = (index: number) => {
+        // Update the skin state
         setCurrentSkin(index);
+        
+        // Immediately update the container background for instant visual feedback
+        const container = canvasRef.current?.parentElement;
+        if (container) {
+            // Use the new skin's colors
+            const newPalette = colorPalettes[index];
+            container.style.background = `linear-gradient(to bottom, ${newPalette.bg1}, ${newPalette.bg2})`;
+        }
+        
+        // Close the skin chooser
         setShowSkinChooser(false);
     };
 
@@ -909,45 +992,46 @@ const WinMediaPlayer = () => {
             onDragOver={handleDragOver}
         >
             <div
-                className={`w-full max-w-5xl ${isFullscreen ? "fixed inset-0 max-w-none" : ""} 
+                className={`w-full max-w-5xl 
                     bg-gradient-to-b from-[${getCurrentPalette().bg1}]/90 to-[${getCurrentPalette().bg2}]/95 
                     backdrop-blur-md border border-[${getCurrentPalette().from}]/40 rounded-md 
                     shadow-[0_0_30px_rgba(83,33,125,0.4)] text-white overflow-hidden flex flex-col 
-                    font-sans ${!isFullscreen ? "h-[715px]" : ""}`}
-                style={{ 
-                    fontFamily: 'var(--font-source-sans-pro)',
-                    '--from-color': getCurrentPalette().from,
-                    '--to-color': getCurrentPalette().to,
-                    '--accent-color': getCurrentPalette().accent,
-                    '--bg1-color': getCurrentPalette().bg1,
-                    '--bg2-color': getCurrentPalette().bg2,
-                } as React.CSSProperties}
+                    font-sans h-[715px]`}
+                style={
+                    {
+                        fontFamily: "var(--font-source-sans-pro)",
+                        "--from-color": getCurrentPalette().from,
+                        "--to-color": getCurrentPalette().to,
+                        "--accent-color": getCurrentPalette().accent,
+                        "--bg1-color": getCurrentPalette().bg1,
+                        "--bg2-color": getCurrentPalette().bg2,
+                    } as React.CSSProperties
+                }
             >
                 <div className="bg-gradient-to-r from-[var(--from-color)] to-[var(--bg1-color)] px-4 py-1.5 flex justify-between items-center border-b border-[var(--to-color)]/30 h-[35px]">
                     <div className="flex items-center">
                         <div className="w-5 h-5 mr-2 bg-[var(--to-color)] rounded-sm flex items-center justify-center">
                             <span className="text-[var(--bg2-color)] text-xs">▶</span>
                         </div>
-                        <span className="text-sm font-semibold text-white" style={{ fontFamily: 'var(--font-raleway)' }}>Windows Media Player</span>
+                        <span className="text-sm font-semibold text-white" style={{ fontFamily: "var(--font-raleway)" }}>
+                            Windows Media Player
+                        </span>
                     </div>
 
                     <div className="flex space-x-1">
-                        <button className="text-white/80 hover:text-white px-1.5 mb-2 cursor-pointer transition-colors duration-200">
+                        <button className="text-white/80 hover:text-white px-1.5 mb-2 transition-colors duration-200">
                             _
                         </button>
-                        <button
-                            className="text-white/80 hover:text-white px-1.5 cursor-pointer transition-colors duration-200"
-                            onClick={() => setIsFullscreen(!isFullscreen)}
-                        >
-                            □
-                        </button>
-                        <button className="text-white/80 hover:text-white px-1.5 cursor-pointer transition-colors duration-200">×</button>
+                        <button className="text-white/80 hover:text-white px-1.5 transition-colors duration-200">□</button>
+                        <button className="text-white/80 hover:text-white px-1.5 transition-colors duration-200">×</button>
                     </div>
                 </div>
 
                 <div className="flex flex-1 overflow-hidden">
                     <div className="bg-gradient-to-b from-[var(--bg1-color)] to-[var(--bg2-color)] w-28 p-3 flex-shrink-0 border-r border-[var(--from-color)]/30">
-                        <div className="text-sm text-[var(--to-color)]/90 font-bold mb-1.5" style={{ fontFamily: 'var(--font-raleway)' }}>Now Playing</div>
+                        <div className="text-sm text-[var(--to-color)]/90 font-bold mb-1.5" style={{ fontFamily: "var(--font-raleway)" }}>
+                            Now Playing
+                        </div>
 
                         <div className="space-y-4 text-xs">
                             {navItems.map((item) => (
@@ -966,7 +1050,7 @@ const WinMediaPlayer = () => {
                     <div className="flex-1 flex flex-col h-full">
                         <div className="bg-gradient-to-r from-[var(--bg2-color)] to-[var(--bg1-color)] px-4 py-2 flex items-center justify-between border-b border-[var(--from-color)]/30 h-[50px]">
                             <div className="flex items-center space-x-3">
-                                <button 
+                                <button
                                     className="text-[var(--accent-color)] hover:text-[var(--to-color)] focus:outline-none cursor-pointer transition-colors duration-200"
                                     onClick={prevTrack}
                                 >
@@ -980,7 +1064,7 @@ const WinMediaPlayer = () => {
                                         />
                                     </svg>
                                 </button>
-                                <button 
+                                <button
                                     className="text-[var(--accent-color)] hover:text-[var(--to-color)] focus:outline-none cursor-pointer transition-colors duration-200"
                                     onClick={nextTrack}
                                 >
@@ -1039,13 +1123,7 @@ const WinMediaPlayer = () => {
                                     onClick={cycleVisualizer}
                                 >
                                     <span className="mr-1.5">Mode: {visualizerMode.charAt(0).toUpperCase() + visualizerMode.slice(1)}</span>
-                                    <svg 
-                                        width="12" 
-                                        height="12" 
-                                        viewBox="0 0 12 12" 
-                                        fill="none" 
-                                        xmlns="http://www.w3.org/2000/svg" 
-                                    >
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <circle cx="6" cy="6" r="3" stroke="currentColor" strokeWidth="1" />
                                     </svg>
                                 </div>
@@ -1054,27 +1132,33 @@ const WinMediaPlayer = () => {
 
                         <div className="bg-gradient-to-r from-[var(--bg2-color)] to-[var(--bg1-color)] px-4 py-2 border-b border-[var(--from-color)]/30 h-[45px]">
                             <div className="text-xs text-[var(--accent-color)]">{getCombinedPlaylist()[currentTrack]?.artist}</div>
-                            <div className="text-sm font-medium text-[var(--to-color)]" style={{ fontFamily: 'var(--font-raleway)' }}>{getCombinedPlaylist()[currentTrack]?.title}</div>
+                            <div className="text-sm font-medium text-[var(--to-color)]" style={{ fontFamily: "var(--font-raleway)" }}>
+                                {getCombinedPlaylist()[currentTrack]?.title}
+                            </div>
                         </div>
 
                         <div className="flex-1 flex overflow-hidden relative">
-                            <div className="flex-1 relative overflow-hidden flex items-center justify-center" 
+                            <div
+                                className="flex-1 relative overflow-hidden flex items-center justify-center"
                                 style={{ background: `linear-gradient(to bottom, ${getCurrentPalette().bg1}, ${getCurrentPalette().bg2})` }}
                             >
-                                <canvas 
-                                    ref={canvasRef} 
-                                    className="max-w-full max-h-full" 
-                                    width={800} 
+                                <canvas
+                                    ref={canvasRef}
+                                    className="max-w-full max-h-full"
+                                    width={800}
                                     height={600}
-                                    style={{ display: 'block' }} 
+                                    style={{ display: "block" }}
                                 />
                             </div>
 
-                            <div 
-                                className="w-72 bg-[var(--bg2-color)]/95 border-l border-[var(--from-color)]/40 overflow-y-auto flex-shrink-0 flex flex-col"
-                            >
+                            <div className="w-72 bg-[var(--bg2-color)]/95 border-l border-[var(--from-color)]/40 overflow-y-auto flex-shrink-0 flex flex-col">
                                 <div className="p-3 flex-1">
-                                    <h3 className="text-sm font-semibold text-[var(--to-color)] mb-2" style={{ fontFamily: 'var(--font-raleway)' }}>Media Library</h3>
+                                    <h3
+                                        className="text-sm font-semibold text-[var(--to-color)] mb-2"
+                                        style={{ fontFamily: "var(--font-raleway)" }}
+                                    >
+                                        Media Library
+                                    </h3>
                                     <div className="space-y-0.5">
                                         {getCombinedPlaylist().map((track, index) => (
                                             <div
@@ -1101,41 +1185,48 @@ const WinMediaPlayer = () => {
                                     </div>
                                 </div>
                                 <div className="p-3 border-t border-[var(--from-color)]/30 text-xs text-[var(--accent-color)]">
-                                    <div className="float-right">Total Time: {(() => {
-                                        const totalSeconds = getCombinedPlaylist().reduce((total, track) => {
-                                            const [mins, secs] = track.duration.split(':').map(Number);
-                                            return total + (mins * 60) + secs;
-                                        }, 0);
-                                        
-                                        const mins = Math.floor(totalSeconds / 60);
-                                        const secs = totalSeconds % 60;
-                                        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-                                    })()}</div>
+                                    <div className="float-right">
+                                        Total Time:{" "}
+                                        {(() => {
+                                            const totalSeconds = getCombinedPlaylist().reduce((total, track) => {
+                                                const [mins, secs] = track.duration.split(":").map(Number);
+                                                return total + mins * 60 + secs;
+                                            }, 0);
+
+                                            const mins = Math.floor(totalSeconds / 60);
+                                            const secs = totalSeconds % 60;
+                                            return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+                                        })()}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <div className="bg-gradient-to-r from-[var(--bg2-color)] to-[var(--bg1-color)] px-4 py-3 border-t border-[var(--from-color)]/40 h-[120px] flex flex-col justify-between">
                             <div className="flex items-center justify-between">
-                                <div className="text-xs text-[var(--accent-color)]">Album: {getCombinedPlaylist()[currentTrack]?.album}</div>
+                                <div className="text-xs text-[var(--accent-color)]">
+                                    Album: {getCombinedPlaylist()[currentTrack]?.album}
+                                </div>
                                 <div className="flex items-center space-x-1.5 text-sm font-medium text-[var(--to-color)]">
-                                    <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
+                                    <span>
+                                        {formatTime(currentTime)} / {formatTime(duration)}
+                                    </span>
                                 </div>
                             </div>
 
-                            <div 
+                            <div
                                 className="relative h-12 my-3 bg-[#2D2A42] rounded-md overflow-hidden border border-[var(--from-color)]/30 shadow-inner cursor-pointer"
                                 onClick={handleProgressClick}
                             >
                                 {/* Progress fill */}
-                                <div 
-                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[var(--from-color)] to-[var(--to-color)] rounded-md" 
-                                    style={{ 
+                                <div
+                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[var(--from-color)] to-[var(--to-color)] rounded-md"
+                                    style={{
                                         width: `${(currentTime / duration) * 100 || 0}%`,
-                                        transition: "width 0.1s linear" 
+                                        transition: "width 0.1s linear",
                                     }}
                                 ></div>
-                                
+
                                 {/* Hidden input range */}
                                 <input
                                     type="range"
@@ -1150,7 +1241,7 @@ const WinMediaPlayer = () => {
                                         }
                                     }}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                    style={{ accentColor: 'var(--to-color)' }}
+                                    style={{ accentColor: "var(--to-color)" }}
                                 />
                             </div>
 
@@ -1189,7 +1280,9 @@ const WinMediaPlayer = () => {
 
                                     <button
                                         className={`focus:outline-none cursor-pointer transition-colors duration-200 ${
-                                            isShuffled ? "text-[var(--to-color)]" : "text-[var(--accent-color)] hover:text-[var(--to-color)]"
+                                            isShuffled
+                                                ? "text-[var(--to-color)]"
+                                                : "text-[var(--accent-color)] hover:text-[var(--to-color)]"
                                         }`}
                                         onClick={() => setIsShuffled(!isShuffled)}
                                     >
@@ -1198,7 +1291,9 @@ const WinMediaPlayer = () => {
 
                                     <button
                                         className={`focus:outline-none cursor-pointer transition-colors duration-200 ${
-                                            isRepeating ? "text-[var(--to-color)]" : "text-[var(--accent-color)] hover:text-[var(--to-color)]"
+                                            isRepeating
+                                                ? "text-[var(--to-color)]"
+                                                : "text-[var(--accent-color)] hover:text-[var(--to-color)]"
                                         }`}
                                         onClick={() => setIsRepeating(!isRepeating)}
                                     >
@@ -1245,50 +1340,160 @@ const WinMediaPlayer = () => {
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
                     <div className="bg-[#1f1f2e] p-6 rounded-lg border border-gray-700 shadow-xl w-[400px]">
                         <div className="flex justify-between items-center mb-5">
-                            <h3 className="text-white font-semibold text-lg" style={{ fontFamily: 'var(--font-raleway)' }}>Choose a Skin</h3>
-                            <button 
+                            <h3 className="text-white font-semibold text-lg" style={{ fontFamily: "var(--font-raleway)" }}>
+                                Choose a Skin
+                            </h3>
+                            <button
                                 className="text-white/80 hover:text-white px-1.5 cursor-pointer transition-colors duration-200"
                                 onClick={() => setShowSkinChooser(false)}
                             >
                                 ×
                             </button>
                         </div>
-                        
+
                         <div className="grid grid-cols-3 gap-4">
                             {colorPalettes.map((palette, index) => (
-                                <div 
-                                    key={index} 
+                                <div
+                                    key={index}
                                     className="cursor-pointer transition-all duration-200 transform hover:scale-105"
                                     onClick={() => handleSkinSelect(index)}
                                 >
-                                    <div 
-                                        className={`h-20 rounded-md overflow-hidden ${currentSkin === index ? 'ring-2 ring-white scale-105 shadow-glow' : 'border border-gray-800'}`}
-                                        style={{ 
-                                            boxShadow: currentSkin === index ? `0 0 10px ${palette.to}` : 'none'
+                                    <div
+                                        className={`h-20 rounded-md overflow-hidden ${
+                                            currentSkin === index ? "ring-2 ring-white scale-105 shadow-glow" : "border border-gray-800"
+                                        }`}
+                                        style={{
+                                            boxShadow: currentSkin === index ? `0 0 10px ${palette.to}` : "none",
                                         }}
                                     >
-                                        <div 
+                                        <div
                                             className="h-full w-full bg-gradient-to-br"
-                                            style={{ 
+                                            style={{
                                                 background: `linear-gradient(135deg, ${palette.from} 0%, ${palette.to} 100%)`,
                                             }}
                                         ></div>
                                     </div>
-                                    <div className="mt-1 text-xs text-center text-white">
-                                        {index === 0 ? "Default" : `Theme ${index}`}
-                                    </div>
+                                    <div className="mt-1 text-xs text-center text-white">{index === 0 ? "Default" : `Theme ${index}`}</div>
                                 </div>
                             ))}
                         </div>
-                        
+
                         <div className="mt-6 flex justify-end">
-                            <button 
+                            <button
                                 className="bg-gradient-to-r from-[var(--from-color)] to-[var(--to-color)] text-white px-4 py-2 rounded text-sm font-medium transition-all duration-200 hover:opacity-90"
                                 onClick={() => setShowSkinChooser(false)}
                             >
                                 Apply
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Track Info Popup */}
+            {showTrackInfo && getCombinedPlaylist()[currentTrack] && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
+                    <div 
+                        className="p-6 rounded-lg border shadow-xl w-[500px] overflow-hidden"
+                        style={{
+                            background: `linear-gradient(to bottom, ${getCurrentPalette().bg1}, ${getCurrentPalette().bg2})`,
+                            borderColor: `${getCurrentPalette().from}40`,
+                            boxShadow: `0 0 30px ${getCurrentPalette().from}80`
+                        }}
+                    >
+                        <div className="flex justify-between items-center mb-5">
+                            <h3 
+                                className="font-semibold text-lg" 
+                                style={{ 
+                                    fontFamily: "var(--font-raleway)",
+                                    color: getCurrentPalette().to 
+                                }}
+                            >
+                                Track Information
+                            </h3>
+                            <button
+                                className="text-white/80 hover:text-white px-1.5 cursor-pointer transition-colors duration-200"
+                                onClick={() => setShowTrackInfo(false)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        
+                        <div className="flex">
+                            {/* Album Cover */}
+                            <div className="w-48 h-48 overflow-hidden rounded-lg relative mr-6 shadow-lg">
+                                <div 
+                                    className="absolute inset-0 z-10"
+                                    style={{
+                                        background: `linear-gradient(135deg, ${getCurrentPalette().from}20, ${getCurrentPalette().to}20)`
+                                    }}
+                                ></div>
+                                <img 
+                                    src={getCombinedPlaylist()[currentTrack]?.image} 
+                                    alt={`Album art for ${getCombinedPlaylist()[currentTrack]?.album}`}
+                                    className="w-full h-full object-cover"
+                                />
+                                <div 
+                                    className="absolute bottom-0 left-0 right-0 h-12" 
+                                    style={{
+                                        background: `linear-gradient(to top, ${getCurrentPalette().bg2}CC, transparent)`
+                                    }}
+                                ></div>
+                            </div>
+                            
+                            {/* Track Details */}
+                            <div className="flex-1">
+                                <div className="mb-6">
+                                    <h2 
+                                        className="text-2xl font-bold mb-1"
+                                        style={{ 
+                                            fontFamily: "var(--font-raleway)",
+                                            color: getCurrentPalette().to
+                                        }}
+                                    >
+                                        {getCombinedPlaylist()[currentTrack]?.title}
+                                    </h2>
+                                    <p className="text-white text-lg">{getCombinedPlaylist()[currentTrack]?.artist}</p>
+                                </div>
+                                
+                                <div className="space-y-3">
+                                    <div className="flex items-center">
+                                        <span className="w-20" style={{ color: getCurrentPalette().accent }}>Album:</span>
+                                        <span className="text-white">{getCombinedPlaylist()[currentTrack]?.album}</span>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <span className="w-20" style={{ color: getCurrentPalette().accent }}>Duration:</span>
+                                        <span className="text-white">{getCombinedPlaylist()[currentTrack]?.duration}</span>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <span className="w-20" style={{ color: getCurrentPalette().accent }}>Current Time:</span>
+                                        <span className="text-white">{formatTime(currentTime)}</span>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <span className="w-20" style={{ color: getCurrentPalette().accent }}>Track Type:</span>
+                                        <span className="text-white">{getCombinedPlaylist()[currentTrack]?.isLocal ? "Local File" : "Streaming"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Playback Progress */}
+                        <div className="mt-6">
+                            <div className="flex justify-between text-sm mb-2">
+                                <span style={{ color: getCurrentPalette().accent }}>{formatTime(currentTime)}</span>
+                                <span style={{ color: getCurrentPalette().accent }}>{formatTime(duration)}</span>
+                            </div>
+                            <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: `${getCurrentPalette().from}40` }}>
+                                <div 
+                                    className="h-full"
+                                    style={{ 
+                                        width: `${(currentTime / duration) * 100 || 0}%`,
+                                        background: `linear-gradient(to right, ${getCurrentPalette().from}, ${getCurrentPalette().to})`
+                                    }}
+                                ></div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             )}
