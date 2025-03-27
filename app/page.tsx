@@ -33,6 +33,8 @@ const WinMediaPlayer = () => {
     const [previousVolume, setPreviousVolume] = useState<number>(80);
     const [customTracks, setCustomTracks] = useState<Array<any>>([]);
     const [activeNavItem, setActiveNavItem] = useState<string>("now-playing");
+    const [showSkinChooser, setShowSkinChooser] = useState<boolean>(false);
+    const [currentSkin, setCurrentSkin] = useState<number>(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -41,6 +43,55 @@ const WinMediaPlayer = () => {
     const analyserRef = useRef<AnalyserNode | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
     const dataArrayRef = useRef<Uint8Array | null>(null);
+
+    const colorPalettes = [
+        { // Default palette (purple/pink)
+            from: "#53217d",
+            to: "#dcb7df",
+            accent: "#7b7aa9",
+            bg1: "#2b325b",
+            bg2: "#1f203b" 
+        },
+        { // Blue/Cyan
+            from: "#1e3b8a",
+            to: "#64dfdf",
+            accent: "#5e60ce",
+            bg1: "#252b42",
+            bg2: "#1a1b35"
+        },
+        { // Red/Orange
+            from: "#850e0e",
+            to: "#ffaa5a",
+            accent: "#c75146",
+            bg1: "#3a2442",
+            bg2: "#1f1a2d"
+        },
+        { // Green/Yellow
+            from: "#1e5128",
+            to: "#d4e09b",
+            accent: "#4a7c59",
+            bg1: "#283845",
+            bg2: "#1a252f"
+        },
+        { // Dark/Gold
+            from: "#1a1a1a",
+            to: "#ffd700",
+            accent: "#a1a1a1",
+            bg1: "#1a1a1a",
+            bg2: "#0f0f0f"
+        },
+        { // Neon
+            from: "#ff00ff",
+            to: "#00ffff",
+            accent: "#39ff14",
+            bg1: "#121212",
+            bg2: "#0a0a0a"
+        }
+    ];
+
+    const getCurrentPalette = () => {
+        return colorPalettes[currentSkin];
+    };
 
     const playlist = [
         {
@@ -104,23 +155,22 @@ const WinMediaPlayer = () => {
         if (audioRef.current) {
             try {
                 if (isPlaying) {
+                    // Simply pause the audio without changing anything else
                     audioRef.current.pause();
                     setIsPlaying(false);
-                    
-                    // Ensure time display continues to update when paused
-                    if (audioRef.current.duration && !isNaN(audioRef.current.duration)) {
-                        setDuration(audioRef.current.duration);
-                    }
-                    setCurrentTime(audioRef.current.currentTime);
                 } else {
                     if (!audioContextRef.current) {
                         initAudioAnalyzer();
                     }
 
                     const track = getCombinedPlaylist()[currentTrack];
-                    if (!audioRef.current.src || audioRef.current.src === window.location.href || audioRef.current.src.endsWith("/")) {
+                    
+                    // Only change the source if track has changed or not set
+                    if (!audioRef.current.src || audioRef.current.src === window.location.href || 
+                        audioRef.current.src.endsWith("/") || !audioRef.current.src.includes(track?.path)) {
                         audioRef.current.src = track?.path || "";
                         audioRef.current.load();
+                        setCurrentTime(0);
                         await new Promise((resolve) => setTimeout(resolve, 100));
                     }
 
@@ -134,20 +184,39 @@ const WinMediaPlayer = () => {
                         }
                     } catch (playError) {
                         console.error("Play error:", playError);
-                        setIsPlaying(true);
+                        setIsPlaying(false);
                     }
                 }
             } catch (err) {
                 console.error("Toggle play error:", err);
-                setIsPlaying(!isPlaying);
             }
         }
     };
 
     const selectTrack = (index: number) => {
+        if (currentTrack === index && isPlaying) {
+            // If clicking the currently playing track, just pause it
+            if (audioRef.current) {
+                audioRef.current.pause();
+                setIsPlaying(false);
+            }
+            return;
+        }
+        
         setCurrentTrack(index);
         setCurrentTime(0);
-        setIsPlaying(true);
+        
+        const wasPlaying = isPlaying;
+        
+        // If a track was already playing, auto-play the new selection
+        if (wasPlaying && audioRef.current) {
+            const track = getCombinedPlaylist()[index];
+            audioRef.current.src = track?.path || "";
+            audioRef.current.load();
+            audioRef.current.play().catch(err => console.error("Failed to play selected track:", err));
+        }
+        
+        setIsPlaying(wasPlaying);
     };
 
     const nextTrack = () => {
@@ -155,7 +224,14 @@ const WinMediaPlayer = () => {
         const newIndex = isShuffled ? Math.floor(Math.random() * combinedPlaylist.length) : (currentTrack + 1) % combinedPlaylist.length;
         setCurrentTrack(newIndex);
         setCurrentTime(0);
-        setIsPlaying(true);
+        
+        // Maintain the current playback state
+        if (isPlaying && audioRef.current) {
+            const track = combinedPlaylist[newIndex];
+            audioRef.current.src = track?.path || "";
+            audioRef.current.load();
+            audioRef.current.play().catch(err => console.error("Failed to play next track:", err));
+        }
     };
 
     const prevTrack = () => {
@@ -163,32 +239,36 @@ const WinMediaPlayer = () => {
         const newIndex = currentTrack === 0 ? combinedPlaylist.length - 1 : currentTrack - 1;
         setCurrentTrack(newIndex);
         setCurrentTime(0);
-        setIsPlaying(true);
+        
+        // Maintain the current playback state
+        if (isPlaying && audioRef.current) {
+            const track = combinedPlaylist[newIndex];
+            audioRef.current.src = track?.path || "";
+            audioRef.current.load();
+            audioRef.current.play().catch(err => console.error("Failed to play previous track:", err));
+        }
     };
 
     const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (audioRef.current) {
-            const progressBar = e.currentTarget;
-            const clickPosition = e.clientX - progressBar.getBoundingClientRect().left;
-            const clickPercentage = clickPosition / progressBar.clientWidth;
-            const newTime = clickPercentage * duration;
-
+        const rect = e.currentTarget.getBoundingClientRect();
+        const percent = (e.clientX - rect.left) / rect.width;
+        if (audioRef.current && duration) {
+            const newTime = percent * duration;
             audioRef.current.currentTime = newTime;
             setCurrentTime(newTime);
         }
     };
 
     const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newVolume = parseInt(e.target.value);
-        setVolume(newVolume);
+        const value = parseInt(e.target.value);
+        setVolume(value);
         if (audioRef.current) {
-            audioRef.current.volume = newVolume / 100;
+            audioRef.current.volume = value / 100;
         }
-
-        if (newVolume > 0 && isMuted) {
-            setIsMuted(false);
-        } else if (newVolume === 0 && !isMuted) {
+        if (value === 0) {
             setIsMuted(true);
+        } else {
+            setIsMuted(false);
         }
     };
 
@@ -227,8 +307,8 @@ const WinMediaPlayer = () => {
         ctx.clearRect(0, 0, width, height);
 
         const gradient = ctx.createLinearGradient(0, 0, 0, height);
-        gradient.addColorStop(0, "#1f203b");
-        gradient.addColorStop(1, "#0f0f20");
+        gradient.addColorStop(0, getCurrentPalette().bg1);
+        gradient.addColorStop(1, getCurrentPalette().bg2);
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);
 
@@ -251,8 +331,8 @@ const WinMediaPlayer = () => {
         const centerY = height / 2;
 
         const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-        bgGradient.addColorStop(0, "#1f203b");
-        bgGradient.addColorStop(1, "#0f0f20");
+        bgGradient.addColorStop(0, getCurrentPalette().bg1);
+        bgGradient.addColorStop(1, getCurrentPalette().bg2);
         ctx.fillStyle = bgGradient;
         ctx.fillRect(0, 0, width, height);
 
@@ -262,15 +342,15 @@ const WinMediaPlayer = () => {
 
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(123, 122, 169, ${alpha})`;
+            ctx.strokeStyle = `rgba(${hexToRgb(getCurrentPalette().accent)}, ${alpha})`;
             ctx.lineWidth = 2;
             ctx.stroke();
         }
 
         const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 50);
-        gradient.addColorStop(0, "rgba(220, 183, 223, 0.8)");
-        gradient.addColorStop(0.5, "rgba(123, 122, 169, 0.6)");
-        gradient.addColorStop(1, "rgba(83, 33, 125, 0)");
+        gradient.addColorStop(0, `rgba(${hexToRgb(getCurrentPalette().to)}, 0.8)`);
+        gradient.addColorStop(0.5, `rgba(${hexToRgb(getCurrentPalette().accent)}, 0.6)`);
+        gradient.addColorStop(1, `rgba(${hexToRgb(getCurrentPalette().from)}, 0)`);
 
         ctx.beginPath();
         ctx.arc(centerX, centerY, 50 + Math.sin(time * 3) * 5, 0, Math.PI * 2);
@@ -284,13 +364,34 @@ const WinMediaPlayer = () => {
 
             ctx.beginPath();
             ctx.arc(x, y, 2, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(220, 183, 223, 0.7)";
+            ctx.fillStyle = `rgba(${hexToRgb(getCurrentPalette().to)}, 0.7)`;
             ctx.fill();
         }
     };
 
+    // Helper function to convert hex to rgb
+    const hexToRgb = (hex: string) => {
+        // Remove the # if it exists
+        hex = hex.replace(/^#/, '');
+        
+        // Parse the hex values
+        const bigint = parseInt(hex, 16);
+        const r = (bigint >> 16) & 255;
+        const g = (bigint >> 8) & 255;
+        const b = bigint & 255;
+        
+        return `${r}, ${g}, ${b}`;
+    };
+
     const drawModernVisualizer = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
         const time = Date.now() * 0.001;
+        
+        // Add theme-colored background
+        const bgGradient = ctx.createLinearGradient(0, 0, width, height);
+        bgGradient.addColorStop(0, getCurrentPalette().bg2);
+        bgGradient.addColorStop(1, getCurrentPalette().bg1);
+        ctx.fillStyle = bgGradient;
+        ctx.fillRect(0, 0, width, height);
 
         for (let i = 0; i < 100; i++) {
             const x = (Math.sin(i * 3.14 + time) * 0.5 + 0.5) * width;
@@ -299,7 +400,13 @@ const WinMediaPlayer = () => {
 
             ctx.beginPath();
             ctx.arc(x, y, size, 0, Math.PI * 2);
-            ctx.fillStyle = `hsla(${(time * 20 + i * 2) % 360}, 100%, 70%, 0.7)`;
+            
+            // Use theme color with hue shift
+            const hue = (time * 20 + i * 2) % 360;
+            const themeColor = i % 3 === 0 ? getCurrentPalette().from : 
+                               i % 3 === 1 ? getCurrentPalette().accent : 
+                               getCurrentPalette().to;
+            ctx.fillStyle = `hsla(${hue}, 100%, 70%, 0.7)`;
             ctx.fill();
         }
 
@@ -312,7 +419,10 @@ const WinMediaPlayer = () => {
                 ctx.lineTo(x, y);
             }
 
-            ctx.strokeStyle = `rgba(80, 200, 255, ${0.3 - i * 0.05})`;
+            // Use gradient of theme colors
+            ctx.strokeStyle = i % 2 === 0 
+                ? `rgba(${hexToRgb(getCurrentPalette().to)}, ${0.3 - i * 0.05})`
+                : `rgba(${hexToRgb(getCurrentPalette().from)}, ${0.3 - i * 0.05})`;
             ctx.lineWidth = 5 - i;
             ctx.stroke();
         }
@@ -323,8 +433,8 @@ const WinMediaPlayer = () => {
         const time = Date.now() * 0.001;
 
         const bgGradient = ctx.createLinearGradient(0, 0, width, height);
-        bgGradient.addColorStop(0, "#1f203b");
-        bgGradient.addColorStop(1, "#2b325b");
+        bgGradient.addColorStop(0, getCurrentPalette().bg2);
+        bgGradient.addColorStop(1, getCurrentPalette().bg1);
         ctx.fillStyle = bgGradient;
         ctx.fillRect(0, 0, width, height);
 
@@ -332,7 +442,7 @@ const WinMediaPlayer = () => {
             const radius = width * (0.4 + i * 0.15) + Math.sin(time * 0.5 + i) * 20;
             ctx.beginPath();
             ctx.arc(width / 2, height / 2, radius, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(123, 122, 169, ${0.1 - i * 0.01})`;
+            ctx.strokeStyle = `rgba(${hexToRgb(getCurrentPalette().accent)}, ${0.1 - i * 0.01})`;
             ctx.lineWidth = 15;
             ctx.stroke();
         }
@@ -343,14 +453,14 @@ const WinMediaPlayer = () => {
         const artX = (width - artSize) / 2;
         const artY = (height - artSize) / 2;
 
-        ctx.shadowColor = "rgba(220, 183, 223, 0.8)";
+        ctx.shadowColor = `rgba(${hexToRgb(getCurrentPalette().to)}, 0.8)`;
         ctx.shadowBlur = 30;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
 
         ctx.beginPath();
         ctx.rect(artX, artY, artSize, artSize);
-        ctx.fillStyle = "#1f203b";
+        ctx.fillStyle = getCurrentPalette().bg2;
         ctx.fill();
 
         const img = new Image();
@@ -359,7 +469,7 @@ const WinMediaPlayer = () => {
         if (albumImageCache[currentTrack]) {
             ctx.drawImage(albumImageCache[currentTrack], artX, artY, artSize, artSize);
         } else {
-            ctx.fillStyle = "#2b325b";
+            ctx.fillStyle = getCurrentPalette().bg1;
             ctx.fillRect(artX, artY, artSize, artSize);
 
             img.onload = () => {
@@ -369,7 +479,7 @@ const WinMediaPlayer = () => {
 
         ctx.shadowBlur = 0;
 
-        ctx.fillStyle = "rgba(220, 183, 223, 0.1)";
+        ctx.fillStyle = `rgba(${hexToRgb(getCurrentPalette().to)}, 0.1)`;
         ctx.beginPath();
         ctx.moveTo(artX, artY);
         ctx.lineTo(artX + artSize, artY);
@@ -381,15 +491,15 @@ const WinMediaPlayer = () => {
         const trackInfoY = artY + artSize + 40;
 
         ctx.textAlign = "center";
-        ctx.fillStyle = "rgba(123, 122, 169, 0.8)";
+        ctx.fillStyle = `rgba(${hexToRgb(getCurrentPalette().accent)}, 0.8)`;
         ctx.font = `bold 14px var(--font-source-sans-pro), sans-serif`;
         ctx.fillText(`Album: ${track.album}`, width / 2, trackInfoY);
 
-        ctx.fillStyle = "rgba(220, 183, 223, 1.0)";
+        ctx.fillStyle = `rgba(${hexToRgb(getCurrentPalette().to)}, 1.0)`;
         ctx.font = `bold 18px var(--font-raleway), sans-serif`;
         ctx.fillText(track.title, width / 2, trackInfoY + 25);
 
-        ctx.fillStyle = "rgba(123, 122, 169, 0.7)";
+        ctx.fillStyle = `rgba(${hexToRgb(getCurrentPalette().accent)}, 0.7)`;
         ctx.font = `15px var(--font-source-sans-pro), sans-serif`;
         ctx.fillText(track.artist, width / 2, trackInfoY + 50);
 
@@ -401,7 +511,7 @@ const WinMediaPlayer = () => {
 
             ctx.beginPath();
             ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(220, 183, 223, 0.6)";
+            ctx.fillStyle = `rgba(${hexToRgb(getCurrentPalette().to)}, 0.6)`;
             ctx.fill();
         }
 
@@ -411,7 +521,7 @@ const WinMediaPlayer = () => {
             ctx.beginPath();
             ctx.moveTo(0, lineY);
             ctx.lineTo(width, lineY);
-            ctx.strokeStyle = `rgba(83, 33, 125, ${0.1 - i * 0.02})`;
+            ctx.strokeStyle = `rgba(${hexToRgb(getCurrentPalette().from)}, ${0.1 - i * 0.02})`;
             ctx.lineWidth = 3;
             ctx.stroke();
         }
@@ -419,13 +529,13 @@ const WinMediaPlayer = () => {
         const ringPulse = Math.sin(time * 2) * 0.1 + 0.9;
         ctx.beginPath();
         ctx.arc(width / 2, height / 2, artSize * 0.6 * ringPulse, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(83, 33, 125, 0.2)";
+        ctx.strokeStyle = `rgba(${hexToRgb(getCurrentPalette().from)}, 0.2)`;
         ctx.lineWidth = 2;
         ctx.stroke();
 
         ctx.beginPath();
         ctx.arc(width / 2, height / 2, artSize * 0.55 * ringPulse, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(220, 183, 223, 0.15)";
+        ctx.strokeStyle = `rgba(${hexToRgb(getCurrentPalette().to)}, 0.15)`;
         ctx.lineWidth = 1;
         ctx.stroke();
     };
@@ -435,6 +545,13 @@ const WinMediaPlayer = () => {
         const dataArray = dataArrayRef.current;
         const time = Date.now() * 0.001;
 
+        // Theme-colored background
+        const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+        bgGradient.addColorStop(0, getCurrentPalette().bg1);
+        bgGradient.addColorStop(1, getCurrentPalette().bg2);
+        ctx.fillStyle = bgGradient;
+        ctx.fillRect(0, 0, width, height);
+
         if (!analyser || !dataArray) {
             const barCount = 64;
             const barWidth = width / barCount - 2;
@@ -443,14 +560,11 @@ const WinMediaPlayer = () => {
             for (let i = 0; i < barCount; i++) {
                 const barHeight = Math.abs(Math.sin(i * 0.2 + time * 2)) * 100 + Math.abs(Math.sin(i * 0.1 + time)) * 80;
 
-                const purple = 123 + (Math.sin(i * 0.1 + time) * 0.5 + 0.5) * 97;
-                const blue = 122 + (Math.sin(i * 0.05 + time * 0.7) * 0.5 + 0.5) * 61;
-                const dark = 169 + (i / barCount) * 54;
-
+                // Use theme colors for bars with slight variations
                 const barGradient = ctx.createLinearGradient(0, baseY, 0, baseY - barHeight);
-                barGradient.addColorStop(0, `rgba(83, 33, 125, 0.9)`);
-                barGradient.addColorStop(0.5, `rgba(${purple}, ${blue}, ${dark}, 0.8)`);
-                barGradient.addColorStop(1, `rgba(220, 183, 223, 0.7)`);
+                barGradient.addColorStop(0, `rgba(${hexToRgb(getCurrentPalette().from)}, 0.9)`);
+                barGradient.addColorStop(0.5, `rgba(${hexToRgb(getCurrentPalette().accent)}, 0.8)`);
+                barGradient.addColorStop(1, `rgba(${hexToRgb(getCurrentPalette().to)}, 0.7)`);
 
                 ctx.fillStyle = barGradient;
                 ctx.fillRect(i * (barWidth + 2) + 2, baseY - barHeight, barWidth, barHeight);
@@ -458,13 +572,13 @@ const WinMediaPlayer = () => {
                 ctx.beginPath();
                 ctx.moveTo(i * (barWidth + 2) + 2, baseY - barHeight);
                 ctx.lineTo(i * (barWidth + 2) + 2 + barWidth, baseY - barHeight);
-                ctx.strokeStyle = "rgba(220, 183, 223, 0.5)";
+                ctx.strokeStyle = `rgba(${hexToRgb(getCurrentPalette().to)}, 0.5)`;
                 ctx.lineWidth = 1;
                 ctx.stroke();
             }
 
             ctx.textAlign = "center";
-            ctx.fillStyle = "rgba(220, 183, 223, 0.8)";
+            ctx.fillStyle = `rgba(${hexToRgb(getCurrentPalette().to)}, 0.8)`;
             ctx.font = "bold 14px Arial";
             ctx.fillText("Audio Spectrum (Simulated)", width / 2, height * 0.1);
 
@@ -478,12 +592,6 @@ const WinMediaPlayer = () => {
         const barWidth = (width - barGap) / barCount - barGap;
         const baseY = height * 0.85;
 
-        const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-        bgGradient.addColorStop(0, "#1f203b");
-        bgGradient.addColorStop(1, "#0f0f20");
-        ctx.fillStyle = bgGradient;
-        ctx.fillRect(0, 0, width, height);
-
         for (let i = 0; i < barCount; i++) {
             const value = dataArray[i];
             const barHeight = (value / 255) * height * 0.7;
@@ -491,14 +599,10 @@ const WinMediaPlayer = () => {
             const x = barGap + (barWidth + barGap) * i;
             const y = baseY - barHeight;
 
-            const purple = 123 + (value / 255) * 97;
-            const blue = 122 + (value / 255) * 61;
-            const dark = 169 + (value / 255) * 54;
-
             const barGradient = ctx.createLinearGradient(x, baseY, x, y);
-            barGradient.addColorStop(0, `rgba(83, 33, 125, 0.9)`);
-            barGradient.addColorStop(0.6, `rgba(${purple}, ${blue}, ${dark}, 0.8)`);
-            barGradient.addColorStop(1, `rgba(220, 183, 223, 0.7)`);
+            barGradient.addColorStop(0, `rgba(${hexToRgb(getCurrentPalette().from)}, 0.9)`);
+            barGradient.addColorStop(0.6, `rgba(${hexToRgb(getCurrentPalette().accent)}, 0.8)`);
+            barGradient.addColorStop(1, `rgba(${hexToRgb(getCurrentPalette().to)}, 0.7)`);
 
             ctx.fillStyle = barGradient;
             ctx.fillRect(x, y, barWidth, barHeight);
@@ -506,16 +610,16 @@ const WinMediaPlayer = () => {
             ctx.beginPath();
             ctx.moveTo(x, y);
             ctx.lineTo(x + barWidth, y);
-            ctx.strokeStyle = `rgba(220, 183, 223, 0.8)`;
+            ctx.strokeStyle = `rgba(${hexToRgb(getCurrentPalette().to)}, 0.8)`;
             ctx.lineWidth = 1;
             ctx.stroke();
 
             if (barHeight > height * 0.25) {
-                ctx.shadowColor = `rgba(83, 33, 125, 0.6)`;
+                ctx.shadowColor = `rgba(${hexToRgb(getCurrentPalette().from)}, 0.6)`;
                 ctx.shadowBlur = 15;
                 ctx.beginPath();
                 ctx.arc(x + barWidth / 2, y, barWidth / 2, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(220, 183, 223, 0.2)`;
+                ctx.fillStyle = `rgba(${hexToRgb(getCurrentPalette().to)}, 0.2)`;
                 ctx.fill();
                 ctx.shadowBlur = 0;
             }
@@ -529,24 +633,20 @@ const WinMediaPlayer = () => {
             const x = barGap + (barWidth + barGap) * i;
             const y = baseY;
 
-            const purple = 123 + (value / 255) * 97;
-            const blue = 122 + (value / 255) * 61;
-            const dark = 169 + (value / 255) * 54;
-
             const barGradient = ctx.createLinearGradient(x, y, x, y + barHeight);
-            barGradient.addColorStop(0, `rgba(${purple}, ${blue}, ${dark}, 0.5)`);
-            barGradient.addColorStop(1, `rgba(${purple}, ${blue}, ${dark}, 0)`);
+            barGradient.addColorStop(0, `rgba(${hexToRgb(getCurrentPalette().accent)}, 0.5)`);
+            barGradient.addColorStop(1, `rgba(${hexToRgb(getCurrentPalette().accent)}, 0)`);
 
             ctx.fillStyle = barGradient;
             ctx.fillRect(x, y, barWidth, barHeight);
         }
         ctx.globalAlpha = 1.0;
 
-        ctx.shadowColor = "rgba(83, 33, 125, 0.8)";
+        ctx.shadowColor = `rgba(${hexToRgb(getCurrentPalette().from)}, 0.8)`;
         ctx.shadowBlur = 10 + Math.sin(time * 2) * 5;
 
         ctx.textAlign = "center";
-        ctx.fillStyle = "rgba(220, 183, 223, 0.8)";
+        ctx.fillStyle = `rgba(${hexToRgb(getCurrentPalette().to)}, 0.8)`;
         ctx.font = "bold 14px Arial";
         ctx.fillText("Audio Spectrum Analyzer", width / 2, height * 0.1);
 
@@ -613,22 +713,31 @@ const WinMediaPlayer = () => {
 
         const handleTrackChange = async () => {
             try {
+                const audio = audioRef.current;
+                if (!audio) return;
+                
                 const track = getCombinedPlaylist()[currentTrack];
                 if (!track) return;
 
-                audioRef.current!.src = track.path;
-                audioRef.current!.load();
-
-                setCurrentTime(0);
+                // Save the current playback position and state
+                const wasPaused = !isPlaying;
+                
+                // Only update source if it's changed
+                if (!audio.src || !audio.src.includes(track.path)) {
+                    audio.src = track.path;
+                    audio.load();
+                    setCurrentTime(0);
+                }
 
                 if (isPlaying) {
                     try {
                         if (!audioContextRef.current) {
                             initAudioAnalyzer();
                         }
-                        await audioRef.current!.play();
+                        await audio.play();
                     } catch (err) {
                         console.error("Failed to auto-play track:", err);
+                        setIsPlaying(false);
                     }
                 }
             } catch (err) {
@@ -637,7 +746,7 @@ const WinMediaPlayer = () => {
         };
 
         handleTrackChange();
-    }, [currentTrack, isPlaying]);
+    }, [currentTrack]);
 
     useEffect(() => {
         const combinedPlaylist = getCombinedPlaylist();
@@ -669,10 +778,30 @@ const WinMediaPlayer = () => {
 
     useEffect(() => {
         drawVisualizer();
+        
+        // Handle canvas resize
+        const resizeCanvas = () => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            
+            const container = canvas.parentElement;
+            if (container) {
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+            }
+        };
+        
+        // Initialize canvas size
+        resizeCanvas();
+        
+        // Listen for window resize
+        window.addEventListener('resize', resizeCanvas);
+        
         return () => {
             if (animationRef.current) {
                 cancelAnimationFrame(animationRef.current);
             }
+            window.removeEventListener('resize', resizeCanvas);
         };
     }, [visualizerMode, currentTrack]);
 
@@ -764,8 +893,13 @@ const WinMediaPlayer = () => {
         if (id === "media-library") {
             setShowPlaylist(true);
         } else if (id === "skin-chooser") {
-            cycleVisualizer();
+            setShowSkinChooser(true);
         }
+    };
+
+    const handleSkinSelect = (index: number) => {
+        setCurrentSkin(index);
+        setShowSkinChooser(false);
     };
 
     return (
@@ -776,16 +910,23 @@ const WinMediaPlayer = () => {
         >
             <div
                 className={`w-full max-w-5xl ${isFullscreen ? "fixed inset-0 max-w-none" : ""} 
-                    bg-gradient-to-b from-[#2b325b]/90 to-[#1f203b]/95 
-                    backdrop-blur-md border border-[#53217d]/40 rounded-md 
+                    bg-gradient-to-b from-[${getCurrentPalette().bg1}]/90 to-[${getCurrentPalette().bg2}]/95 
+                    backdrop-blur-md border border-[${getCurrentPalette().from}]/40 rounded-md 
                     shadow-[0_0_30px_rgba(83,33,125,0.4)] text-white overflow-hidden flex flex-col 
-                    font-sans`}
-                style={{ fontFamily: 'var(--font-source-sans-pro)' }}
+                    font-sans ${!isFullscreen ? "h-[715px]" : ""}`}
+                style={{ 
+                    fontFamily: 'var(--font-source-sans-pro)',
+                    '--from-color': getCurrentPalette().from,
+                    '--to-color': getCurrentPalette().to,
+                    '--accent-color': getCurrentPalette().accent,
+                    '--bg1-color': getCurrentPalette().bg1,
+                    '--bg2-color': getCurrentPalette().bg2,
+                } as React.CSSProperties}
             >
-                <div className="bg-gradient-to-r from-[#53217d] to-[#2b325b] px-4 py-1.5 flex justify-between items-center border-b border-[#dcb7df]/30">
+                <div className="bg-gradient-to-r from-[var(--from-color)] to-[var(--bg1-color)] px-4 py-1.5 flex justify-between items-center border-b border-[var(--to-color)]/30 h-[35px]">
                     <div className="flex items-center">
-                        <div className="w-5 h-5 mr-2 bg-[#dcb7df] rounded-sm flex items-center justify-center">
-                            <span className="text-[#1f203b] text-xs">▶</span>
+                        <div className="w-5 h-5 mr-2 bg-[var(--to-color)] rounded-sm flex items-center justify-center">
+                            <span className="text-[var(--bg2-color)] text-xs">▶</span>
                         </div>
                         <span className="text-sm font-semibold text-white" style={{ fontFamily: 'var(--font-raleway)' }}>Windows Media Player</span>
                     </div>
@@ -805,15 +946,15 @@ const WinMediaPlayer = () => {
                 </div>
 
                 <div className="flex flex-1 overflow-hidden">
-                    <div className="bg-gradient-to-b from-[#2b325b] to-[#1f203b] w-28 p-3 flex-shrink-0 border-r border-[#53217d]/30">
-                        <div className="text-sm text-[#dcb7df]/90 font-bold mb-1.5" style={{ fontFamily: 'var(--font-raleway)' }}>Now Playing</div>
+                    <div className="bg-gradient-to-b from-[var(--bg1-color)] to-[var(--bg2-color)] w-28 p-3 flex-shrink-0 border-r border-[var(--from-color)]/30">
+                        <div className="text-sm text-[var(--to-color)]/90 font-bold mb-1.5" style={{ fontFamily: 'var(--font-raleway)' }}>Now Playing</div>
 
                         <div className="space-y-4 text-xs">
                             {navItems.map((item) => (
                                 <div
                                     key={item.id}
-                                    className={`cursor-pointer hover:text-[#dcb7df] transition-colors duration-200
-                               ${item.id === activeNavItem ? "text-[#dcb7df] font-semibold" : "text-[#7b7aa9]"}`}
+                                    className={`cursor-pointer hover:text-[var(--to-color)] transition-colors duration-200
+                               ${item.id === activeNavItem ? "text-[var(--to-color)] font-semibold" : "text-[var(--accent-color)]"}`}
                                     onClick={() => handleNavItemClick(item.id)}
                                 >
                                     {item.label}
@@ -822,11 +963,11 @@ const WinMediaPlayer = () => {
                         </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col">
-                        <div className="bg-gradient-to-r from-[#1f203b] to-[#2b325b] px-4 py-2 flex items-center justify-between border-b border-[#53217d]/30">
+                    <div className="flex-1 flex flex-col h-full">
+                        <div className="bg-gradient-to-r from-[var(--bg2-color)] to-[var(--bg1-color)] px-4 py-2 flex items-center justify-between border-b border-[var(--from-color)]/30 h-[50px]">
                             <div className="flex items-center space-x-3">
                                 <button 
-                                    className="text-[#7b7aa9] hover:text-[#dcb7df] focus:outline-none cursor-pointer transition-colors duration-200"
+                                    className="text-[var(--accent-color)] hover:text-[var(--to-color)] focus:outline-none cursor-pointer transition-colors duration-200"
                                     onClick={prevTrack}
                                 >
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -840,7 +981,7 @@ const WinMediaPlayer = () => {
                                     </svg>
                                 </button>
                                 <button 
-                                    className="text-[#7b7aa9] hover:text-[#dcb7df] focus:outline-none cursor-pointer transition-colors duration-200"
+                                    className="text-[var(--accent-color)] hover:text-[var(--to-color)] focus:outline-none cursor-pointer transition-colors duration-200"
                                     onClick={nextTrack}
                                 >
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -854,7 +995,7 @@ const WinMediaPlayer = () => {
                                     </svg>
                                 </button>
                                 <button
-                                    className="text-[#7b7aa9] hover:text-[#dcb7df] focus:outline-none cursor-pointer transition-colors duration-200"
+                                    className="text-[var(--accent-color)] hover:text-[var(--to-color)] focus:outline-none cursor-pointer transition-colors duration-200"
                                     onClick={cycleVisualizer}
                                 >
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -875,7 +1016,7 @@ const WinMediaPlayer = () => {
                                 </button>
 
                                 <button
-                                    className="text-[#7b7aa9] hover:text-[#dcb7df] focus:outline-none cursor-pointer transition-colors duration-200 flex items-center"
+                                    className="text-[var(--accent-color)] hover:text-[var(--to-color)] focus:outline-none cursor-pointer transition-colors duration-200 flex items-center"
                                     onClick={() => fileInputRef.current?.click()}
                                 >
                                     <IoMdFolderOpen size={20} />
@@ -894,101 +1035,129 @@ const WinMediaPlayer = () => {
 
                             <div className="flex items-center space-x-2">
                                 <div
-                                    className="bg-[#454157] text-[#dcb7df] px-3 py-1 text-xs rounded border border-[#53217d]/50 flex items-center hover:bg-[#53217d]/60 cursor-pointer transition-all duration-200"
-                                    onClick={() => setShowPlaylist(!showPlaylist)}
+                                    className="bg-[#454157] text-[var(--to-color)] px-3 py-1 text-xs rounded border border-[var(--from-color)]/50 flex items-center hover:bg-[var(--from-color)]/60 cursor-pointer transition-all duration-200"
+                                    onClick={cycleVisualizer}
                                 >
-                                    <span className="mr-1.5">{showPlaylist ? "Hide Playlist" : "Show Playlist"}</span>
+                                    <span className="mr-1.5">Mode: {visualizerMode.charAt(0).toUpperCase() + visualizerMode.slice(1)}</span>
                                     <svg 
                                         width="12" 
                                         height="12" 
                                         viewBox="0 0 12 12" 
                                         fill="none" 
                                         xmlns="http://www.w3.org/2000/svg" 
-                                        className={`transform transition-transform duration-300 ease-in-out ${showPlaylist ? 'rotate-180' : ''}`}
                                     >
-                                        <path
-                                            d="M3 4.5L6 7.5L9 4.5"
-                                            stroke="currentColor"
-                                            strokeWidth="1.5"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        />
+                                        <circle cx="6" cy="6" r="3" stroke="currentColor" strokeWidth="1" />
                                     </svg>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-r from-[#1f203b] to-[#2b325b] px-4 py-2 border-b border-[#53217d]/30">
-                            <div className="text-xs text-[#7b7aa9]">{getCombinedPlaylist()[currentTrack]?.artist}</div>
-                            <div className="text-sm font-medium text-[#dcb7df]" style={{ fontFamily: 'var(--font-raleway)' }}>{getCombinedPlaylist()[currentTrack]?.title}</div>
+                        <div className="bg-gradient-to-r from-[var(--bg2-color)] to-[var(--bg1-color)] px-4 py-2 border-b border-[var(--from-color)]/30 h-[45px]">
+                            <div className="text-xs text-[var(--accent-color)]">{getCombinedPlaylist()[currentTrack]?.artist}</div>
+                            <div className="text-sm font-medium text-[var(--to-color)]" style={{ fontFamily: 'var(--font-raleway)' }}>{getCombinedPlaylist()[currentTrack]?.title}</div>
                         </div>
 
                         <div className="flex-1 flex overflow-hidden relative">
-                            <div className="flex-1 bg-black relative overflow-hidden">
-                                <canvas ref={canvasRef} className="w-full h-full" width={800} height={600} />
+                            <div className="flex-1 relative overflow-hidden flex items-center justify-center" 
+                                style={{ background: `linear-gradient(to bottom, ${getCurrentPalette().bg1}, ${getCurrentPalette().bg2})` }}
+                            >
+                                <canvas 
+                                    ref={canvasRef} 
+                                    className="max-w-full max-h-full" 
+                                    width={800} 
+                                    height={600}
+                                    style={{ display: 'block' }} 
+                                />
                             </div>
 
                             <div 
-                                className={`absolute top-0 right-0 bottom-0 w-72 bg-[#1f203b]/95 border-l border-[#53217d]/40 
-                                overflow-y-auto transition-transform duration-300 ease-in-out transform 
-                                ${showPlaylist ? 'translate-x-0' : 'translate-x-full'}`}
+                                className="w-72 bg-[var(--bg2-color)]/95 border-l border-[var(--from-color)]/40 overflow-y-auto flex-shrink-0 flex flex-col"
                             >
-                                <div className="p-3">
-                                    <h3 className="text-sm font-semibold text-[#dcb7df] mb-2" style={{ fontFamily: 'var(--font-raleway)' }}>Media Library</h3>
+                                <div className="p-3 flex-1">
+                                    <h3 className="text-sm font-semibold text-[var(--to-color)] mb-2" style={{ fontFamily: 'var(--font-raleway)' }}>Media Library</h3>
                                     <div className="space-y-0.5">
                                         {getCombinedPlaylist().map((track, index) => (
                                             <div
                                                 key={`track-${track.id || index}`}
                                                 className={`flex items-center text-xs p-1.5 ${
                                                     currentTrack === index
-                                                        ? "bg-[#53217d]/40 text-[#dcb7df]"
-                                                        : "text-[#7b7aa9] hover:bg-[#2b325b]/70 hover:text-[#dcb7df]"
+                                                        ? "bg-[var(--from-color)]/40 text-[var(--to-color)]"
+                                                        : "text-[var(--accent-color)] hover:bg-[var(--bg1-color)]/70 hover:text-[var(--to-color)]"
                                                 } cursor-pointer transition-all duration-200 rounded`}
                                                 onClick={() => selectTrack(index)}
                                             >
                                                 <div className="w-2 mr-2">
                                                     {currentTrack === index && (
-                                                        <div className="w-2 h-2 bg-[#dcb7df] rounded-full"></div>
+                                                        <div className="w-2 h-2 bg-[var(--to-color)] rounded-full"></div>
                                                     )}
                                                 </div>
                                                 <div className="flex-1 truncate">
                                                     {track.title}
-                                                    {track.isLocal && <span className="ml-1 text-[#dcb7df]/60">(local)</span>}
+                                                    {track.isLocal && <span className="ml-1 text-[var(--to-color)]/60">(local)</span>}
                                                 </div>
-                                                <div className="ml-2 text-[#dcb7df]/70">{track.duration}</div>
+                                                <div className="ml-2 text-[var(--to-color)]/70">{track.duration}</div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
+                                <div className="p-3 border-t border-[var(--from-color)]/30 text-xs text-[var(--accent-color)]">
+                                    <div className="float-right">Total Time: {(() => {
+                                        const totalSeconds = getCombinedPlaylist().reduce((total, track) => {
+                                            const [mins, secs] = track.duration.split(':').map(Number);
+                                            return total + (mins * 60) + secs;
+                                        }, 0);
+                                        
+                                        const mins = Math.floor(totalSeconds / 60);
+                                        const secs = totalSeconds % 60;
+                                        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                                    })()}</div>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-r from-[#1f203b] to-[#2b325b] px-4 py-3 border-t border-[#53217d]/40">
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="text-xs text-[#7b7aa9]">Album: {getCombinedPlaylist()[currentTrack]?.album}</div>
-                                <div className="flex items-center space-x-1.5 text-xs text-[#7b7aa9]">
-                                    <span>Total Time: {getCombinedPlaylist()[currentTrack]?.duration}</span>
-                                    <span>|</span>
-                                    <span>
-                                        {formatTime(currentTime)} / {formatTime(duration)}
-                                    </span>
+                        <div className="bg-gradient-to-r from-[var(--bg2-color)] to-[var(--bg1-color)] px-4 py-3 border-t border-[var(--from-color)]/40 h-[120px] flex flex-col justify-between">
+                            <div className="flex items-center justify-between">
+                                <div className="text-xs text-[var(--accent-color)]">Album: {getCombinedPlaylist()[currentTrack]?.album}</div>
+                                <div className="flex items-center space-x-1.5 text-sm font-medium text-[var(--to-color)]">
+                                    <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
                                 </div>
                             </div>
 
-                            <div
-                                className="h-2 bg-[#454157] rounded-full overflow-hidden cursor-pointer mb-3 transition-colors duration-200 hover:bg-[#454157]/80"
+                            <div 
+                                className="relative h-12 my-3 bg-[#2D2A42] rounded-md overflow-hidden border border-[var(--from-color)]/30 shadow-inner cursor-pointer"
                                 onClick={handleProgressClick}
                             >
-                                <div
-                                    className="h-full bg-gradient-to-r from-[#53217d] to-[#dcb7df] rounded-full"
-                                    style={{ width: `${(currentTime / duration) * 100 || 0}%`, transition: "width 0.1s linear" }}
+                                {/* Progress fill */}
+                                <div 
+                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[var(--from-color)] to-[var(--to-color)] rounded-md" 
+                                    style={{ 
+                                        width: `${(currentTime / duration) * 100 || 0}%`,
+                                        transition: "width 0.1s linear" 
+                                    }}
                                 ></div>
+                                
+                                {/* Hidden input range */}
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max={duration || 100}
+                                    value={currentTime}
+                                    onChange={(e) => {
+                                        const newTime = parseFloat(e.target.value);
+                                        if (audioRef.current) {
+                                            audioRef.current.currentTime = newTime;
+                                            setCurrentTime(newTime);
+                                        }
+                                    }}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                    style={{ accentColor: 'var(--to-color)' }}
+                                />
                             </div>
 
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between pb-1">
                                 <div className="flex items-center space-x-3">
                                     <button
-                                        className="text-[#7b7aa9] hover:text-[#dcb7df] focus:outline-none cursor-pointer transition-colors duration-200"
+                                        className="text-[var(--accent-color)] hover:text-[var(--to-color)] focus:outline-none cursor-pointer transition-colors duration-200"
                                         onClick={() => prevTrack()}
                                     >
                                         <FaStepBackward size={16} />
@@ -998,9 +1167,9 @@ const WinMediaPlayer = () => {
                                         className="w-9 h-9 relative overflow-hidden rounded-full flex items-center justify-center focus:outline-none shadow-md cursor-pointer group"
                                         onClick={togglePlay}
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-b from-[#53217d] to-[#2b325b] transition-opacity duration-300 ease-in-out group-hover:opacity-0"></div>
+                                        <div className="absolute inset-0 bg-gradient-to-b from-[var(--from-color)] to-[var(--bg1-color)] transition-opacity duration-300 ease-in-out group-hover:opacity-0"></div>
 
-                                        <div className="absolute inset-0 bg-gradient-to-b from-[#dcb7df] to-[#53217d] opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
+                                        <div className="absolute inset-0 bg-gradient-to-b from-[var(--to-color)] to-[var(--from-color)] opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
 
                                         <div className="relative z-10">
                                             {isPlaying ? (
@@ -1012,7 +1181,7 @@ const WinMediaPlayer = () => {
                                     </button>
 
                                     <button
-                                        className="text-[#7b7aa9] hover:text-[#dcb7df] focus:outline-none cursor-pointer transition-colors duration-200"
+                                        className="text-[var(--accent-color)] hover:text-[var(--to-color)] focus:outline-none cursor-pointer transition-colors duration-200"
                                         onClick={() => nextTrack()}
                                     >
                                         <FaStepForward size={16} />
@@ -1020,7 +1189,7 @@ const WinMediaPlayer = () => {
 
                                     <button
                                         className={`focus:outline-none cursor-pointer transition-colors duration-200 ${
-                                            isShuffled ? "text-[#dcb7df]" : "text-[#7b7aa9] hover:text-[#dcb7df]"
+                                            isShuffled ? "text-[var(--to-color)]" : "text-[var(--accent-color)] hover:text-[var(--to-color)]"
                                         }`}
                                         onClick={() => setIsShuffled(!isShuffled)}
                                     >
@@ -1029,7 +1198,7 @@ const WinMediaPlayer = () => {
 
                                     <button
                                         className={`focus:outline-none cursor-pointer transition-colors duration-200 ${
-                                            isRepeating ? "text-[#dcb7df]" : "text-[#7b7aa9] hover:text-[#dcb7df]"
+                                            isRepeating ? "text-[var(--to-color)]" : "text-[var(--accent-color)] hover:text-[var(--to-color)]"
                                         }`}
                                         onClick={() => setIsRepeating(!isRepeating)}
                                     >
@@ -1039,7 +1208,7 @@ const WinMediaPlayer = () => {
 
                                 <div className="flex items-center space-x-2">
                                     <button
-                                        className="text-[#7b7aa9] hover:text-[#dcb7df] focus:outline-none cursor-pointer transition-colors duration-200"
+                                        className="text-[var(--accent-color)] hover:text-[var(--to-color)] focus:outline-none cursor-pointer transition-colors duration-200"
                                         onClick={toggleMute}
                                     >
                                         {isMuted ? <FaVolumeMute size={16} /> : <FaVolumeUp size={16} />}
@@ -1049,7 +1218,7 @@ const WinMediaPlayer = () => {
                                         <div className="absolute inset-0 h-1 top-1 bg-[#454157] rounded-full"></div>
 
                                         <div
-                                            className="absolute h-1 top-1 left-0 bg-[#dcb7df] rounded-full"
+                                            className="absolute h-1 top-1 left-0 bg-[var(--to-color)] rounded-full"
                                             style={{ width: `${volume}%` }}
                                         ></div>
 
@@ -1070,6 +1239,59 @@ const WinMediaPlayer = () => {
             </div>
 
             <audio ref={audioRef} crossOrigin="anonymous" />
+
+            {/* Skin Chooser Popup */}
+            {showSkinChooser && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
+                    <div className="bg-[#1f1f2e] p-6 rounded-lg border border-gray-700 shadow-xl w-[400px]">
+                        <div className="flex justify-between items-center mb-5">
+                            <h3 className="text-white font-semibold text-lg" style={{ fontFamily: 'var(--font-raleway)' }}>Choose a Skin</h3>
+                            <button 
+                                className="text-white/80 hover:text-white px-1.5 cursor-pointer transition-colors duration-200"
+                                onClick={() => setShowSkinChooser(false)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-4">
+                            {colorPalettes.map((palette, index) => (
+                                <div 
+                                    key={index} 
+                                    className="cursor-pointer transition-all duration-200 transform hover:scale-105"
+                                    onClick={() => handleSkinSelect(index)}
+                                >
+                                    <div 
+                                        className={`h-20 rounded-md overflow-hidden ${currentSkin === index ? 'ring-2 ring-white scale-105 shadow-glow' : 'border border-gray-800'}`}
+                                        style={{ 
+                                            boxShadow: currentSkin === index ? `0 0 10px ${palette.to}` : 'none'
+                                        }}
+                                    >
+                                        <div 
+                                            className="h-full w-full bg-gradient-to-br"
+                                            style={{ 
+                                                background: `linear-gradient(135deg, ${palette.from} 0%, ${palette.to} 100%)`,
+                                            }}
+                                        ></div>
+                                    </div>
+                                    <div className="mt-1 text-xs text-center text-white">
+                                        {index === 0 ? "Default" : `Theme ${index}`}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        <div className="mt-6 flex justify-end">
+                            <button 
+                                className="bg-gradient-to-r from-[var(--from-color)] to-[var(--to-color)] text-white px-4 py-2 rounded text-sm font-medium transition-all duration-200 hover:opacity-90"
+                                onClick={() => setShowSkinChooser(false)}
+                            >
+                                Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
