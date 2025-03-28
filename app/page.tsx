@@ -6,6 +6,36 @@ import { MdRepeat, MdShuffle } from "react-icons/md";
 import { IoMdFolderOpen } from "react-icons/io";
 import { Raleway, Source_Sans_3 } from "next/font/google";
 
+declare global {
+    interface Window {
+        webkitAudioContext: typeof AudioContext;
+    }
+}
+
+interface Track {
+    id: string;
+    title: string;
+    artist: string;
+    album: string;
+    duration: string;
+    path: string;
+    image: string;
+    isLocal?: boolean;
+}
+
+interface ColorPalette {
+    from: string;
+    to: string;
+    accent: string;
+    bg1: string;
+    bg2: string;
+}
+
+interface NavItem {
+    id: string;
+    label: string;
+}
+
 const raleway = Raleway({ 
     subsets: ['latin'],
     variable: '--font-raleway'
@@ -29,7 +59,7 @@ const WinMediaPlayer = () => {
     const [visualizerMode, setVisualizerMode] = useState<string>("classic");
     const [albumImageCache, setAlbumImageCache] = useState<{ [key: number]: HTMLImageElement }>({});
     const [previousVolume, setPreviousVolume] = useState<number>(80);
-    const [customTracks, setCustomTracks] = useState<Array<any>>([]);
+    const [customTracks, setCustomTracks] = useState<Track[]>([]);
     const [activeNavItem, setActiveNavItem] = useState<string>("now-playing");
     const [showSkinChooser, setShowSkinChooser] = useState<boolean>(false);
     const [currentSkin, setCurrentSkin] = useState<number>(0);
@@ -44,7 +74,7 @@ const WinMediaPlayer = () => {
     const audioContextRef = useRef<AudioContext | null>(null);
     const dataArrayRef = useRef<Uint8Array | null>(null);
 
-    const colorPalettes = [
+    const colorPalettes: ColorPalette[] = [
         { 
             from: "#53217d",
             to: "#dcb7df",
@@ -89,11 +119,11 @@ const WinMediaPlayer = () => {
         }
     ];
 
-    const getCurrentPalette = () => {
+    const getCurrentPalette = (): ColorPalette => {
         return colorPalettes[currentSkin];
     };
 
-    const playlist = [
+    const playlist: Track[] = [
         {
             id: "built-in-1-" + Math.random().toString(36).substring(2, 11),
             title: "No Me Conoce (Remix)",
@@ -132,23 +162,23 @@ const WinMediaPlayer = () => {
         },
     ];
 
-    const navItems = [
+    const navItems: NavItem[] = [
         { id: "visualizer", label: "Visualizer" },
         { id: "skin-chooser", label: "Skin Chooser" },
         { id: "info", label: "Track Info" },
     ];
 
-    const formatTime = (seconds: number) => {
+    const formatTime = (seconds: number): string => {
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
     };
 
-    const getCombinedPlaylist = () => {
+    const getCombinedPlaylist = (): Track[] => {
         return [...playlist, ...customTracks];
     };
 
-    const togglePlay = async () => {
+    const togglePlay = async (): Promise<void> => {
         if (audioRef.current) {
             try {
                 if (isPlaying) {
@@ -190,7 +220,7 @@ const WinMediaPlayer = () => {
         }
     };
 
-    const selectTrack = (index: number) => {
+    const selectTrack = (index: number): void => {
         if (currentTrack === index && isPlaying) {
             // If clicking the currently playing track, just pause it
             if (audioRef.current) {
@@ -216,7 +246,7 @@ const WinMediaPlayer = () => {
         setIsPlaying(wasPlaying);
     };
 
-    const nextTrack = () => {
+    const nextTrack = (): void => {
         const combinedPlaylist = getCombinedPlaylist();
         const newIndex = isShuffled ? Math.floor(Math.random() * combinedPlaylist.length) : (currentTrack + 1) % combinedPlaylist.length;
         setCurrentTrack(newIndex);
@@ -230,7 +260,7 @@ const WinMediaPlayer = () => {
         }
     };
 
-    const prevTrack = () => {
+    const prevTrack = (): void => {
         const combinedPlaylist = getCombinedPlaylist();
         const newIndex = currentTrack === 0 ? combinedPlaylist.length - 1 : currentTrack - 1;
         setCurrentTrack(newIndex);
@@ -266,7 +296,7 @@ const WinMediaPlayer = () => {
         }
     }, [isRepeating, isShuffled, currentTrack, isPlaying, getCombinedPlaylist]);
 
-    const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>): void => {
         const rect = e.currentTarget.getBoundingClientRect();
         const percent = (e.clientX - rect.left) / rect.width;
         if (audioRef.current && duration) {
@@ -276,7 +306,7 @@ const WinMediaPlayer = () => {
         }
     };
 
-    const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
         const value = parseInt(e.target.value);
         setVolume(value);
         if (audioRef.current) {
@@ -696,7 +726,7 @@ const WinMediaPlayer = () => {
         ctx.shadowBlur = 0;
     };
 
-    const initAudioAnalyzer = () => {
+    const initAudioAnalyzer = (): void => {
         if (!audioContextRef.current && audioRef.current) {
             try {
                 const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -841,7 +871,7 @@ const WinMediaPlayer = () => {
         };
     }, []);
     
-    const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>): void => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
 
@@ -992,11 +1022,7 @@ const WinMediaPlayer = () => {
                     </div>
 
                     <div className="flex space-x-1">
-                        <button className="text-white/80 hover:text-white px-1.5 mb-2 transition-colors duration-200">
-                            _
-                        </button>
-                        <button className="text-white/80 hover:text-white px-1.5 transition-colors duration-200">□</button>
-                        <button className="text-white/80 hover:text-white px-1.5 transition-colors duration-200">×</button>
+                        
                     </div>
                 </div>
 
@@ -1364,7 +1390,7 @@ const WinMediaPlayer = () => {
             {showTrackInfo && getCombinedPlaylist()[currentTrack] && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
                     <div 
-                        className="p-6 rounded-lg border shadow-xl w-[500px] overflow-hidden"
+                        className="p-6 rounded-lg border shadow-xl w-[600px] overflow-hidden"
                         style={{
                             background: `linear-gradient(to bottom, ${getCurrentPalette().bg1}, ${getCurrentPalette().bg2})`,
                             borderColor: `${getCurrentPalette().from}40`,
@@ -1382,7 +1408,7 @@ const WinMediaPlayer = () => {
                                 Track Information
                             </h3>
                             <button
-                                className="text-white/80 hover:text-white px-1.5 cursor-pointer transition-colors duration-200"
+                                className="text-white/80 hover:text-white cursor-pointer transition-colors duration-200"
                                 onClick={() => setShowTrackInfo(false)}
                             >
                                 ×
@@ -1391,23 +1417,11 @@ const WinMediaPlayer = () => {
                         
                         <div className="flex">
                             <div className="w-48 h-48 overflow-hidden rounded-lg relative mr-6 shadow-lg">
-                                <div 
-                                    className="absolute inset-0 z-10"
-                                    style={{
-                                        background: `linear-gradient(135deg, ${getCurrentPalette().from}20, ${getCurrentPalette().to}20)`
-                                    }}
-                                ></div>
                                 <img 
                                     src={getCombinedPlaylist()[currentTrack]?.image} 
                                     alt={`Album art for ${getCombinedPlaylist()[currentTrack]?.album}`}
                                     className="w-full h-full object-cover"
                                 />
-                                <div 
-                                    className="absolute bottom-0 left-0 right-0 h-12" 
-                                    style={{
-                                        background: `linear-gradient(to top, ${getCurrentPalette().bg2}CC, transparent)`
-                                    }}
-                                ></div>
                             </div>
                             
                             <div className="flex-1">
@@ -1425,21 +1439,21 @@ const WinMediaPlayer = () => {
                                 </div>
                                 
                                 <div className="space-y-3">
-                                    <div className="flex items-center">
-                                        <span className="w-20" style={{ color: getCurrentPalette().accent }}>Album:</span>
-                                        <span className="text-white">{getCombinedPlaylist()[currentTrack]?.album}</span>
+                                    <div className="flex items-center whitespace-nowrap overflow-hidden">
+                                        <span className="w-32 flex-shrink-0" style={{ color: getCurrentPalette().accent }}>Album:</span>
+                                        <span className="text-white truncate">{getCombinedPlaylist()[currentTrack]?.album}</span>
                                     </div>
-                                    <div className="flex items-center">
-                                        <span className="w-20" style={{ color: getCurrentPalette().accent }}>Duration:</span>
-                                        <span className="text-white">{getCombinedPlaylist()[currentTrack]?.duration}</span>
+                                    <div className="flex items-center whitespace-nowrap overflow-hidden">
+                                        <span className="w-32 flex-shrink-0" style={{ color: getCurrentPalette().accent }}>Duration:</span>
+                                        <span className="text-white truncate">{getCombinedPlaylist()[currentTrack]?.duration}</span>
                                     </div>
-                                    <div className="flex items-center">
-                                        <span className="w-20" style={{ color: getCurrentPalette().accent }}>Current Time:</span>
-                                        <span className="text-white">{formatTime(currentTime)}</span>
+                                    <div className="flex items-center whitespace-nowrap overflow-hidden">
+                                        <span className="w-32 flex-shrink-0" style={{ color: getCurrentPalette().accent }}>Current Time:</span>
+                                        <span className="text-white truncate">{formatTime(currentTime)}</span>
                                     </div>
-                                    <div className="flex items-center">
-                                        <span className="w-20" style={{ color: getCurrentPalette().accent }}>Track Type:</span>
-                                        <span className="text-white">{getCombinedPlaylist()[currentTrack]?.isLocal ? "Local File" : "Streaming"}</span>
+                                    <div className="flex items-center whitespace-nowrap overflow-hidden">
+                                        <span className="w-32 flex-shrink-0" style={{ color: getCurrentPalette().accent }}>Track Type:</span>
+                                        <span className="text-white truncate">{getCombinedPlaylist()[currentTrack]?.isLocal ? "Local File" : "Streaming"}</span>
                                     </div>
                                 </div>
                             </div>
