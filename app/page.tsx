@@ -262,8 +262,9 @@ export default function Timer() {
     };
 
     // Handle input key events - delete one by one and default to 0 when empty
+    // Also handle arrow keys for navigation
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, type: 'hours' | 'minutes' | 'seconds') => {
-        // Only handle backspace - let delete function normally
+        // Handle backspace - default to 0 when empty
         if (e.key === 'Backspace') {
             const input = e.currentTarget;
             const value = input.value;
@@ -281,6 +282,15 @@ export default function Timer() {
                 }
             }
             // Otherwise, let backspace delete normally (digit by digit)
+        }
+        
+        // Handle arrow keys for navigation
+        if (e.key === 'ArrowUp') {
+            e.preventDefault(); // Prevent default scrolling behavior
+            increment(type);
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault(); // Prevent default scrolling behavior
+            decrement(type);
         }
     };
 
