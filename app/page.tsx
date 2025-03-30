@@ -1,11 +1,8 @@
 "use client";
 import React, { useState, useEffect, useRef, TouchEvent } from "react";
 import { 
-  Play, 
   Pause, 
   X, 
-  Clock, 
-  Square,
   ChevronUp,
   ChevronDown,
   RotateCcw,
@@ -13,7 +10,7 @@ import {
   Bell
 } from "lucide-react";
 
-// Create a solid play icon component
+
 function PlaySolid() {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
@@ -36,20 +33,20 @@ export default function Timer() {
     const [showLaps, setShowLaps] = useState(false);
     const progressRingRef = useRef<SVGCircleElement>(null);
     
-    // Touch tracking
+    
     const [touchStartY, setTouchStartY] = useState<number | null>(null);
     const [activeInput, setActiveInput] = useState<'hours' | 'minutes' | 'seconds' | null>(null);
     
     const [alarmSound, setAlarmSound] = useState<HTMLAudioElement | null>(null);
     
-    // Calculate total time when hours, minutes, seconds change
+    
     useEffect(() => {
         const total = hours * 3600 + minutes * 60 + seconds;
         setTotalTimeInSeconds(total);
         setRemainingTimeInSeconds(total);
     }, [hours, minutes, seconds]);
     
-    // Initialize alarm sound
+    
     useEffect(() => {
         const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/996/996.wav");
         audio.volume = 0.7;
@@ -63,7 +60,7 @@ export default function Timer() {
         };
     }, []);
     
-    // Timer effect
+    
     useEffect(() => {
         let interval: NodeJS.Timeout;
         
@@ -72,7 +69,7 @@ export default function Timer() {
                 setRemainingTimeInSeconds(prev => {
                     if (prev <= 1) {
                         setRunning(false);
-                        // Play alarm sound when timer reaches zero
+                        
                         if (alarmSound) {
                             alarmSound.currentTime = 0;
                             alarmSound.play().catch(err => console.error('Error playing alarm:', err));
@@ -91,16 +88,16 @@ export default function Timer() {
         return () => clearInterval(interval);
     }, [running, remainingTimeInSeconds, alarmSound]);
     
-    // Update progress ring
+    
     useEffect(() => {
         if (progressRingRef.current && totalTimeInSeconds > 0) {
-            const circumference = 2 * Math.PI * 130; // radius = 130
+            const circumference = 2 * Math.PI * 130;
             const offset = circumference * (1 - (remainingTimeInSeconds / totalTimeInSeconds));
             progressRingRef.current.style.strokeDashoffset = `${offset}`;
         }
     }, [remainingTimeInSeconds, totalTimeInSeconds]);
 
-    // Set current time + duration for alarm
+    
     useEffect(() => {
         if (running && totalTimeInSeconds > 0) {
             const now = new Date();
@@ -114,7 +111,7 @@ export default function Timer() {
 
     const handleStart = () => {
         if (remainingTimeInSeconds === 0) {
-            // If time is 0, restore original time before starting
+            
             setRemainingTimeInSeconds(totalTimeInSeconds);
             setElapsedTimeInSeconds(0);
             setRunning(true);
@@ -134,21 +131,21 @@ export default function Timer() {
         setLaps([]);
         setShowLaps(false);
         
-        // Reset timer to original set time
+        
         setRemainingTimeInSeconds(totalTimeInSeconds);
     };
     
     const handleReturnToSelector = () => {
-        // Stop the timer if it's running
+        
         setRunning(false);
         
-        // Reset all states
+        
         setElapsedTimeInSeconds(0);
         setAlarmTime(null);
         setLaps([]);
         setShowLaps(false);
         
-        // Return to selector view
+        
         setView("selector");
     };
     
@@ -184,14 +181,14 @@ export default function Timer() {
         }
     };
     
-    // Handle direct input - replace 0 value when typing a new number
+    
     const handleInputChange = (type: 'hours' | 'minutes' | 'seconds', value: string) => {
-        // Get the current value based on type
+        
         const currentValue = type === 'hours' ? hours : type === 'minutes' ? minutes : seconds;
         
-        // If current value is 0, replace it entirely with the new input
+        
         if (currentValue === 0 && value !== '0') {
-            // If the input field has a leading 0 added by the browser, remove it
+            
             if (value.startsWith('0') && value !== '0') {
                 value = value.replace(/^0+/, '');
             }
@@ -210,7 +207,7 @@ export default function Timer() {
         }
     };
     
-    // Touch handlers for swipe gestures
+    
     const handleTouchStart = (e: TouchEvent, type: 'hours' | 'minutes' | 'seconds') => {
         setTouchStartY(e.touches[0].clientY);
         setActiveInput(type);
@@ -222,13 +219,13 @@ export default function Timer() {
         const touchY = e.touches[0].clientY;
         const diff = touchStartY - touchY;
         
-        // If enough movement has occurred, trigger increment or decrement
+        
         if (diff > 15) {
-            // Swipe up - increment
+            
             increment(activeInput);
             setTouchStartY(touchY);
         } else if (diff < -15) {
-            // Swipe down - decrement
+            
             decrement(activeInput);
             setTouchStartY(touchY);
         }
@@ -255,23 +252,23 @@ export default function Timer() {
     const toggleLapsVisibility = () => {
         setShowLaps(prev => !prev);
         
-        // Reset timer if it's at 0
+        
         if (remainingTimeInSeconds === 0) {
             handleReset();
         }
     };
 
-    // Handle input key events - delete one by one and default to 0 when empty
-    // Also handle arrow keys for navigation
+    
+    
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, type: 'hours' | 'minutes' | 'seconds') => {
-        // Handle backspace - default to 0 when empty
+        
         if (e.key === 'Backspace') {
             const input = e.currentTarget;
             const value = input.value;
             
-            // If there's only one digit or empty, set to 0
+            
             if (value.length <= 1) {
-                e.preventDefault(); // Prevent default only when we need to set to 0
+                
                 
                 if (type === 'hours') {
                     setHours(0);
@@ -281,22 +278,22 @@ export default function Timer() {
                     setSeconds(0);
                 }
             }
-            // Otherwise, let backspace delete normally (digit by digit)
+            
         }
         
-        // Handle arrow keys for navigation
+        
         if (e.key === 'ArrowUp') {
-            e.preventDefault(); // Prevent default scrolling behavior
+            
             increment(type);
         } else if (e.key === 'ArrowDown') {
-            e.preventDefault(); // Prevent default scrolling behavior
+            
             decrement(type);
         }
     };
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-[#151515] text-white px-4">
-            {/* CSS for neon title animation with reduced glow effect */}
+
             <style jsx>{`
                 @keyframes neonPulse {
                     0%,
@@ -447,7 +444,7 @@ export default function Timer() {
                             <span className="title-light">.now</span>
                         </h1>
 
-                        {/* Centered labels with larger font */}
+
                         <div className="w-full grid grid-cols-3 mb-2 text-[#a6a6a6] font-mono text-base">
                             <span className="text-center">hours</span>
                             <span className="text-center">min</span>
@@ -455,7 +452,7 @@ export default function Timer() {
                         </div>
 
                         <div className="w-full mb-8">
-                            {/* Centered top numbers */}
+
                             <div className="grid grid-cols-3 items-center">
                                 <div className="cursor-pointer text-center" onClick={() => decrement("hours")}>
                                     <ChevronUp className="mx-auto h-7 w-7 text-[#282828]" />
@@ -477,7 +474,7 @@ export default function Timer() {
                                 </div>
                             </div>
 
-                            {/* Timer selector display with thick borders and dividers */}
+
                             <div className="flex justify-between items-center my-4 bg-[#121212] border-4 border-[#090909] rounded-xl overflow-hidden">
                                 <div
                                     className="w-1/3 py-5 text-center relative"
@@ -531,7 +528,7 @@ export default function Timer() {
                                 </div>
                             </div>
 
-                            {/* Centered bottom numbers */}
+
                             <div className="grid grid-cols-3 items-center">
                                 <div className="cursor-pointer text-center" onClick={() => increment("hours")}>
                                     <span className="text-[#282828] font-mono font-bold text-xl animate-fade-up-in">
@@ -571,7 +568,7 @@ export default function Timer() {
                         </h1>
                         
                         <div className="relative w-full h-[420px] flex items-center justify-center">
-                            {/* Top buttons */}
+
                             <div className="absolute top-0 left-[15%]">
                                 <button 
                                     onClick={handleLap}
@@ -590,7 +587,7 @@ export default function Timer() {
                                 </button>
                             </div>
                             
-                            {/* Laps display */}
+
                             {showLaps && (
                                 <div className="absolute right-[-220px] top-1/2 transform -translate-y-1/2 w-52 lap-card">
                                     <div className="lap-header">
@@ -620,10 +617,10 @@ export default function Timer() {
                                 </div>
                             )}
                             
-                            {/* Center timer display */}
+
                             <div className="relative h-80 w-80 flex items-center justify-center">
                                 <svg className="absolute h-full w-full" viewBox="0 0 300 300">
-                                    {/* Background ring */}
+
                                     <circle
                                         cx="150"
                                         cy="150"
@@ -634,7 +631,7 @@ export default function Timer() {
                                         filter="drop-shadow(0 0 2px rgba(0, 0, 0, 0.2))"
                                     />
                                     
-                                    {/* Progress ring - animated */}
+
                                     <circle
                                         ref={progressRingRef}
                                         cx="150"
@@ -650,7 +647,7 @@ export default function Timer() {
                                         style={{ transition: "stroke-dashoffset 1s linear" }}
                                     />
                                     
-                                    {/* Gradient definition */}
+
                                     <defs>
                                         <linearGradient id="gradient" gradientTransform="rotate(90)">
                                             <stop offset="0%" stopColor="#9bf8f4" />
@@ -675,7 +672,7 @@ export default function Timer() {
                                 </div>
                             </div>
                             
-                            {/* Bottom buttons */}
+
                             <div className="absolute bottom-0 left-[15%]">
                                 <button 
                                     onClick={handleReturnToSelector}
