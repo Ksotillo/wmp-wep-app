@@ -1,706 +1,1408 @@
-"use client";
-import React, { useState, useEffect, useRef, TouchEvent } from "react";
-import { 
-  Pause, 
-  X, 
-  ChevronUp,
-  ChevronDown,
-  RotateCcw,
-  Flag,
-  Bell
-} from "lucide-react";
+'use client';
 
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { FiHome, FiUser, FiCode, FiBriefcase, FiBook, FiMoon, FiSun, FiGithub, FiLinkedin, FiSearch, FiLayers, FiExternalLink } from 'react-icons/fi';
+import { SiJavascript, SiTypescript, SiReact, SiNextdotjs, SiPython, SiRust, SiGo, SiZcool, SiCplusplus, SiSharp, SiRuby, SiAmazon, SiGooglecloud, SiDocker, SiKubernetes, SiMongodb, SiPostgresql, SiTensorflow } from 'react-icons/si';
+import Image from 'next/image';
 
-function PlaySolid() {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-            <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
-        </svg>
-    );
-}
+// Sample blog posts data
+const blogPosts = [
+  {
+    id: 1,
+    title: 'Understanding React Server Components',
+    description: 'Exploring the benefits and implementation of React Server Components in modern web applications.',
+    date: 'March 28, 2024',
+    readTime: '5 min read',
+  },
+  {
+    id: 2,
+    title: 'State Management Patterns',
+    description: 'A deep dive into different state management approaches and when to use each one.',
+    date: 'March 25, 2024',
+    readTime: '7 min read',
+  },
+  {
+    id: 3,
+    title: 'Building Accessible Web Apps',
+    description: 'Best practices and techniques for creating inclusive web applications.',
+    date: 'March 20, 2024',
+    readTime: '4 min read',
+  },
+  {
+    id: 4,
+    title: 'The Future of JavaScript: What to Expect',
+    description: 'Exploring upcoming features, trends, and the evolution of JavaScript in the web development ecosystem.',
+    date: 'March 15, 2024',
+    readTime: '6 min read',
+  },
+  {
+    id: 5,
+    title: 'Optimizing React Performance',
+    description: 'Strategies and techniques for improving the performance of your React applications through code optimization.',
+    date: 'March 10, 2024',
+    readTime: '8 min read',
+  },
+  {
+    id: 6,
+    title: 'Design Patterns in Modern Web Development',
+    description: 'Understanding and implementing effective design patterns to create maintainable and scalable web applications.',
+    date: 'March 5, 2024',
+    readTime: '7 min read',
+  },
+  {
+    id: 7,
+    title: 'The Art of Clean Code',
+    description: 'Principles and practices for writing elegant, maintainable, and efficient code in any programming language.',
+    date: 'February 28, 2024',
+    readTime: '5 min read',
+  },
+  {
+    id: 8,
+    title: 'TypeScript Best Practices in 2024',
+    description: 'Updated guidelines and recommendations for writing type-safe, reliable TypeScript code in modern projects.',
+    date: 'February 20, 2024',
+    readTime: '6 min read',
+  }
+];
 
-export default function Timer() {
-    const [view, setView] = useState<"selector" | "timer">("selector");
-    const [hours, setHours] = useState(0);
-    const [minutes, setMinutes] = useState(1);
-    const [seconds, setSeconds] = useState(25);
-    const [running, setRunning] = useState(false);
-    const [totalTimeInSeconds, setTotalTimeInSeconds] = useState(0);
-    const [remainingTimeInSeconds, setRemainingTimeInSeconds] = useState(0);
-    const [elapsedTimeInSeconds, setElapsedTimeInSeconds] = useState(0);
-    const [alarmTime, setAlarmTime] = useState<string | null>(null);
-    const [laps, setLaps] = useState<{ time: string, elapsed: number }[]>([]);
-    const [showLaps, setShowLaps] = useState(false);
-    const progressRingRef = useRef<SVGCircleElement>(null);
-    
-    
-    const [touchStartY, setTouchStartY] = useState<number | null>(null);
-    const [activeInput, setActiveInput] = useState<'hours' | 'minutes' | 'seconds' | null>(null);
-    
-    const [alarmSound, setAlarmSound] = useState<HTMLAudioElement | null>(null);
-    
-    
-    useEffect(() => {
-        const total = hours * 3600 + minutes * 60 + seconds;
-        setTotalTimeInSeconds(total);
-        setRemainingTimeInSeconds(total);
-    }, [hours, minutes, seconds]);
-    
-    
-    useEffect(() => {
-        const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/996/996.wav");
-        audio.volume = 0.7;
-        setAlarmSound(audio);
-        
-        return () => {
-            if (audio) {
-                audio.pause();
-                audio.currentTime = 0;
-            }
-        };
-    }, []);
-    
-    
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-        
-        if (running && remainingTimeInSeconds > 0) {
-            interval = setInterval(() => {
-                setRemainingTimeInSeconds(prev => {
-                    if (prev <= 1) {
-                        setRunning(false);
-                        
-                        if (alarmSound) {
-                            alarmSound.currentTime = 0;
-                            alarmSound.play().catch(err => console.error('Error playing alarm:', err));
-                        }
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-                
-                setElapsedTimeInSeconds(prev => prev + 1);
-            }, 1000);
-        } else if (running && remainingTimeInSeconds === 0) {
-            setRunning(false);
-        }
-        
-        return () => clearInterval(interval);
-    }, [running, remainingTimeInSeconds, alarmSound]);
-    
-    
-    useEffect(() => {
-        if (progressRingRef.current && totalTimeInSeconds > 0) {
-            const circumference = 2 * Math.PI * 130;
-            const offset = circumference * (1 - (remainingTimeInSeconds / totalTimeInSeconds));
-            progressRingRef.current.style.strokeDashoffset = `${offset}`;
-        }
-    }, [remainingTimeInSeconds, totalTimeInSeconds]);
+// About Me Content
+const aboutMeContent = {
+  intro: "Hi there! I'm John Smith, a passionate Full Stack Developer with over 8 years of experience building web applications that solve real-world problems.",
+  bio: "After graduating with a Computer Science degree from MIT, I've worked with startups and established companies across the globe. My journey in tech began when I built my first website at 12, and I've been hooked ever since.",
+  interests: [
+    "Building scalable web applications",
+    "Contributing to open-source projects",
+    "Exploring new technologies and frameworks",
+    "Technical writing and mentoring junior developers"
+  ],
+  personalLife: "When I'm not coding, you'll find me hiking in the mountains, experimenting with photography, or trying out new coffee shops around the city. I believe in maintaining a healthy work-life balance and finding inspiration in everyday experiences.",
+  philosophy: "I approach every project with curiosity and a commitment to excellence. My philosophy is that great software should be both powerful and intuitive to use.",
+  images: [
+    {
+      src: "https://picsum.photos/id/1025/600/400",
+      alt: "Mountain hiking trip",
+      caption: "Taking a break from coding at Mount Rainier"
+    },
+    {
+      src: "https://picsum.photos/id/96/600/400",
+      alt: "Photography hobby",
+      caption: "Exploring my passion for photography in urban landscapes"
+    },
+    {
+      src: "https://picsum.photos/id/447/600/400",
+      alt: "Speaking at a tech conference",
+      caption: "Sharing knowledge at the React Summit 2023"
+    }
+  ]
+};
 
-    
-    useEffect(() => {
-        if (running && totalTimeInSeconds > 0) {
-            const now = new Date();
-            const alarmDate = new Date(now.getTime() + remainingTimeInSeconds * 1000);
-            const hours = alarmDate.getHours();
-            const minutes = alarmDate.getMinutes();
-            
-            setAlarmTime(`${hours}:${minutes.toString().padStart(2, '0')}`);
-        }
-    }, [running, remainingTimeInSeconds, totalTimeInSeconds]);
+// Skills Content
+const skillsContent = {
+  intro: "With over 15 years of programming experience, I've had the opportunity to work with a diverse range of technologies from modern frameworks to legacy systems.",
+  mainSkills: [
+    { name: "JavaScript", icon: <SiJavascript className="text-yellow-400" size={24} />, level: 95, years: 10 },
+    { name: "TypeScript", icon: <SiTypescript className="text-blue-500" size={24} />, level: 90, years: 7 },
+    { name: "React", icon: <SiReact className="text-cyan-400" size={24} />, level: 92, years: 8 },
+    { name: "Next.js", icon: <SiNextdotjs className="text-black dark:text-white" size={24} />, level: 88, years: 5 },
+    { name: "Python", icon: <SiPython className="text-blue-600" size={24} />, level: 85, years: 9 },
+    { name: "Java", level: 80, years: 12 },
+  ],
+  backendSkills: [
+    { name: "Node.js", level: 90, years: 9 },
+    { name: "Express", level: 88, years: 8 },
+    { name: "Django", level: 82, years: 6 },
+    { name: "Spring Boot", level: 78, years: 7 },
+    { name: "GraphQL", level: 85, years: 4 },
+    { name: "REST API Design", level: 95, years: 10 },
+  ],
+  databaseSkills: [
+    { name: "MongoDB", icon: <SiMongodb className="text-green-500" size={24} />, level: 88, years: 7 },
+    { name: "PostgreSQL", icon: <SiPostgresql className="text-blue-700" size={24} />, level: 85, years: 9 },
+    { name: "MySQL", level: 90, years: 12 },
+    { name: "Redis", level: 80, years: 6 },
+    { name: "Elasticsearch", level: 75, years: 4 },
+  ],
+  cloudSkills: [
+    { name: "AWS", icon: <SiAmazon className="text-orange-400" size={24} />, level: 85, years: 7 },
+    { name: "Google Cloud", icon: <SiGooglecloud className="text-blue-500" size={24} />, level: 80, years: 5 },
+    { name: "Azure", level: 75, years: 4 },
+    { name: "Docker", icon: <SiDocker className="text-blue-400" size={24} />, level: 88, years: 6 },
+    { name: "Kubernetes", icon: <SiKubernetes className="text-blue-500" size={24} />, level: 82, years: 4 },
+  ],
+  legacyAndSpecializedSkills: [
+    { name: "COBOL", icon: <SiZcool className="text-blue-800" size={24} />, level: 70, years: 3, description: "Maintained banking systems during Y2K transition" },
+    { name: "Fortran", level: 65, years: 2, description: "Scientific computing projects at NASA" },
+    { name: "Assembly", level: 60, years: 4, description: "Low-level optimization for embedded systems" },
+    { name: "LISP", level: 72, years: 3, description: "AI research projects" },
+    { name: "Ada", level: 68, years: 2, description: "Military defense contracting" },
+  ],
+  emergingTechSkills: [
+    { name: "Rust", icon: <SiRust className="text-orange-600" size={24} />, level: 78, years: 3 },
+    { name: "Go", icon: <SiGo className="text-blue-400" size={24} />, level: 82, years: 4 },
+    { name: "TensorFlow", icon: <SiTensorflow className="text-orange-500" size={24} />, level: 75, years: 3 },
+    { name: "WebAssembly", level: 70, years: 2 },
+    { name: "Blockchain/Smart Contracts", level: 65, years: 2 },
+  ],
+  quote: "Technology is constantly evolving, and I believe in continuous learning. The more languages you know, the more approaches you have to solve complex problems."
+};
 
-    const handleStart = () => {
-        if (remainingTimeInSeconds === 0) {
-            
-            setRemainingTimeInSeconds(totalTimeInSeconds);
-            setElapsedTimeInSeconds(0);
-            setRunning(true);
-            setView("timer");
-        } else if (totalTimeInSeconds > 0) {
-            setRunning(true);
-            setView("timer");
-        }
-    };
-    
-    const handleStop = () => setRunning(false);
-    
-    const handleReset = () => {
-        setRunning(false);
-        setElapsedTimeInSeconds(0);
-        setAlarmTime(null);
-        setLaps([]);
-        setShowLaps(false);
-        
-        
-        setRemainingTimeInSeconds(totalTimeInSeconds);
-    };
-    
-    const handleReturnToSelector = () => {
-        
-        setRunning(false);
-        
-        
-        setElapsedTimeInSeconds(0);
-        setAlarmTime(null);
-        setLaps([]);
-        setShowLaps(false);
-        
-        
-        setView("selector");
-    };
-    
-    const formatTimeDisplay = (totalSeconds: number) => {
-        const h = Math.floor(totalSeconds / 3600);
-        const m = Math.floor((totalSeconds % 3600) / 60);
-        const s = totalSeconds % 60;
-        
-        if (h > 0) {
-            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
-        
-        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    };
-    
-    const increment = (type: 'hours' | 'minutes' | 'seconds') => {
-        if (type === 'hours') {
-            setHours(prev => prev >= 23 ? 0 : prev + 1);
-        } else if (type === 'minutes') {
-            setMinutes(prev => prev >= 59 ? 0 : prev + 1);
-        } else if (type === 'seconds') {
-            setSeconds(prev => prev >= 59 ? 0 : prev + 1);
-        }
-    };
-    
-    const decrement = (type: 'hours' | 'minutes' | 'seconds') => {
-        if (type === 'hours') {
-            setHours(prev => prev <= 0 ? 23 : prev - 1);
-        } else if (type === 'minutes') {
-            setMinutes(prev => prev <= 0 ? 59 : prev - 1);
-        } else if (type === 'seconds') {
-            setSeconds(prev => prev <= 0 ? 59 : prev - 1);
-        }
-    };
-    
-    
-    const handleInputChange = (type: 'hours' | 'minutes' | 'seconds', value: string) => {
-        
-        const currentValue = type === 'hours' ? hours : type === 'minutes' ? minutes : seconds;
-        
-        
-        if (currentValue === 0 && value !== '0') {
-            
-            if (value.startsWith('0') && value !== '0') {
-                value = value.replace(/^0+/, '');
-            }
-        }
-        
-        const numValue = parseInt(value, 10);
-        
-        if (isNaN(numValue)) return;
-        
-        if (type === 'hours') {
-            setHours(Math.min(23, Math.max(0, numValue)));
-        } else if (type === 'minutes') {
-            setMinutes(Math.min(59, Math.max(0, numValue)));
-        } else if (type === 'seconds') {
-            setSeconds(Math.min(59, Math.max(0, numValue)));
-        }
-    };
-    
-    
-    const handleTouchStart = (e: TouchEvent, type: 'hours' | 'minutes' | 'seconds') => {
-        setTouchStartY(e.touches[0].clientY);
-        setActiveInput(type);
-    };
-    
-    const handleTouchMove = (e: TouchEvent) => {
-        if (touchStartY === null || activeInput === null) return;
-        
-        const touchY = e.touches[0].clientY;
-        const diff = touchStartY - touchY;
-        
-        
-        if (diff > 15) {
-            
-            increment(activeInput);
-            setTouchStartY(touchY);
-        } else if (diff < -15) {
-            
-            decrement(activeInput);
-            setTouchStartY(touchY);
-        }
-    };
-    
-    const handleTouchEnd = () => {
-        setTouchStartY(null);
-        setActiveInput(null);
-    };
+// Projects data
+const projectsData = [
+  {
+    id: 1,
+    title: "NebulaVerse",
+    description: "An immersive 3D space exploration game built with Three.js and WebGL. Features procedurally generated galaxies, physics-based spacecraft controls, and multiplayer capabilities.",
+    tags: ["Three.js", "WebGL", "JavaScript", "Socket.io", "WebRTC"],
+    image: "https://picsum.photos/id/123/800/500",
+    demoUrl: "https://nebulaverse.example.com",
+    repoUrl: "https://github.com/johnsmith/nebulaverse",
+    featured: true,
+    achievements: ["100,000+ monthly active users", "Featured on Chrome Experiments", "WebGL Innovation Award 2023"]
+  },
+  {
+    id: 2,
+    title: "COBOL-X",
+    description: "An open-source modernization framework for legacy COBOL systems used by financial institutions. Provides API wrappers, security enhancements, and compatibility layers for integrating decades-old banking systems with modern web services.",
+    tags: ["COBOL", "Java", "REST APIs", "Banking", "Legacy Systems"],
+    image: "https://picsum.photos/id/180/800/500",
+    repoUrl: "https://github.com/johnsmith/cobolx",
+    featured: true,
+    achievements: ["Adopted by 5 major banks", "Reduced migration costs by 60%", "Featured in Banking Technology Magazine"]
+  },
+  {
+    id: 3,
+    title: "StreamForge",
+    description: "A low-latency streaming library for game developers, with advanced features like adaptive bitrate optimization, peer-to-peer fallback, and integration with major gaming platforms.",
+    tags: ["Rust", "WebRTC", "C++", "UDP", "Gaming"],
+    image: "https://picsum.photos/id/160/800/500",
+    demoUrl: "https://streamforge.dev",
+    repoUrl: "https://github.com/johnsmith/streamforge",
+    featured: true,
+    achievements: ["Used by 200+ indie game studios", "Sub-50ms latency achievement", "10M+ end users"]
+  },
+  {
+    id: 4,
+    title: "QuantumLab",
+    description: "An educational platform for quantum computing simulation, making quantum concepts accessible through interactive visualizations and simplified programming interfaces.",
+    tags: ["Python", "Quantum Computing", "WebAssembly", "Education"],
+    image: "https://picsum.photos/id/201/800/500",
+    demoUrl: "https://quantumlab.io",
+    repoUrl: "https://github.com/johnsmith/quantumlab"
+  },
+  {
+    id: 5,
+    title: "EcoTrack",
+    description: "IoT system for environmental monitoring that uses machine learning to predict pollution levels and analyze environmental impact. Deployed in cooperation with environmental agencies.",
+    tags: ["IoT", "TensorFlow", "Python", "Time Series Analysis"],
+    image: "https://picsum.photos/id/142/800/500",
+    demoUrl: "https://ecotrack.earth",
+    featured: true,
+    achievements: ["Monitoring 150+ urban locations", "Predicted pollution events with 92% accuracy"]
+  },
+  {
+    id: 6,
+    title: "RetroRealm",
+    description: "A virtual reality arcade featuring perfectly emulated vintage games from the 70s, 80s, and 90s. Includes a physics-based environment where players can walk around a period-accurate arcade.",
+    tags: ["Unity", "VR", "C#", "Emulation", "3D Modeling"],
+    image: "https://picsum.photos/id/96/800/500",
+    demoUrl: "https://retrorealm.io"
+  },
+  {
+    id: 7,
+    title: "MediChain",
+    description: "Blockchain-based medical records system ensuring patient data privacy while enabling secure sharing between healthcare providers. Implements zero-knowledge proofs for sensitive information.",
+    tags: ["Blockchain", "Ethereum", "Zero-knowledge Proofs", "Healthcare"],
+    image: "https://picsum.photos/id/175/800/500",
+    repoUrl: "https://github.com/johnsmith/medichain",
+    achievements: ["Pilot program with 3 hospitals", "Published security paper at IEEE"]
+  },
+  {
+    id: 8,
+    title: "LinguaGen",
+    description: "An AI-powered language learning platform using computational linguistics to generate personalized learning materials based on user's native language and learning patterns.",
+    tags: ["NLP", "Machine Learning", "React", "Python"],
+    image: "https://picsum.photos/id/20/800/500",
+    demoUrl: "https://linguagen.app"
+  },
+  {
+    id: 9,
+    title: "AutoSymphony",
+    description: "Experimental music composition AI that generates original orchestral arrangements based on emotional input and style preferences. Used in indie film scoring and game development.",
+    tags: ["TensorFlow", "Audio Processing", "MIDI", "GANs"],
+    image: "https://picsum.photos/id/187/800/500",
+    demoUrl: "https://autosymphony.io",
+    repoUrl: "https://github.com/johnsmith/autosymphony"
+  },
+  {
+    id: 10,
+    title: "Holotecture",
+    description: "Augmented reality architecture visualization tool that helps architects and clients see building designs at scale in real environments before construction begins.",
+    tags: ["AR", "Unity", "BIM Integration", "3D Rendering"],
+    image: "https://picsum.photos/id/162/800/500",
+    demoUrl: "https://holotecture.build"
+  }
+];
 
-    const handleLap = () => {
-        if (running) {
-            setLaps(prev => [
-                { 
-                    time: formatTimeDisplay(remainingTimeInSeconds),
-                    elapsed: elapsedTimeInSeconds
-                },
-                ...prev
-            ]);
-            setShowLaps(true);
-        }
-    };
-    
-    const toggleLapsVisibility = () => {
-        setShowLaps(prev => !prev);
-        
-        
-        if (remainingTimeInSeconds === 0) {
-            handleReset();
-        }
-    };
+// Portfolio data
+const portfolioData = {
+  experience: [
+    {
+      company: "TechNova Labs",
+      position: "Principal Software Architect",
+      period: "2020 - Present",
+      description: "Leading architecture design for cloud-native applications and mentoring engineering teams. Spearheaded company-wide migration to microservices architecture, reducing deployment time by 70%.",
+      technologies: ["React", "Node.js", "AWS", "Kubernetes", "GraphQL"],
+      achievements: [
+        "Redesigned payment processing system handling $2M daily transactions",
+        "Reduced infrastructure costs by 35% through cloud optimization",
+        "Established engineering excellence program adopted by 4 departments"
+      ],
+      logo: "https://picsum.photos/id/28/100/100"
+    },
+    {
+      company: "DataSphere Systems",
+      position: "Senior Full Stack Developer",
+      period: "2017 - 2020",
+      description: "Developed enterprise data visualization platform used by Fortune 500 clients. Led team of 6 engineers and collaborated with product managers to deliver key features.",
+      technologies: ["Angular", "Python", "PostgreSQL", "Docker", "Azure"],
+      achievements: [
+        "Built real-time analytics dashboard processing 50M data points daily",
+        "Improved application performance by 60% through optimization",
+        "Awarded company's 'Innovator of the Year' for AI integration initiative"
+      ],
+      logo: "https://picsum.photos/id/42/100/100"
+    },
+    {
+      company: "LegacyTech Financial Services",
+      position: "Systems Analyst & COBOL Specialist",
+      period: "2014 - 2017",
+      description: "Maintained and modernized critical banking infrastructure during major digital transformation. Created integration layers between legacy systems and modern web services.",
+      technologies: ["COBOL", "Java", "Oracle", "RESTful APIs", "JCL"],
+      achievements: [
+        "Successfully migrated 30-year-old banking system with zero downtime",
+        "Implemented secure API gateway for legacy systems",
+        "Reduced manual processing time by 80% through automation"
+      ],
+      logo: "https://picsum.photos/id/60/100/100"
+    },
+    {
+      company: "NASA Jet Propulsion Laboratory",
+      position: "Research Software Engineer (Contract)",
+      period: "2012 - 2014",
+      description: "Contributed to mission-critical software for Mars rover operations. Worked with scientific computing teams to optimize data processing pipelines for telemetry analysis.",
+      technologies: ["C++", "Python", "FORTRAN", "CUDA", "Scientific Computing"],
+      achievements: [
+        "Developed image processing algorithms for Mars terrain analysis",
+        "Optimized computation-intensive simulations, reducing runtime by 40%",
+        "Co-authored research paper on distributed computing for space missions"
+      ],
+      logo: "https://picsum.photos/id/73/100/100"
+    }
+  ],
+  education: [
+    {
+      institution: "Massachusetts Institute of Technology",
+      degree: "Master of Science in Computer Science",
+      period: "2010 - 2012",
+      description: "Specialized in distributed systems and machine learning. Teaching assistant for Advanced Algorithms course.",
+      thesis: "Distributed Consensus Algorithms for Autonomous Vehicle Coordination",
+      logo: "https://picsum.photos/id/15/100/100"
+    },
+    {
+      institution: "Stanford University",
+      degree: "Bachelor of Science in Computer Science",
+      period: "2006 - 2010",
+      description: "Graduated with honors. Active in competitive programming and robotics club.",
+      thesis: "Efficient Path Planning Algorithms for Multi-Agent Systems",
+      logo: "https://picsum.photos/id/16/100/100"
+    }
+  ],
+  certifications: [
+    {
+      name: "AWS Solutions Architect Professional",
+      issuer: "Amazon Web Services",
+      date: "2022",
+      logo: "https://picsum.photos/id/119/100/100"
+    },
+    {
+      name: "Google Cloud Professional Architect",
+      issuer: "Google",
+      date: "2021",
+      logo: "https://picsum.photos/id/120/100/100"
+    },
+    {
+      name: "Certified Kubernetes Administrator",
+      issuer: "Cloud Native Computing Foundation",
+      date: "2020",
+      logo: "https://picsum.photos/id/121/100/100"
+    },
+    {
+      name: "Azure DevOps Expert",
+      issuer: "Microsoft",
+      date: "2019",
+      logo: "https://picsum.photos/id/122/100/100"
+    }
+  ],
+  speaking: [
+    {
+      event: "React Summit 2023",
+      topic: "Beyond Hooks: The Future of React State Management",
+      location: "Amsterdam, Netherlands",
+      date: "June 2023",
+      image: "https://picsum.photos/id/139/800/400"
+    },
+    {
+      event: "COBOL Connect Conference",
+      topic: "Bridging Decades: Integrating Legacy COBOL with Modern Microservices",
+      location: "Chicago, USA",
+      date: "March 2023",
+      image: "https://picsum.photos/id/140/800/400"
+    },
+    {
+      event: "AWS re:Invent",
+      topic: "Serverless at Scale: Lessons from the Trenches",
+      location: "Las Vegas, USA",
+      date: "November 2022",
+      image: "https://picsum.photos/id/141/800/400"
+    }
+  ]
+};
 
-    
-    
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, type: 'hours' | 'minutes' | 'seconds') => {
-        
-        if (e.key === 'Backspace') {
-            const input = e.currentTarget;
-            const value = input.value;
-            
-            
-            if (value.length <= 1) {
-                
-                
-                if (type === 'hours') {
-                    setHours(0);
-                } else if (type === 'minutes') {
-                    setMinutes(0);
-                } else if (type === 'seconds') {
-                    setSeconds(0);
-                }
-            }
-            
-        }
-        
-        
-        if (e.key === 'ArrowUp') {
-            
-            increment(type);
-        } else if (e.key === 'ArrowDown') {
-            
-            decrement(type);
-        }
-    };
+// Theme configuration
+const themeConfig = {
+  light: {
+    main: {
+      background: 'bg-gradient-to-br from-white to-[#fef8f3]',
+      text: 'text-[#1c1c1c]',
+      textSecondary: 'text-[#1c1c1c]/70',
+      hover: 'hover:text-[#1c1c1c]',
+    },
+    sidebar: {
+      background: 'bg-[#fefcfb]',
+      activeBackground: 'bg-[#fceee7]',
+      hoverBackground: 'hover:bg-[#fceee7]/50',
+      border: 'border-[#e9ecef]',
+    },
+    content: {
+      background: 'bg-white',
+      inputBorder: 'border-[#e9ecef]',
+      focusRing: 'focus:ring-[#fceee7]',
+      card: '',
+      cardHover: '',
+    },
+    button: {
+      primary: 'text-[#b85c38] hover:text-[#a04b2b]',
+    },
+    accent: 'text-[#b85c38]'
+  },
+  dark: {
+    main: {
+      background: 'bg-[#1a1a1a]',
+      text: 'text-white',
+      textSecondary: 'text-[#a0a0a0]',
+      hover: 'hover:text-white',
+    },
+    sidebar: {
+      background: 'bg-[#2d2d2d]',
+      activeBackground: 'bg-[#404040]',
+      hoverBackground: 'hover:bg-[#363636]',
+      border: 'border-[#404040]',
+    },
+    content: {
+      background: 'bg-[#2d2d2d]',
+      inputBorder: 'border-[#404040]',
+      focusRing: 'focus:ring-[#404040]',
+      card: '',
+      cardHover: '',
+    },
+    button: {
+      primary: 'text-[#b85c38] hover:text-[#a04b2b]',
+    },
+    accent: 'text-[#b85c38]'
+  }
+};
 
-    return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-[#151515] text-white px-4">
+export default function Home() {
+  const [activeMenu, setActiveMenu] = useState('Home');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [mounted, setMounted] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  // Get active theme styles
+  const theme = isDarkMode ? themeConfig.dark : themeConfig.light;
 
-            <style jsx>{`
-                @keyframes neonPulse {
-                    0%,
-                    100% {
-                        text-shadow: 0 0 1.5px #8ecae6, 0 0 3px #8ecae6, 0 0 5.25px #8ecae6, 0 0 10.5px #219ebc, 0 0 21px #219ebc;
-                    }
-                    50% {
-                        text-shadow: 0 0 2.25px #a2d2ff, 0 0 5.25px #ffafcc, 0 0 7.5px #ffafcc, 0 0 10.5px #cdb4db, 0 0 18.75px #cdb4db;
-                    }
-                }
-                .app-title {
-                    font-weight: 500;
-                    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-                    letter-spacing: 0.5px;
-                    text-shadow: 0 0 1.25px #4c4c4c, 0 0 2.5px #3c3c3c, 0 0 3.75px #2c2c2c;
-                    user-select: none;
-                    cursor: default;
-                    transition: text-shadow 0.3s ease;
-                }
-                .app-title:hover {
-                    text-shadow: 0 0 4px #4c4c4c, 0 0 8px #3c3c3c, 0 0 12px #2c2c2c;
-                    transition: text-shadow 0.3s ease;
-                }
-                .title-light {
-                    color: #cbcbcb;
-                }
-                .title-dark {
-                    color: #a9a8a8;
-                }
-                @keyframes gradientFlow {
-                    0% {
-                        background-position: 0% 50%;
-                    }
-                    50% {
-                        background-position: 100% 50%;
-                    }
-                    100% {
-                        background-position: 0% 50%;
-                    }
-                }
-                @keyframes fadeUpOut {
-                    0% {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                    100% {
-                        opacity: 0;
-                        transform: translateY(-10px);
-                    }
-                }
-                @keyframes fadeDownIn {
-                    0% {
-                        opacity: 0;
-                        transform: translateY(10px);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-                @keyframes fadeDownOut {
-                    0% {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                    100% {
-                        opacity: 0;
-                        transform: translateY(10px);
-                    }
-                }
-                @keyframes fadeUpIn {
-                    0% {
-                        opacity: 0;
-                        transform: translateY(-10px);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-                .animate-fade-up-out {
-                    animation: fadeUpOut 0.2s forwards;
-                }
-                .animate-fade-down-in {
-                    animation: fadeDownIn 0.2s forwards;
-                }
-                .animate-fade-down-out {
-                    animation: fadeDownOut 0.2s forwards;
-                }
-                .animate-fade-up-in {
-                    animation: fadeUpIn 0.2s forwards;
-                }
-                .lap-card {
-                    background-color: #111;
-                    border: 2px solid #090909;
-                    border-radius: 0.75rem;
-                    box-shadow: 0 0 15px rgba(44, 44, 44, 0.5), 
-                                inset 0 0 8px rgba(101, 101, 101, 0.05);
-                    overflow: hidden;
-                    transition: all 0.3s ease;
-                }
-                
-                .lap-card:hover {
-                    box-shadow: 0 0 20px rgba(76, 76, 76, 0.4), 
-                                inset 0 0 12px rgba(125, 124, 132, 0.1);
-                }
-                
-                .lap-header {
-                    padding: 0.75rem 1rem;
-                    border-bottom: 1px solid #1a1a1a;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-                
-                .lap-list {
-                    padding: 0.5rem 1rem;
-                    max-height: 260px;
-                    overflow-y: auto;
-                }
-                
-                .lap-item {
-                    padding: 0.5rem 0;
-                    border-bottom: 1px solid #222;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-                
-                .lap-item:last-child {
-                    border-bottom: none;
-                }
-                
-                .text-gradient {
-                    background: linear-gradient(90deg, #9bf8f4, #a2d2ff, #cdb4db, #ffafcc, #ffc8dd);
-                    -webkit-background-clip: text;
-                    background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    color: transparent;
-                }
-            `}</style>
+  // Wait until mounted to check for saved theme preference
+  useEffect(() => {
+    setMounted(true);
+    // Check for saved theme preference
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      setIsDarkMode(true);
+    }
+  }, []);
 
-            <div className="w-full max-w-md">
-                {view === "selector" ? (
-                    <div className="p-6 flex flex-col items-center">
-                        <h1 className="text-4xl mb-12 text-center app-title">
-                            <span className="title-dark">timer</span>
-                            <span className="title-light">.now</span>
-                        </h1>
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    // Save preference
+    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+  };
 
+  const menuItems = [
+    { name: 'Home', icon: <FiHome className="w-5 h-5" /> },
+    { name: 'About Me', icon: <FiUser className="w-5 h-5" /> },
+    { name: 'Skills', icon: <FiCode className="w-5 h-5" /> },
+    { name: 'Projects', icon: <FiLayers className="w-5 h-5" /> },
+    { name: 'Portfolio', icon: <FiBriefcase className="w-5 h-5" /> },
+    { name: 'Blog Posts', icon: <FiBook className="w-5 h-5" /> },
+  ];
 
-                        <div className="w-full grid grid-cols-3 mb-2 text-[#a6a6a6] font-mono text-base">
-                            <span className="text-center">hours</span>
-                            <span className="text-center">min</span>
-                            <span className="text-center">sec</span>
-                        </div>
+  const filteredPosts = blogPosts.filter(post =>
+    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-                        <div className="w-full mb-8">
+  // Skill bar component with proper types
+  type SkillBarProps = {
+    name: string;
+    level: number;
+    years: number;
+    icon?: React.ReactNode;
+    description?: string;
+  };
 
-                            <div className="grid grid-cols-3 items-center">
-                                <div className="cursor-pointer text-center" onClick={() => decrement("hours")}>
-                                    <ChevronUp className="mx-auto h-7 w-7 text-[#282828]" />
-                                    <span className="text-[#282828] font-mono font-bold text-xl animate-fade-down-in">
-                                        {hours > 0 ? (hours - 1).toString().padStart(2, "0") : "23"}
-                                    </span>
-                                </div>
-                                <div className="cursor-pointer text-center" onClick={() => decrement("minutes")}>
-                                    <ChevronUp className="mx-auto h-7 w-7 text-[#282828]" />
-                                    <span className="text-[#282828] font-mono font-bold text-xl animate-fade-down-in">
-                                        {minutes > 0 ? (minutes - 1).toString().padStart(2, "0") : "59"}
-                                    </span>
-                                </div>
-                                <div className="cursor-pointer text-center" onClick={() => decrement("seconds")}>
-                                    <ChevronUp className="mx-auto h-7 w-7 text-[#282828]" />
-                                    <span className="text-[#282828] font-mono font-bold text-xl animate-fade-down-in">
-                                        {seconds > 0 ? (seconds - 1).toString().padStart(2, "0") : "59"}
-                                    </span>
-                                </div>
-                            </div>
-
-
-                            <div className="flex justify-between items-center my-4 bg-[#121212] border-4 border-[#090909] rounded-xl overflow-hidden">
-                                <div
-                                    className="w-1/3 py-5 text-center relative"
-                                    onTouchStart={(e) => handleTouchStart(e, "hours")}
-                                    onTouchMove={handleTouchMove}
-                                    onTouchEnd={handleTouchEnd}
-                                >
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        value={hours}
-                                        onChange={(e) => handleInputChange("hours", e.target.value)}
-                                        onKeyDown={(e) => handleKeyDown(e, "hours")}
-                                        className="w-full bg-transparent text-center font-bold text-4xl focus:outline-none font-mono cursor-pointer transition-opacity duration-200"
-                                    />
-                                </div>
-                                <div className="h-12 w-0.5 rounded-full bg-[#0e0e10]"></div>
-                                <div
-                                    className="w-1/3 py-5 text-center relative"
-                                    onTouchStart={(e) => handleTouchStart(e, "minutes")}
-                                    onTouchMove={handleTouchMove}
-                                    onTouchEnd={handleTouchEnd}
-                                >
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        value={minutes}
-                                        onChange={(e) => handleInputChange("minutes", e.target.value)}
-                                        onKeyDown={(e) => handleKeyDown(e, "minutes")}
-                                        className="w-full bg-transparent text-center font-bold text-4xl focus:outline-none font-mono cursor-pointer transition-opacity duration-200"
-                                    />
-                                </div>
-                                <div className="h-12 w-0.5 rounded-full bg-[#0e0e10]"></div>
-                                <div
-                                    className="w-1/3 py-5 text-center relative"
-                                    onTouchStart={(e) => handleTouchStart(e, "seconds")}
-                                    onTouchMove={handleTouchMove}
-                                    onTouchEnd={handleTouchEnd}
-                                >
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        value={seconds}
-                                        onChange={(e) => handleInputChange("seconds", e.target.value)}
-                                        onKeyDown={(e) => handleKeyDown(e, "seconds")}
-                                        className="w-full bg-transparent text-center font-bold text-4xl focus:outline-none font-mono cursor-pointer transition-opacity duration-200"
-                                    />
-                                </div>
-                            </div>
-
-
-                            <div className="grid grid-cols-3 items-center">
-                                <div className="cursor-pointer text-center" onClick={() => increment("hours")}>
-                                    <span className="text-[#282828] font-mono font-bold text-xl animate-fade-up-in">
-                                        {(hours < 23 ? hours + 1 : 0).toString().padStart(2, "0")}
-                                    </span>
-                                    <ChevronDown className="mx-auto h-7 w-7 text-[#282828]" />
-                                </div>
-                                <div className="cursor-pointer text-center" onClick={() => increment("minutes")}>
-                                    <span className="text-[#282828] font-mono font-bold text-xl animate-fade-up-in">
-                                        {(minutes < 59 ? minutes + 1 : 0).toString().padStart(2, "0")}
-                                    </span>
-                                    <ChevronDown className="mx-auto h-7 w-7 text-[#282828]" />
-                                </div>
-                                <div className="cursor-pointer text-center" onClick={() => increment("seconds")}>
-                                    <span className="text-[#282828] font-mono font-bold text-xl animate-fade-up-in">
-                                        {(seconds < 59 ? seconds + 1 : 0).toString().padStart(2, "0")}
-                                    </span>
-                                    <ChevronDown className="mx-auto h-7 w-7 text-[#282828]" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={handleStart}
-                            className="w-16 h-16 rounded-full flex items-center justify-center bg-[#151515] border-4 border-[#090909] transition-all duration-300 cursor-pointer hover:bg-[#1a1a1a] hover:shadow-[0_0_10px_rgba(154,231,232,0.3)]"
-                        >
-                            <div className="w-7 h-7">
-                                <PlaySolid />
-                            </div>
-                        </button>
-                    </div>
-                ) : (
-                    <div className="p-6 flex flex-col items-center">
-                        <h1 className="text-3xl mb-10 text-center app-title">
-                            <span className="title-dark">timer</span>
-                            <span className="title-light">.now</span>
-                        </h1>
-                        
-                        <div className="relative w-full h-[420px] flex items-center justify-center">
-
-                            <div className="absolute top-0 left-[15%]">
-                                <button 
-                                    onClick={handleLap}
-                                    className="p-4 rounded-full bg-[#151515] border-2 border-[#090909] transition-all duration-300 cursor-pointer hover:bg-[#1a1a1a] hover:shadow-[0_0_10px_rgba(154,231,232,0.3)]"
-                                >
-                                    <Flag size={20} />
-                                </button>
-                            </div>
-                            
-                            <div className="absolute top-0 right-[15%]">
-                                <button 
-                                    onClick={handleReset}
-                                    className="p-4 rounded-full bg-[#151515] border-2 border-[#090909] transition-all duration-300 cursor-pointer hover:bg-[#1a1a1a] hover:shadow-[0_0_10px_rgba(154,231,232,0.3)]"
-                                >
-                                    <RotateCcw size={20} />
-                                </button>
-                            </div>
-                            
-
-                            {showLaps && (
-                                <div className="absolute right-[-220px] top-1/2 transform -translate-y-1/2 w-52 lap-card">
-                                    <div className="lap-header">
-                                        <h3 className="text-lg font-mono font-medium">Laps</h3>
-                                        <button 
-                                            onClick={toggleLapsVisibility}
-                                            className="text-[#a6a6a6] hover:text-white transition-colors duration-200 cursor-pointer"
-                                        >
-                                            <X size={16} />
-                                        </button>
-                                    </div>
-                                    
-                                    <div className="lap-list">
-                                        {laps.length === 0 ? (
-                                            <p className="text-[#a6a6a6] text-center text-sm font-mono py-4">No laps recorded</p>
-                                        ) : (
-                                            <div className="space-y-2">
-                                                {laps.map((lap, index) => (
-                                                    <div key={index} className="lap-item">
-                                                        <span className="text-[#a6a6a6] font-mono text-sm">#{laps.length - index}</span>
-                                                        <span className="font-mono font-medium">{lap.time}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                            
-
-                            <div className="relative h-80 w-80 flex items-center justify-center">
-                                <svg className="absolute h-full w-full" viewBox="0 0 300 300">
-
-                                    <circle
-                                        cx="150"
-                                        cy="150"
-                                        r="130"
-                                        fill="none"
-                                        stroke="#090909"
-                                        strokeWidth="10"
-                                        filter="drop-shadow(0 0 2px rgba(0, 0, 0, 0.2))"
-                                    />
-                                    
-
-                                    <circle
-                                        ref={progressRingRef}
-                                        cx="150"
-                                        cy="150"
-                                        r="130"
-                                        fill="none"
-                                        stroke="url(#gradient)"
-                                        strokeWidth="10"
-                                        strokeLinecap="round"
-                                        strokeDasharray={2 * Math.PI * 130}
-                                        strokeDashoffset="0"
-                                        transform="rotate(-90 150 150)"
-                                        style={{ transition: "stroke-dashoffset 1s linear" }}
-                                    />
-                                    
-
-                                    <defs>
-                                        <linearGradient id="gradient" gradientTransform="rotate(90)">
-                                            <stop offset="0%" stopColor="#9bf8f4" />
-                                            <stop offset="25%" stopColor="#a2d2ff" />
-                                            <stop offset="50%" stopColor="#cdb4db" />
-                                            <stop offset="75%" stopColor="#ffafcc" />
-                                            <stop offset="100%" stopColor="#ffc8dd" />
-                                        </linearGradient>
-                                    </defs>
-                                </svg>
-                                
-                                <div className="z-10 text-center">
-                                    <div className="text-5xl font-bold mb-1 font-mono">
-                                        {formatTimeDisplay(remainingTimeInSeconds)}
-                                    </div>
-                                    {alarmTime && (
-                                        <div className="text-sm flex items-center justify-center space-x-1">
-                                            <Bell size={12} className="text-gradient" />
-                                            <span className="text-gradient font-mono">{alarmTime}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            
-
-                            <div className="absolute bottom-0 left-[15%]">
-                                <button 
-                                    onClick={handleReturnToSelector}
-                                    className="p-4 rounded-full bg-[#151515] border-2 border-[#090909] hover:bg-[#1a1a1a] transition-all duration-300 cursor-pointer hover:shadow-[0_0_10px_rgba(154,231,232,0.3)]"
-                                >
-                                    <X size={24} />
-                                </button>
-                            </div>
-                            
-                            <div className="absolute bottom-0 right-[15%]">
-                                <button 
-                                    onClick={running ? handleStop : handleStart}
-                                    className="p-4 rounded-full bg-[#151515] border-2 border-[#090909] flex items-center justify-center transition-all duration-300 cursor-pointer hover:bg-[#1a1a1a] hover:shadow-[0_0_10px_rgba(154,231,232,0.3)]"
-                                >
-                                    {running ? (
-                                        <Pause size={24} />
-                                    ) : (
-                                        <div className="w-6 h-6">
-                                            <PlaySolid />
-                                        </div>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+  const SkillBar = ({ name, level, years, icon, description }: SkillBarProps) => (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center space-x-2">
+          {icon && <span>{icon}</span>}
+          <span className={`font-medium ${theme.main.text}`}>{name}</span>
         </div>
-    );
-}
+        <div className="flex items-center space-x-2">
+          <span className={`text-sm ${theme.accent}`}>{years} {years === 1 ? 'year' : 'years'}</span>
+          <span className={`text-sm ${theme.main.textSecondary}`}>{level}%</span>
+        </div>
+      </div>
+      <div className={`w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden`}>
+        <div 
+          className="h-full bg-gradient-to-r from-[#b85c38] to-[#e8956c] rounded-full"
+          style={{ width: `${level}%` }}
+        ></div>
+      </div>
+      {description && (
+        <p className={`text-xs ${theme.main.textSecondary} mt-1 italic`}>{description}</p>
+      )}
+    </div>
+  );
 
+  // Avoid rendering until client-side to prevent hydration mismatch
+  if (!mounted) {
+    return <div className="min-h-screen bg-[#fefcfb]"></div>;
+  }
+
+  // Render content based on active menu
+  const renderContent = () => {
+    switch (activeMenu) {
+      case 'Home':
+        return (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="max-w-6xl"
+          >
+            {/* Hero Section */}
+            <section className="mb-16">
+              <div className="flex flex-col md:flex-row gap-8 items-center">
+                <div className="md:w-1/2">
+                  <h1 className={`text-4xl font-bold ${theme.main.text} mb-4`}>
+                    John Smith
+                  </h1>
+                  <h2 className={`text-2xl ${theme.accent} mb-6`}>
+                    Full Stack Developer & <span className="line-through">Problem Solver</span> Problem Creator
+                  </h2>
+                  <p className={`${theme.main.textSecondary} text-lg mb-6`}>
+                    {aboutMeContent.intro}
+                  </p>
+                  <div className="flex space-x-4">
+                    <button 
+                      onClick={() => setActiveMenu('Projects')}
+                      className={`px-6 py-3 rounded-lg bg-[#b85c38] text-white font-medium hover:bg-[#a04b2b] transition-colors cursor-pointer`}
+                    >
+                      View Projects
+                    </button>
+                    <button 
+                      onClick={() => setActiveMenu('Portfolio')}
+                      className={`px-6 py-3 rounded-lg border border-[#b85c38] ${theme.accent} font-medium hover:bg-[#fceee7]/50 transition-colors cursor-pointer`}
+                    >
+                      My Experience
+                    </button>
+                  </div>
+                </div>
+                <div className="md:w-1/2">
+                  <div className="relative">
+                    <div className="relative h-[400px] w-full rounded-2xl overflow-hidden">
+                      <Image
+                        src="https://picsum.photos/id/1025/800/800"
+                        alt="John Smith"
+                        fill
+                        className="object-cover"
+                        priority
+                      />
+                    </div>
+                    <div className={`absolute -bottom-6 -left-6 p-4 ${theme.content.background} rounded-xl shadow-lg`}>
+                      <div className="flex items-center space-x-2">
+                        <FiCode className={`w-6 h-6 ${theme.accent}`} />
+                        <span className={`font-bold ${theme.main.text}`}>15+ Years Coding</span>
+                      </div>
+                    </div>
+                    <div className={`absolute -top-6 -right-6 p-4 ${theme.content.background} rounded-xl shadow-lg`}>
+                      <div className="flex items-center space-x-2">
+                        <FiBriefcase className={`w-6 h-6 ${theme.accent}`} />
+                        <span className={`font-bold ${theme.main.text}`}>10+ Projects</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Stats Section */}
+            <section className="mb-16">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6 flex flex-col items-center justify-center`}>
+                  <span className={`text-4xl font-bold ${theme.accent} mb-2`}>15+</span>
+                  <span className={`${theme.main.textSecondary} text-center`}>Years of Experience</span>
+                </div>
+                <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6 flex flex-col items-center justify-center`}>
+                  <span className={`text-4xl font-bold ${theme.accent} mb-2`}>50+</span>
+                  <span className={`${theme.main.textSecondary} text-center`}>Completed Projects</span>
+                </div>
+                <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6 flex flex-col items-center justify-center`}>
+                  <span className={`text-4xl font-bold ${theme.accent} mb-2`}>24/7</span>
+                  <span className={`${theme.main.textSecondary} text-center`}>Development Support</span>
+                </div>
+                <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6 flex flex-col items-center justify-center`}>
+                  <span className={`text-4xl font-bold ${theme.accent} mb-2`}>99%</span>
+                  <span className={`${theme.main.textSecondary} text-center`}>Client Satisfaction</span>
+                </div>
+              </div>
+            </section>
+
+            {/* About & Services Section */}
+            <section className="mb-16">
+              <div className="mb-8">
+                <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>About Me</h2>
+                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-8">
+                <div className="md:w-1/2">
+                  <p className={`${theme.main.textSecondary} mb-4`}>
+                    {aboutMeContent.bio}
+                  </p>
+                  <p className={`${theme.main.textSecondary} mb-6`}>
+                    {aboutMeContent.personalLife}
+                  </p>
+                  <button 
+                    onClick={() => setActiveMenu('About Me')}
+                    className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium flex items-center cursor-pointer`}
+                  >
+                    <span>Learn More</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="md:w-1/2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}>
+                      <FiCode className={`w-8 h-8 ${theme.accent} mb-3`} />
+                      <h3 className={`text-lg font-semibold ${theme.main.text} mb-2`}>Web Development</h3>
+                      <p className={`${theme.main.textSecondary} text-sm`}>
+                        Crafting responsive and performant web applications using modern frameworks.
+                      </p>
+                    </div>
+                    <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}>
+                      <FiLayers className={`w-8 h-8 ${theme.accent} mb-3`} />
+                      <h3 className={`text-lg font-semibold ${theme.main.text} mb-2`}>Legacy System Integration</h3>
+                      <p className={`${theme.main.textSecondary} text-sm`}>
+                        Bridging old and new technologies with secure, efficient solutions.
+                      </p>
+                    </div>
+                    <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}>
+                      <FiSearch className={`w-8 h-8 ${theme.accent} mb-3`} />
+                      <h3 className={`text-lg font-semibold ${theme.main.text} mb-2`}>Technical Consulting</h3>
+                      <p className={`${theme.main.textSecondary} text-sm`}>
+                        Expert guidance on architecture, technology selection, and best practices.
+                      </p>
+                    </div>
+                    <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}>
+                      <FiUser className={`w-8 h-8 ${theme.accent} mb-3`} />
+                      <h3 className={`text-lg font-semibold ${theme.main.text} mb-2`}>Developer Training</h3>
+                      <p className={`${theme.main.textSecondary} text-sm`}>
+                        Mentorship and technical training for teams transitioning to new technologies.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Skills Overview */}
+            <section className="mb-16">
+              <div className="mb-8">
+                <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>Skills Overview</h2>
+                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
+              </div>
+
+              <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-8`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {skillsContent.mainSkills.slice(0, 3).map((skill, index) => (
+                    <SkillBar key={index} {...skill} />
+                  ))}
+                  {skillsContent.backendSkills.slice(0, 1).map((skill, index) => (
+                    <SkillBar key={index} {...skill} />
+                  ))}
+                  {skillsContent.cloudSkills.slice(0, 1).map((skill, index) => (
+                    <SkillBar key={index} {...skill} />
+                  ))}
+                  {skillsContent.legacyAndSpecializedSkills.slice(0, 1).map((skill, index) => (
+                    <SkillBar key={index} {...skill} />
+                  ))}
+                </div>
+                
+                <div className="mt-8 text-center">
+                  <button 
+                    onClick={() => setActiveMenu('Skills')}
+                    className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
+                  >
+                    <span>View All Skills</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* Featured Projects */}
+            <section className="mb-16">
+              <div className="mb-8">
+                <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>Featured Projects</h2>
+                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {projectsData.filter(p => p.featured).slice(0, 2).map((project) => (
+                  <div 
+                    key={project.id}
+                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden group`}
+                  >
+                    <div className="relative h-64">
+                      <Image
+                        src={project.image}
+                        alt={project.title}
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+                        <div className="p-6">
+                          <h3 className="text-xl font-bold text-white mb-2">{project.title}</h3>
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {project.tags.slice(0, 3).map((tag, idx) => (
+                              <span key={idx} className="text-xs px-2 py-1 bg-white/20 text-white rounded-full">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 text-center">
+                <button 
+                  onClick={() => setActiveMenu('Projects')}
+                  className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
+                >
+                  <span>View All Projects</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+              </div>
+            </section>
+
+            {/* Recent Blog Posts */}
+            <section>
+              <div className="mb-8">
+                <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>Recent Blog Posts</h2>
+                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {blogPosts.slice(0, 2).map((post) => (
+                  <div 
+                    key={post.id}
+                    className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder}`}
+                  >
+                    <div className={`${theme.accent} text-xs mb-2 font-medium`}>{post.date} • {post.readTime}</div>
+                    <h3 className={`text-xl font-semibold ${theme.main.text} mb-2`}>
+                      {post.title}
+                    </h3>
+                    <p className={`${theme.main.textSecondary} mb-4`}>
+                      {post.description}
+                    </p>
+                    <div className="flex justify-end">
+                      <button className={`${theme.button.primary} font-medium transition-colors flex items-center space-x-1 cursor-pointer`}>
+                        <span>Read more</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 text-center">
+                <button 
+                  onClick={() => setActiveMenu('Blog Posts')}
+                  className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
+                >
+                  <span>View All Posts</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+              </div>
+            </section>
+          </motion.div>
+        );
+      
+      case 'About Me':
+        return (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="max-w-3xl"
+          >
+            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>About Me</h1>
+            
+            <div className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} mb-8`}>
+              <p className={`${theme.main.text} mb-4 text-lg`}>{aboutMeContent.intro}</p>
+              <p className={`${theme.main.textSecondary} mb-6`}>{aboutMeContent.bio}</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                {aboutMeContent.images.map((image, index) => (
+                  <div key={index} className="flex flex-col space-y-2">
+                    <div className="relative h-48 rounded-lg overflow-hidden">
+                      <Image
+                        src={image.src}
+                        alt={image.alt}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <p className={`text-sm ${theme.main.textSecondary} italic`}>{image.caption}</p>
+                  </div>
+                ))}
+              </div>
+
+              <h2 className={`text-xl font-semibold ${theme.main.text} mb-3`}>What I'm interested in</h2>
+              <ul className="list-disc pl-5 mb-6">
+                {aboutMeContent.interests.map((interest, index) => (
+                  <li key={index} className={`${theme.main.textSecondary} mb-1`}>{interest}</li>
+                ))}
+              </ul>
+
+              <h2 className={`text-xl font-semibold ${theme.main.text} mb-3`}>Outside of work</h2>
+              <p className={`${theme.main.textSecondary} mb-4`}>{aboutMeContent.personalLife}</p>
+              
+              <div className="border-t border-b py-4 my-6 border-opacity-10 border-current">
+                <p className={`${theme.main.text} text-center italic`}>"{aboutMeContent.philosophy}"</p>
+              </div>
+
+              <div className="flex justify-center">
+                <div className="relative h-60 w-full rounded-lg overflow-hidden">
+                  <Image
+                    src="https://picsum.photos/id/239/1200/400"
+                    alt="Panorama shot of my workspace"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+      
+      case 'Skills':
+        return (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="max-w-3xl"
+          >
+            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>Technical Skills</h1>
+            
+            <div className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} mb-8`}>
+              <p className={`${theme.main.text} mb-6 text-lg`}>{skillsContent.intro}</p>
+              
+              <div className="mb-8">
+                <h2 className={`text-xl font-semibold ${theme.main.text} mb-4 flex items-center`}>
+                  <FiCode className="mr-2" /> Primary Languages & Frameworks
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                  {skillsContent.mainSkills.map((skill, index) => (
+                    <SkillBar key={index} {...skill} />
+                  ))}
+                </div>
+              </div>
+              
+              <div className="mb-8">
+                <h2 className={`text-xl font-semibold ${theme.main.text} mb-4`}>Backend Development</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                  {skillsContent.backendSkills.map((skill, index) => (
+                    <SkillBar key={index} {...skill} />
+                  ))}
+                </div>
+              </div>
+              
+              <div className="mb-8">
+                <h2 className={`text-xl font-semibold ${theme.main.text} mb-4`}>Database Technologies</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                  {skillsContent.databaseSkills.map((skill, index) => (
+                    <SkillBar key={index} {...skill} />
+                  ))}
+                </div>
+              </div>
+              
+              <div className="mb-8">
+                <h2 className={`text-xl font-semibold ${theme.main.text} mb-4`}>Cloud & DevOps</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                  {skillsContent.cloudSkills.map((skill, index) => (
+                    <SkillBar key={index} {...skill} />
+                  ))}
+                </div>
+              </div>
+              
+              <div className="mb-8">
+                <h2 className={`text-xl font-semibold ${theme.main.text} mb-4 flex items-center`}>
+                  <span className={theme.accent}>Legacy & Specialized Systems</span>
+                </h2>
+                <div className="grid grid-cols-1 gap-x-8">
+                  {skillsContent.legacyAndSpecializedSkills.map((skill, index) => (
+                    <SkillBar key={index} {...skill} />
+                  ))}
+                </div>
+              </div>
+              
+              <div className="mb-8">
+                <h2 className={`text-xl font-semibold ${theme.main.text} mb-4`}>Emerging Technologies</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                  {skillsContent.emergingTechSkills.map((skill, index) => (
+                    <SkillBar key={index} {...skill} />
+                  ))}
+                </div>
+              </div>
+              
+              <div className="border-t border-b py-4 my-6 border-opacity-10 border-current">
+                <p className={`${theme.main.text} text-center italic`}>"{skillsContent.quote}"</p>
+              </div>
+              
+              <div className="relative h-60 w-full rounded-lg overflow-hidden">
+                <Image
+                  src="https://picsum.photos/id/119/1200/400"
+                  alt="Workstation with multiple screens"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            </div>
+          </motion.div>
+        );
+      
+      case 'Projects':
+        return (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="max-w-5xl"
+          >
+            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>Projects</h1>
+            
+            <div className="mb-8">
+              <p className={`${theme.main.text} text-lg max-w-3xl`}>
+                A collection of my most significant projects spanning from game development and legacy systems to cutting-edge AI and blockchain applications.
+              </p>
+            </div>
+            
+            {/* Featured Projects */}
+            <div className="mb-12">
+              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6`}>Featured Projects</h2>
+              <div className="grid grid-cols-1 gap-8">
+                {projectsData.filter(p => p.featured).map((project) => (
+                  <motion.div
+                    key={project.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
+                  >
+                    <div className="md:flex">
+                      <div className="md:w-2/5 relative h-64 md:h-auto">
+                        <Image
+                          src={project.image}
+                          alt={project.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="p-6 md:w-3/5">
+                        <h3 className={`text-xl font-bold ${theme.main.text} mb-2`}>{project.title}</h3>
+                        <p className={`${theme.main.textSecondary} mb-4`}>{project.description}</p>
+                        
+                        {project.achievements && (
+                          <div className="mb-4">
+                            <h4 className={`text-sm font-semibold ${theme.accent} mb-2`}>Achievements:</h4>
+                            <ul className={`list-disc list-inside ${theme.main.textSecondary} text-sm`}>
+                              {project.achievements.map((achievement, idx) => (
+                                <li key={idx}>{achievement}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {project.tags.map((tag, idx) => (
+                            <span key={idx} className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        
+                        <div className="flex space-x-4 mt-4">
+                          {project.demoUrl && (
+                            <a 
+                              href={project.demoUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className={`${theme.button.primary} text-sm font-medium flex items-center`}
+                            >
+                              <span>Live Demo</span>
+                              <FiExternalLink className="ml-1 w-4 h-4" />
+                            </a>
+                          )}
+                          {project.repoUrl && (
+                            <a 
+                              href={project.repoUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className={`${theme.main.textSecondary} hover:${theme.main.text} text-sm font-medium flex items-center`}
+                            >
+                              <FiGithub className="mr-1 w-4 h-4" />
+                              <span>Source Code</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Other Projects */}
+            <div>
+              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6`}>Other Notable Projects</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {projectsData.filter(p => !p.featured).map((project) => (
+                  <motion.div
+                    key={project.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
+                  >
+                    <div className="relative h-48">
+                      <Image
+                        src={project.image}
+                        alt={project.title}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="p-5">
+                      <h3 className={`text-lg font-bold ${theme.main.text} mb-2`}>{project.title}</h3>
+                      <p className={`${theme.main.textSecondary} text-sm mb-3`}>{project.description}</p>
+                      
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {project.tags.slice(0, 3).map((tag, idx) => (
+                          <span key={idx} className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}>
+                            {tag}
+                          </span>
+                        ))}
+                        {project.tags.length > 3 && (
+                          <span className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.textSecondary}`}>
+                            +{project.tags.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="flex space-x-3 mt-3">
+                        {project.demoUrl && (
+                          <a 
+                            href={project.demoUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className={`${theme.button.primary} text-xs font-medium flex items-center`}
+                          >
+                            <span>Live Demo</span>
+                            <FiExternalLink className="ml-1 w-3 h-3" />
+                          </a>
+                        )}
+                        {project.repoUrl && (
+                          <a 
+                            href={project.repoUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className={`${theme.main.textSecondary} hover:${theme.main.text} text-xs font-medium flex items-center`}
+                          >
+                            <FiGithub className="mr-1 w-3 h-3" />
+                            <span>Source Code</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        );
+      
+      case 'Portfolio':
+        return (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="max-w-4xl"
+          >
+            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>Professional Portfolio</h1>
+            
+            {/* Work Experience */}
+            <section className="mb-12">
+              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6 flex items-center`}>
+                <FiBriefcase className="mr-2" /> Work Experience
+              </h2>
+              
+              <div className="space-y-8">
+                {portfolioData.experience.map((job, index) => (
+                  <motion.div 
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
+                  >
+                    <div className="md:flex">
+                      <div className="p-6 md:w-full">
+                        <div className="flex flex-col md:flex-row md:items-center mb-4">
+                          <div className="flex items-center mb-3 md:mb-0">
+                            <div className="mr-4 relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                              <Image
+                                src={job.logo}
+                                alt={`${job.company} logo`}
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                            <div>
+                              <h3 className={`text-xl font-bold ${theme.main.text}`}>{job.position}</h3>
+                              <div className="flex items-center">
+                                <span className={`font-medium ${theme.accent}`}>{job.company}</span>
+                                <span className={`mx-2 text-xs ${theme.main.textSecondary}`}>•</span>
+                                <span className={`text-sm ${theme.main.textSecondary}`}>{job.period}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <p className={`${theme.main.textSecondary} mb-4`}>{job.description}</p>
+                        
+                        <div className="mb-4">
+                          <h4 className={`text-sm font-semibold ${theme.accent} mb-2`}>Key Achievements:</h4>
+                          <ul className={`list-disc list-inside ${theme.main.textSecondary}`}>
+                            {job.achievements.map((achievement, idx) => (
+                              <li key={idx} className="mb-1">{achievement}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        
+                        <div>
+                          <h4 className={`text-sm font-semibold ${theme.main.text} mb-2`}>Technologies:</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {job.technologies.map((tech, idx) => (
+                              <span key={idx} className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}>
+                                {tech}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+            
+            {/* Education */}
+            <section className="mb-12">
+              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6 flex items-center`}>
+                <FiUser className="mr-2" /> Education
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {portfolioData.education.map((edu, index) => (
+                  <motion.div 
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}
+                  >
+                    <div className="flex items-center mb-3">
+                      <div className="mr-3 relative w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                        <Image
+                          src={edu.logo}
+                          alt={`${edu.institution} logo`}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div>
+                        <h3 className={`text-lg font-bold ${theme.main.text}`}>{edu.institution}</h3>
+                        <span className={`text-sm ${theme.main.textSecondary}`}>{edu.period}</span>
+                      </div>
+                    </div>
+                    
+                    <div className={`font-medium ${theme.accent} mb-2`}>{edu.degree}</div>
+                    <p className={`${theme.main.textSecondary} text-sm mb-3`}>{edu.description}</p>
+                    
+                    {edu.thesis && (
+                      <div className="mt-2">
+                        <span className={`text-sm font-medium ${theme.main.text}`}>Thesis: </span>
+                        <span className={`text-sm italic ${theme.main.textSecondary}`}>{edu.thesis}</span>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+            
+            {/* Certifications */}
+            <section className="mb-12">
+              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6 flex items-center`}>
+                <FiCode className="mr-2" /> Professional Certifications
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {portfolioData.certifications.map((cert, index) => (
+                  <motion.div 
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-4 flex items-center`}
+                  >
+                    <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 mr-4">
+                      <Image
+                        src={cert.logo}
+                        alt={`${cert.name} logo`}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div>
+                      <h3 className={`font-bold ${theme.main.text}`}>{cert.name}</h3>
+                      <div className="flex items-center">
+                        <span className={`text-sm ${theme.main.textSecondary}`}>{cert.issuer}</span>
+                        <span className={`mx-2 text-xs ${theme.main.textSecondary}`}>•</span>
+                        <span className={`text-sm ${theme.accent}`}>{cert.date}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+            
+            {/* Speaking Engagements */}
+            <section>
+              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6 flex items-center`}>
+                <FiLayers className="mr-2" /> Speaking Engagements
+              </h2>
+              
+              <div className="space-y-6">
+                {portfolioData.speaking.map((talk, index) => (
+                  <motion.div 
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
+                  >
+                    <div className="relative h-48 w-full">
+                      <Image
+                        src={talk.image}
+                        alt={talk.event}
+                        fill
+                        className="object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+                        <div className="p-6 text-white">
+                          <div className="text-sm mb-1">{talk.date} • {talk.location}</div>
+                          <h3 className="text-xl font-bold mb-1">{talk.event}</h3>
+                          <p className="text-white/90 font-medium">{talk.topic}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          </motion.div>
+        );
+      
+      case 'Blog Posts':
+        return (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="max-w-2xl"
+          >
+            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>Blog Posts</h1>
+            
+            {/* Search Bar */}
+            <div className="mb-8">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search blog posts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={`w-full px-4 py-2 pl-10 rounded-lg border ${theme.content.inputBorder} ${theme.content.background} ${theme.main.text} focus:outline-none focus:ring-2 ${theme.content.focusRing}`}
+                />
+                <FiSearch className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${theme.main.textSecondary} w-4 h-4`} />
+              </div>
+            </div>
+
+            {/* Blog Posts */}
+            <div className="space-y-6">
+              {filteredPosts.map((post) => (
+                <motion.article
+                  key={post.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} transition-all duration-300`}
+                >
+                  <div className={`${theme.accent} text-xs mb-2 font-medium`}>{post.date} • {post.readTime}</div>
+                  <h2 className={`text-xl font-semibold ${theme.main.text} mb-2`}>
+                    {post.title}
+                  </h2>
+                  <p className={`${theme.main.textSecondary} mb-4`}>
+                    {post.description}
+                  </p>
+                  <div className="flex justify-end">
+                    <button className={`${theme.button.primary} font-medium transition-colors cursor-pointer flex items-center space-x-1`}>
+                      <span>Read more</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </button>
+                  </div>
+                </motion.article>
+              ))}
+            </div>
+          </motion.div>
+        );
+      
+      default:
+        return (
+          <div className="flex items-center justify-center h-[80vh]">
+            <p className={`text-xl ${theme.main.textSecondary}`}>This section is coming soon...</p>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className={`flex min-h-screen ${theme.main.background}`}>
+      {/* Left Sidebar */}
+      <motion.aside 
+        initial={{ x: -20, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        className={`w-[240px] ${theme.sidebar.background} fixed h-screen border-r ${theme.sidebar.border} py-8`}
+      >
+        <div className="px-6 mb-8">
+          <div className="flex items-center space-x-3 mb-3">
+            <div className="relative w-12 h-12 rounded-full overflow-hidden">
+              <Image 
+                src="https://randomuser.me/api/portraits/men/32.jpg" 
+                alt="Profile picture" 
+                fill
+                className="object-cover"
+              />
+            </div>
+            <div>
+              <h1 className={`text-xl font-bold ${theme.main.text}`}>John Smith</h1>
+              <p className={`text-sm ${theme.main.textSecondary}`}>Full Stack Developer</p>
+            </div>
+          </div>
+          <div className="flex space-x-3 mt-4">
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer"
+              className={`${theme.main.textSecondary} ${theme.main.hover} transition-colors cursor-pointer`}>
+              <FiGithub size={20} />
+            </a>
+            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"
+              className={`${theme.main.textSecondary} ${theme.main.hover} transition-colors cursor-pointer`}>
+              <FiLinkedin size={20} />
+            </a>
+          </div>
+        </div>
+        <nav className="px-4">
+          {menuItems.map((item) => (
+            <button
+              key={item.name}
+              onClick={() => setActiveMenu(item.name)}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors mb-1 cursor-pointer ${
+                activeMenu === item.name
+                  ? `${theme.sidebar.activeBackground} ${theme.main.text}`
+                  : `${theme.main.textSecondary} ${theme.sidebar.hoverBackground}`
+              }`}
+            >
+              {item.icon}
+              <span className="text-sm">{item.name}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="absolute bottom-8 left-0 right-0 px-6">
+          <button
+            onClick={toggleTheme}
+            className={`w-full flex items-center justify-center space-x-2 py-2 rounded-lg ${theme.sidebar.activeBackground} ${theme.main.textSecondary} ${theme.main.hover} transition-colors cursor-pointer`}
+          >
+            {isDarkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
+            <span className="text-sm">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
+        </div>
+      </motion.aside>
+
+      {/* Main Content */}
+      <main className="ml-[240px] flex-1 p-8">
+        {renderContent()}
+      </main>
+    </div>
+  );
+}
