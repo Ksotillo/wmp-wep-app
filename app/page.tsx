@@ -442,11 +442,24 @@ export default function Home() {
     }
   }, []);
 
+  // Scroll to top when active menu changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, [activeMenu]);
+
   const toggleTheme = () => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
     // Save preference
     localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+  };
+
+  // Custom handler for menu switching with scroll-to-top behavior
+  const handleMenuChange = (menuName: string) => {
+    setActiveMenu(menuName);
   };
 
   const menuItems = [
@@ -473,7 +486,11 @@ export default function Home() {
   };
 
   const SkillBar = ({ name, level, years, icon, description }: SkillBarProps) => (
-    <div className="mb-4">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-4"
+    >
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center space-x-2">
           {icon && <span>{icon}</span>}
@@ -481,20 +498,59 @@ export default function Home() {
         </div>
         <div className="flex items-center space-x-2">
           <span className={`text-sm ${theme.accent}`}>{years} {years === 1 ? 'year' : 'years'}</span>
-          <span className={`text-sm ${theme.main.textSecondary}`}>{level}%</span>
+          <motion.span 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className={`text-sm ${theme.main.textSecondary}`}
+          >
+            {level}%
+          </motion.span>
         </div>
       </div>
       <div className={`w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden`}>
-        <div 
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: `${level}%` }}
+          transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
           className="h-full bg-gradient-to-r from-[#b85c38] to-[#e8956c] rounded-full"
-          style={{ width: `${level}%` }}
-        ></div>
+        ></motion.div>
       </div>
       {description && (
-        <p className={`text-xs ${theme.main.textSecondary} mt-1 italic`}>{description}</p>
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+          className={`text-xs ${theme.main.textSecondary} mt-1 italic`}
+        >
+          {description}
+        </motion.p>
       )}
-    </div>
+    </motion.div>
   );
+
+  // Animation variants for staggered animations
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut"
+      }
+    }
+  };
 
   // Avoid rendering until client-side to prevent hydration mismatch
   if (!mounted) {
@@ -512,9 +568,19 @@ export default function Home() {
             className="max-w-6xl"
           >
             {/* Hero Section */}
-            <section className="mb-16">
+            <motion.section 
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="mb-16"
+            >
               <div className="flex flex-col md:flex-row gap-8 items-center">
-                <div className="md:w-1/2">
+                <motion.div 
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="md:w-1/2"
+                >
                   <h1 className={`text-4xl font-bold ${theme.main.text} mb-4`}>
                     John Smith
                   </h1>
@@ -525,21 +591,30 @@ export default function Home() {
                     {aboutMeContent.intro}
                   </p>
                   <div className="flex space-x-4">
-                    <button 
-                      onClick={() => setActiveMenu('Projects')}
+                    <motion.button 
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleMenuChange('Projects')}
                       className={`px-6 py-3 rounded-lg bg-[#b85c38] text-white font-medium hover:bg-[#a04b2b] transition-colors cursor-pointer`}
                     >
                       View Projects
-                    </button>
-                    <button 
-                      onClick={() => setActiveMenu('Portfolio')}
+                    </motion.button>
+                    <motion.button 
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleMenuChange('Portfolio')}
                       className={`px-6 py-3 rounded-lg border border-[#b85c38] ${theme.accent} font-medium hover:bg-[#fceee7]/50 transition-colors cursor-pointer`}
                     >
                       My Experience
-                    </button>
+                    </motion.button>
                   </div>
-                </div>
-                <div className="md:w-1/2">
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="md:w-1/2"
+                >
                   <div className="relative">
                     <div className="relative h-[400px] w-full rounded-2xl overflow-hidden">
                       <Image
@@ -550,105 +625,126 @@ export default function Home() {
                         priority
                       />
                     </div>
-                    <div className={`absolute -bottom-6 -left-6 p-4 ${theme.content.background} rounded-xl shadow-lg`}>
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6 }}
+                      className={`absolute -bottom-6 -left-6 p-4 ${theme.content.background} rounded-xl shadow-lg`}
+                    >
                       <div className="flex items-center space-x-2">
                         <FiCode className={`w-6 h-6 ${theme.accent}`} />
                         <span className={`font-bold ${theme.main.text}`}>15+ Years Coding</span>
                       </div>
-                    </div>
-                    <div className={`absolute -top-6 -right-6 p-4 ${theme.content.background} rounded-xl shadow-lg`}>
+                    </motion.div>
+                    <motion.div 
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6 }}
+                      className={`absolute -top-6 -right-6 p-4 ${theme.content.background} rounded-xl shadow-lg`}
+                    >
                       <div className="flex items-center space-x-2">
                         <FiBriefcase className={`w-6 h-6 ${theme.accent}`} />
                         <span className={`font-bold ${theme.main.text}`}>10+ Projects</span>
                       </div>
-                    </div>
+                    </motion.div>
                   </div>
-                </div>
+                </motion.div>
               </div>
-            </section>
+            </motion.section>
 
             {/* Stats Section */}
-            <section className="mb-16">
+            <motion.section 
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="mb-16"
+            >
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6 flex flex-col items-center justify-center`}>
-                  <span className={`text-4xl font-bold ${theme.accent} mb-2`}>15+</span>
-                  <span className={`${theme.main.textSecondary} text-center`}>Years of Experience</span>
-                </div>
-                <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6 flex flex-col items-center justify-center`}>
-                  <span className={`text-4xl font-bold ${theme.accent} mb-2`}>50+</span>
-                  <span className={`${theme.main.textSecondary} text-center`}>Completed Projects</span>
-                </div>
-                <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6 flex flex-col items-center justify-center`}>
-                  <span className={`text-4xl font-bold ${theme.accent} mb-2`}>24/7</span>
-                  <span className={`${theme.main.textSecondary} text-center`}>Development Support</span>
-                </div>
-                <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6 flex flex-col items-center justify-center`}>
-                  <span className={`text-4xl font-bold ${theme.accent} mb-2`}>99%</span>
-                  <span className={`${theme.main.textSecondary} text-center`}>Client Satisfaction</span>
-                </div>
+                {[
+                  { value: "15+", label: "Years of Experience" },
+                  { value: "50+", label: "Completed Projects" },
+                  { value: "24/7", label: "Development Support" },
+                  { value: "99%", label: "Client Satisfaction" }
+                ].map((stat, index) => (
+                  <motion.div 
+                    key={index}
+                    variants={itemVariants}
+                    whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6 flex flex-col items-center justify-center`}
+                  >
+                    <span className={`text-4xl font-bold ${theme.accent} mb-2`}>{stat.value}</span>
+                    <span className={`${theme.main.textSecondary} text-center`}>{stat.label}</span>
+                  </motion.div>
+                ))}
               </div>
-            </section>
+            </motion.section>
 
             {/* About & Services Section */}
-            <section className="mb-16">
+            <motion.section 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="mb-16"
+            >
               <div className="mb-8">
                 <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>About Me</h2>
                 <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
               </div>
 
               <div className="flex flex-col md:flex-row gap-8">
-                <div className="md:w-1/2">
+                <motion.div 
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="md:w-1/2"
+                >
                   <p className={`${theme.main.textSecondary} mb-4`}>
                     {aboutMeContent.bio}
                   </p>
                   <p className={`${theme.main.textSecondary} mb-6`}>
                     {aboutMeContent.personalLife}
                   </p>
-                  <button 
-                    onClick={() => setActiveMenu('About Me')}
+                  <motion.button 
+                    whileHover={{ scale: 1.05, x: 5 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleMenuChange('About Me')}
                     className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium flex items-center cursor-pointer`}
                   >
                     <span>Learn More</span>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>
-                  </button>
-                </div>
+                  </motion.button>
+                </motion.div>
 
-                <div className="md:w-1/2">
+                <motion.div 
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="md:w-1/2"
+                >
                   <div className="grid grid-cols-2 gap-4">
-                    <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}>
-                      <FiCode className={`w-8 h-8 ${theme.accent} mb-3`} />
-                      <h3 className={`text-lg font-semibold ${theme.main.text} mb-2`}>Web Development</h3>
-                      <p className={`${theme.main.textSecondary} text-sm`}>
-                        Crafting responsive and performant web applications using modern frameworks.
-                      </p>
-                    </div>
-                    <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}>
-                      <FiLayers className={`w-8 h-8 ${theme.accent} mb-3`} />
-                      <h3 className={`text-lg font-semibold ${theme.main.text} mb-2`}>Legacy System Integration</h3>
-                      <p className={`${theme.main.textSecondary} text-sm`}>
-                        Bridging old and new technologies with secure, efficient solutions.
-                      </p>
-                    </div>
-                    <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}>
-                      <FiSearch className={`w-8 h-8 ${theme.accent} mb-3`} />
-                      <h3 className={`text-lg font-semibold ${theme.main.text} mb-2`}>Technical Consulting</h3>
-                      <p className={`${theme.main.textSecondary} text-sm`}>
-                        Expert guidance on architecture, technology selection, and best practices.
-                      </p>
-                    </div>
-                    <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}>
-                      <FiUser className={`w-8 h-8 ${theme.accent} mb-3`} />
-                      <h3 className={`text-lg font-semibold ${theme.main.text} mb-2`}>Developer Training</h3>
-                      <p className={`${theme.main.textSecondary} text-sm`}>
-                        Mentorship and technical training for teams transitioning to new technologies.
-                      </p>
-                    </div>
+                    {[
+                      { icon: <FiCode className={`w-8 h-8 ${theme.accent} mb-3`} />, title: "Web Development", desc: "Crafting responsive and performant web applications using modern frameworks." },
+                      { icon: <FiLayers className={`w-8 h-8 ${theme.accent} mb-3`} />, title: "Legacy System Integration", desc: "Bridging old and new technologies with secure, efficient solutions." },
+                      { icon: <FiSearch className={`w-8 h-8 ${theme.accent} mb-3`} />, title: "Technical Consulting", desc: "Expert guidance on architecture, technology selection, and best practices." },
+                      { icon: <FiUser className={`w-8 h-8 ${theme.accent} mb-3`} />, title: "Developer Training", desc: "Mentorship and technical training for teams transitioning to new technologies." }
+                    ].map((service, index) => (
+                      <motion.div 
+                        key={index}
+                        variants={itemVariants}
+                        whileHover={{ y: -5, boxShadow: "0 10px 15px -5px rgba(0, 0, 0, 0.1)" }}
+                        className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}
+                      >
+                        {service.icon}
+                        <h3 className={`text-lg font-semibold ${theme.main.text} mb-2`}>{service.title}</h3>
+                        <p className={`${theme.main.textSecondary} text-sm`}>{service.desc}</p>
+                      </motion.div>
+                    ))}
                   </div>
-                </div>
+                </motion.div>
               </div>
-            </section>
+            </motion.section>
 
             {/* Skills Overview */}
             <section className="mb-16">
@@ -674,15 +770,17 @@ export default function Home() {
                 </div>
                 
                 <div className="mt-8 text-center">
-                  <button 
-                    onClick={() => setActiveMenu('Skills')}
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleMenuChange('Skills')}
                     className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
                   >
                     <span>View All Skills</span>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>
-                  </button>
+                  </motion.button>
                 </div>
               </div>
             </section>
@@ -725,15 +823,17 @@ export default function Home() {
               </div>
 
               <div className="mt-8 text-center">
-                <button 
-                  onClick={() => setActiveMenu('Projects')}
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleMenuChange('Projects')}
                   className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
                 >
                   <span>View All Projects</span>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
-                </button>
+                </motion.button>
               </div>
             </section>
 
@@ -758,27 +858,33 @@ export default function Home() {
                       {post.description}
                     </p>
                     <div className="flex justify-end">
-                      <button className={`${theme.button.primary} font-medium transition-colors flex items-center space-x-1 cursor-pointer`}>
+                      <motion.button 
+                        whileHover={{ scale: 1.05, x: 5 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`${theme.button.primary} font-medium transition-colors flex items-center space-x-1 cursor-pointer`}
+                      >
                         <span>Read more</span>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
-                      </button>
+                      </motion.button>
                     </div>
                   </div>
                 ))}
               </div>
 
               <div className="mt-8 text-center">
-                <button 
-                  onClick={() => setActiveMenu('Blog Posts')}
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleMenuChange('Blog Posts')}
                   className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
                 >
                   <span>View All Posts</span>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
-                </button>
+                </motion.button>
               </div>
             </section>
           </motion.div>
@@ -791,15 +897,50 @@ export default function Home() {
             animate={{ opacity: 1 }}
             className="max-w-3xl"
           >
-            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>About Me</h1>
+            <motion.h1 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`text-3xl font-bold ${theme.main.text} mb-6`}
+            >
+              About Me
+            </motion.h1>
             
-            <div className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} mb-8`}>
-              <p className={`${theme.main.text} mb-4 text-lg`}>{aboutMeContent.intro}</p>
-              <p className={`${theme.main.textSecondary} mb-6`}>{aboutMeContent.bio}</p>
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} mb-8`}
+            >
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className={`${theme.main.text} mb-4 text-lg`}
+              >
+                {aboutMeContent.intro}
+              </motion.p>
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className={`${theme.main.textSecondary} mb-6`}
+              >
+                {aboutMeContent.bio}
+              </motion.p>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+              >
                 {aboutMeContent.images.map((image, index) => (
-                  <div key={index} className="flex flex-col space-y-2">
+                  <motion.div 
+                    key={index}
+                    variants={itemVariants}
+                    whileHover={{ y: -5, scale: 1.03 }}
+                    className="flex flex-col space-y-2"
+                  >
                     <div className="relative h-48 rounded-lg overflow-hidden">
                       <Image
                         src={image.src}
@@ -809,25 +950,67 @@ export default function Home() {
                       />
                     </div>
                     <p className={`text-sm ${theme.main.textSecondary} italic`}>{image.caption}</p>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
 
-              <h2 className={`text-xl font-semibold ${theme.main.text} mb-3`}>What I'm interested in</h2>
-              <ul className="list-disc pl-5 mb-6">
+              <motion.h2 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+                className={`text-xl font-semibold ${theme.main.text} mb-3`}
+              >
+                What I'm interested in
+              </motion.h2>
+              <motion.ul 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="list-disc pl-5 mb-6"
+              >
                 {aboutMeContent.interests.map((interest, index) => (
-                  <li key={index} className={`${theme.main.textSecondary} mb-1`}>{interest}</li>
+                  <motion.li 
+                    key={index} 
+                    variants={itemVariants}
+                    className={`${theme.main.textSecondary} mb-1`}
+                  >
+                    {interest}
+                  </motion.li>
                 ))}
-              </ul>
+              </motion.ul>
 
-              <h2 className={`text-xl font-semibold ${theme.main.text} mb-3`}>Outside of work</h2>
-              <p className={`${theme.main.textSecondary} mb-4`}>{aboutMeContent.personalLife}</p>
+              <motion.h2 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 }}
+                className={`text-xl font-semibold ${theme.main.text} mb-3`}
+              >
+                Outside of work
+              </motion.h2>
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className={`${theme.main.textSecondary} mb-4`}
+              >
+                {aboutMeContent.personalLife}
+              </motion.p>
               
-              <div className="border-t border-b py-4 my-6 border-opacity-10 border-current">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.7, duration: 0.5 }}
+                className="border-t border-b py-4 my-6 border-opacity-10 border-current"
+              >
                 <p className={`${theme.main.text} text-center italic`}>"{aboutMeContent.philosophy}"</p>
-              </div>
+              </motion.div>
 
-              <div className="flex justify-center">
+              <motion.div 
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8, duration: 0.7 }}
+                className="flex justify-center"
+              >
                 <div className="relative h-60 w-full rounded-lg overflow-hidden">
                   <Image
                     src="https://picsum.photos/id/239/1200/400"
@@ -836,8 +1019,8 @@ export default function Home() {
                     className="object-cover"
                   />
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </motion.div>
         );
       
@@ -848,82 +1031,193 @@ export default function Home() {
             animate={{ opacity: 1 }}
             className="max-w-3xl"
           >
-            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>Technical Skills</h1>
+            <motion.h1 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`text-3xl font-bold ${theme.main.text} mb-6`}
+            >
+              Technical Skills
+            </motion.h1>
             
-            <div className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} mb-8`}>
-              <p className={`${theme.main.text} mb-6 text-lg`}>{skillsContent.intro}</p>
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} mb-8`}
+            >
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className={`${theme.main.text} mb-6 text-lg`}
+              >
+                {skillsContent.intro}
+              </motion.p>
               
-              <div className="mb-8">
-                <h2 className={`text-xl font-semibold ${theme.main.text} mb-4 flex items-center`}>
-                  <FiCode className="mr-2" /> Primary Languages & Frameworks
-                </h2>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="mb-8"
+              >
+                <motion.h2 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className={`text-xl font-semibold ${theme.main.text} mb-4 flex items-center`}
+                >
+                  <motion.div
+                    initial={{ rotate: -90 }}
+                    animate={{ rotate: 0 }}
+                    transition={{ delay: 0.4, duration: 0.5 }}
+                  >
+                    <FiCode className="mr-2" />
+                  </motion.div>
+                  Primary Languages & Frameworks
+                </motion.h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                   {skillsContent.mainSkills.map((skill, index) => (
                     <SkillBar key={index} {...skill} />
                   ))}
                 </div>
-              </div>
+              </motion.div>
               
-              <div className="mb-8">
-                <h2 className={`text-xl font-semibold ${theme.main.text} mb-4`}>Backend Development</h2>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="mb-8"
+              >
+                <motion.h2 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className={`text-xl font-semibold ${theme.main.text} mb-4`}
+                >
+                  Backend Development
+                </motion.h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                   {skillsContent.backendSkills.map((skill, index) => (
                     <SkillBar key={index} {...skill} />
                   ))}
                 </div>
-              </div>
+              </motion.div>
               
-              <div className="mb-8">
-                <h2 className={`text-xl font-semibold ${theme.main.text} mb-4`}>Database Technologies</h2>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mb-8"
+              >
+                <motion.h2 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className={`text-xl font-semibold ${theme.main.text} mb-4`}
+                >
+                  Database Technologies
+                </motion.h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                   {skillsContent.databaseSkills.map((skill, index) => (
                     <SkillBar key={index} {...skill} />
                   ))}
                 </div>
-              </div>
+              </motion.div>
               
-              <div className="mb-8">
-                <h2 className={`text-xl font-semibold ${theme.main.text} mb-4`}>Cloud & DevOps</h2>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="mb-8"
+              >
+                <motion.h2 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className={`text-xl font-semibold ${theme.main.text} mb-4`}
+                >
+                  Cloud & DevOps
+                </motion.h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                   {skillsContent.cloudSkills.map((skill, index) => (
                     <SkillBar key={index} {...skill} />
                   ))}
                 </div>
-              </div>
+              </motion.div>
               
-              <div className="mb-8">
-                <h2 className={`text-xl font-semibold ${theme.main.text} mb-4 flex items-center`}>
-                  <span className={theme.accent}>Legacy & Specialized Systems</span>
-                </h2>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                className="mb-8"
+              >
+                <motion.h2 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className={`text-xl font-semibold ${theme.main.text} mb-4 flex items-center`}
+                >
+                  <motion.span 
+                    initial={{ scale: 0.7 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.7, duration: 0.5, type: "spring" }}
+                    className={theme.accent}
+                  >
+                    Legacy & Specialized Systems
+                  </motion.span>
+                </motion.h2>
                 <div className="grid grid-cols-1 gap-x-8">
                   {skillsContent.legacyAndSpecializedSkills.map((skill, index) => (
                     <SkillBar key={index} {...skill} />
                   ))}
                 </div>
-              </div>
+              </motion.div>
               
-              <div className="mb-8">
-                <h2 className={`text-xl font-semibold ${theme.main.text} mb-4`}>Emerging Technologies</h2>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                className="mb-8"
+              >
+                <motion.h2 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className={`text-xl font-semibold ${theme.main.text} mb-4`}
+                >
+                  Emerging Technologies
+                </motion.h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                   {skillsContent.emergingTechSkills.map((skill, index) => (
                     <SkillBar key={index} {...skill} />
                   ))}
                 </div>
-              </div>
+              </motion.div>
               
-              <div className="border-t border-b py-4 my-6 border-opacity-10 border-current">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.9, duration: 0.5 }}
+                className="border-t border-b py-4 my-6 border-opacity-10 border-current"
+              >
                 <p className={`${theme.main.text} text-center italic`}>"{skillsContent.quote}"</p>
-              </div>
+              </motion.div>
               
-              <div className="relative h-60 w-full rounded-lg overflow-hidden">
+              <motion.div 
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1, duration: 0.7 }}
+                whileHover={{ scale: 1.02 }}
+                className="relative h-60 w-full rounded-lg overflow-hidden"
+              >
                 <Image
                   src="https://picsum.photos/id/119/1200/400"
                   alt="Workstation with multiple screens"
                   fill
                   className="object-cover"
                 />
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </motion.div>
         );
       
@@ -1316,12 +1610,16 @@ export default function Home() {
                     {post.description}
                   </p>
                   <div className="flex justify-end">
-                    <button className={`${theme.button.primary} font-medium transition-colors cursor-pointer flex items-center space-x-1`}>
+                    <motion.button 
+                      whileHover={{ scale: 1.05, x: 5 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={`${theme.button.primary} font-medium transition-colors cursor-pointer flex items-center space-x-1`}
+                    >
                       <span>Read more</span>
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                       </svg>
-                    </button>
+                    </motion.button>
                   </div>
                 </motion.article>
               ))}
@@ -1374,9 +1672,11 @@ export default function Home() {
         </div>
         <nav className="px-4">
           {menuItems.map((item) => (
-            <button
+            <motion.button
               key={item.name}
-              onClick={() => setActiveMenu(item.name)}
+              whileHover={{ x: 5 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleMenuChange(item.name)}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors mb-1 cursor-pointer ${
                 activeMenu === item.name
                   ? `${theme.sidebar.activeBackground} ${theme.main.text}`
@@ -1385,17 +1685,19 @@ export default function Home() {
             >
               {item.icon}
               <span className="text-sm">{item.name}</span>
-            </button>
+            </motion.button>
           ))}
         </nav>
         <div className="absolute bottom-8 left-0 right-0 px-6">
-          <button
+          <motion.button
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={toggleTheme}
             className={`w-full flex items-center justify-center space-x-2 py-2 rounded-lg ${theme.sidebar.activeBackground} ${theme.main.textSecondary} ${theme.main.hover} transition-colors cursor-pointer`}
           >
             {isDarkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
             <span className="text-sm">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
-          </button>
+          </motion.button>
         </div>
       </motion.aside>
 
