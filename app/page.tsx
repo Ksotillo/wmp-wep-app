@@ -1,1710 +1,2656 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FiHome, FiUser, FiCode, FiBriefcase, FiBook, FiMoon, FiSun, FiGithub, FiLinkedin, FiSearch, FiLayers, FiExternalLink } from 'react-icons/fi';
-import { SiJavascript, SiTypescript, SiReact, SiNextdotjs, SiPython, SiRust, SiGo, SiZcool, SiCplusplus, SiSharp, SiRuby, SiAmazon, SiGooglecloud, SiDocker, SiKubernetes, SiMongodb, SiPostgresql, SiTensorflow } from 'react-icons/si';
-import Image from 'next/image';
+import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
+import {
+    Search,
+    Settings,
+    MapPin,
+    Image as ImageIcon,
+    Heart,
+    MessageSquare,
+    Eye,
+    Home as HomeIcon,
+    Users,
+    X,
+    Send,
+    Paperclip,
+    CheckCircle,
+    Menu,
+    Bell,
+} from "lucide-react";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-// Sample blog posts data
-const blogPosts = [
-  {
-    id: 1,
-    title: 'Understanding React Server Components',
-    description: 'Exploring the benefits and implementation of React Server Components in modern web applications.',
-    date: 'March 28, 2024',
-    readTime: '5 min read',
-  },
-  {
-    id: 2,
-    title: 'State Management Patterns',
-    description: 'A deep dive into different state management approaches and when to use each one.',
-    date: 'March 25, 2024',
-    readTime: '7 min read',
-  },
-  {
-    id: 3,
-    title: 'Building Accessible Web Apps',
-    description: 'Best practices and techniques for creating inclusive web applications.',
-    date: 'March 20, 2024',
-    readTime: '4 min read',
-  },
-  {
-    id: 4,
-    title: 'The Future of JavaScript: What to Expect',
-    description: 'Exploring upcoming features, trends, and the evolution of JavaScript in the web development ecosystem.',
-    date: 'March 15, 2024',
-    readTime: '6 min read',
-  },
-  {
-    id: 5,
-    title: 'Optimizing React Performance',
-    description: 'Strategies and techniques for improving the performance of your React applications through code optimization.',
-    date: 'March 10, 2024',
-    readTime: '8 min read',
-  },
-  {
-    id: 6,
-    title: 'Design Patterns in Modern Web Development',
-    description: 'Understanding and implementing effective design patterns to create maintainable and scalable web applications.',
-    date: 'March 5, 2024',
-    readTime: '7 min read',
-  },
-  {
-    id: 7,
-    title: 'The Art of Clean Code',
-    description: 'Principles and practices for writing elegant, maintainable, and efficient code in any programming language.',
-    date: 'February 28, 2024',
-    readTime: '5 min read',
-  },
-  {
-    id: 8,
-    title: 'TypeScript Best Practices in 2024',
-    description: 'Updated guidelines and recommendations for writing type-safe, reliable TypeScript code in modern projects.',
-    date: 'February 20, 2024',
-    readTime: '6 min read',
-  }
-];
-
-// About Me Content
-const aboutMeContent = {
-  intro: "Hi there! I'm John Smith, a passionate Full Stack Developer with over 8 years of experience building web applications that solve real-world problems.",
-  bio: "After graduating with a Computer Science degree from MIT, I've worked with startups and established companies across the globe. My journey in tech began when I built my first website at 12, and I've been hooked ever since.",
-  interests: [
-    "Building scalable web applications",
-    "Contributing to open-source projects",
-    "Exploring new technologies and frameworks",
-    "Technical writing and mentoring junior developers"
-  ],
-  personalLife: "When I'm not coding, you'll find me hiking in the mountains, experimenting with photography, or trying out new coffee shops around the city. I believe in maintaining a healthy work-life balance and finding inspiration in everyday experiences.",
-  philosophy: "I approach every project with curiosity and a commitment to excellence. My philosophy is that great software should be both powerful and intuitive to use.",
-  images: [
-    {
-      src: "https://picsum.photos/id/1025/600/400",
-      alt: "Mountain hiking trip",
-      caption: "Taking a break from coding at Mount Rainier"
-    },
-    {
-      src: "https://picsum.photos/id/96/600/400",
-      alt: "Photography hobby",
-      caption: "Exploring my passion for photography in urban landscapes"
-    },
-    {
-      src: "https://picsum.photos/id/447/600/400",
-      alt: "Speaking at a tech conference",
-      caption: "Sharing knowledge at the React Summit 2023"
-    }
-  ]
+type User = {
+    id: number;
+    name: string;
+    username: string;
+    avatar: string;
 };
 
-// Skills Content
-const skillsContent = {
-  intro: "With over 15 years of programming experience, I've had the opportunity to work with a diverse range of technologies from modern frameworks to legacy systems.",
-  mainSkills: [
-    { name: "JavaScript", icon: <SiJavascript className="text-yellow-400" size={24} />, level: 95, years: 10 },
-    { name: "TypeScript", icon: <SiTypescript className="text-blue-500" size={24} />, level: 90, years: 7 },
-    { name: "React", icon: <SiReact className="text-cyan-400" size={24} />, level: 92, years: 8 },
-    { name: "Next.js", icon: <SiNextdotjs className="text-black dark:text-white" size={24} />, level: 88, years: 5 },
-    { name: "Python", icon: <SiPython className="text-blue-600" size={24} />, level: 85, years: 9 },
-    { name: "Java", level: 80, years: 12 },
-  ],
-  backendSkills: [
-    { name: "Node.js", level: 90, years: 9 },
-    { name: "Express", level: 88, years: 8 },
-    { name: "Django", level: 82, years: 6 },
-    { name: "Spring Boot", level: 78, years: 7 },
-    { name: "GraphQL", level: 85, years: 4 },
-    { name: "REST API Design", level: 95, years: 10 },
-  ],
-  databaseSkills: [
-    { name: "MongoDB", icon: <SiMongodb className="text-green-500" size={24} />, level: 88, years: 7 },
-    { name: "PostgreSQL", icon: <SiPostgresql className="text-blue-700" size={24} />, level: 85, years: 9 },
-    { name: "MySQL", level: 90, years: 12 },
-    { name: "Redis", level: 80, years: 6 },
-    { name: "Elasticsearch", level: 75, years: 4 },
-  ],
-  cloudSkills: [
-    { name: "AWS", icon: <SiAmazon className="text-orange-400" size={24} />, level: 85, years: 7 },
-    { name: "Google Cloud", icon: <SiGooglecloud className="text-blue-500" size={24} />, level: 80, years: 5 },
-    { name: "Azure", level: 75, years: 4 },
-    { name: "Docker", icon: <SiDocker className="text-blue-400" size={24} />, level: 88, years: 6 },
-    { name: "Kubernetes", icon: <SiKubernetes className="text-blue-500" size={24} />, level: 82, years: 4 },
-  ],
-  legacyAndSpecializedSkills: [
-    { name: "COBOL", icon: <SiZcool className="text-blue-800" size={24} />, level: 70, years: 3, description: "Maintained banking systems during Y2K transition" },
-    { name: "Fortran", level: 65, years: 2, description: "Scientific computing projects at NASA" },
-    { name: "Assembly", level: 60, years: 4, description: "Low-level optimization for embedded systems" },
-    { name: "LISP", level: 72, years: 3, description: "AI research projects" },
-    { name: "Ada", level: 68, years: 2, description: "Military defense contracting" },
-  ],
-  emergingTechSkills: [
-    { name: "Rust", icon: <SiRust className="text-orange-600" size={24} />, level: 78, years: 3 },
-    { name: "Go", icon: <SiGo className="text-blue-400" size={24} />, level: 82, years: 4 },
-    { name: "TensorFlow", icon: <SiTensorflow className="text-orange-500" size={24} />, level: 75, years: 3 },
-    { name: "WebAssembly", level: 70, years: 2 },
-    { name: "Blockchain/Smart Contracts", level: 65, years: 2 },
-  ],
-  quote: "Technology is constantly evolving, and I believe in continuous learning. The more languages you know, the more approaches you have to solve complex problems."
+type Post = {
+    id: number;
+    user: User;
+    content: string;
+    prompt?: string;
+    model?: string;
+    images: string[];
+    likes: number;
+    timeAgo: string;
+    mentions?: { name: string; username: string }[];
+    reactions?: { emoji: string; count: number }[];
+    comments?: { user: User; text: string; timeAgo: string }[];
 };
 
-// Projects data
-const projectsData = [
-  {
-    id: 1,
-    title: "NebulaVerse",
-    description: "An immersive 3D space exploration game built with Three.js and WebGL. Features procedurally generated galaxies, physics-based spacecraft controls, and multiplayer capabilities.",
-    tags: ["Three.js", "WebGL", "JavaScript", "Socket.io", "WebRTC"],
-    image: "https://picsum.photos/id/123/800/500",
-    demoUrl: "https://nebulaverse.example.com",
-    repoUrl: "https://github.com/johnsmith/nebulaverse",
-    featured: true,
-    achievements: ["100,000+ monthly active users", "Featured on Chrome Experiments", "WebGL Innovation Award 2023"]
-  },
-  {
-    id: 2,
-    title: "COBOL-X",
-    description: "An open-source modernization framework for legacy COBOL systems used by financial institutions. Provides API wrappers, security enhancements, and compatibility layers for integrating decades-old banking systems with modern web services.",
-    tags: ["COBOL", "Java", "REST APIs", "Banking", "Legacy Systems"],
-    image: "https://picsum.photos/id/180/800/500",
-    repoUrl: "https://github.com/johnsmith/cobolx",
-    featured: true,
-    achievements: ["Adopted by 5 major banks", "Reduced migration costs by 60%", "Featured in Banking Technology Magazine"]
-  },
-  {
-    id: 3,
-    title: "StreamForge",
-    description: "A low-latency streaming library for game developers, with advanced features like adaptive bitrate optimization, peer-to-peer fallback, and integration with major gaming platforms.",
-    tags: ["Rust", "WebRTC", "C++", "UDP", "Gaming"],
-    image: "https://picsum.photos/id/160/800/500",
-    demoUrl: "https://streamforge.dev",
-    repoUrl: "https://github.com/johnsmith/streamforge",
-    featured: true,
-    achievements: ["Used by 200+ indie game studios", "Sub-50ms latency achievement", "10M+ end users"]
-  },
-  {
-    id: 4,
-    title: "QuantumLab",
-    description: "An educational platform for quantum computing simulation, making quantum concepts accessible through interactive visualizations and simplified programming interfaces.",
-    tags: ["Python", "Quantum Computing", "WebAssembly", "Education"],
-    image: "https://picsum.photos/id/201/800/500",
-    demoUrl: "https://quantumlab.io",
-    repoUrl: "https://github.com/johnsmith/quantumlab"
-  },
-  {
-    id: 5,
-    title: "EcoTrack",
-    description: "IoT system for environmental monitoring that uses machine learning to predict pollution levels and analyze environmental impact. Deployed in cooperation with environmental agencies.",
-    tags: ["IoT", "TensorFlow", "Python", "Time Series Analysis"],
-    image: "https://picsum.photos/id/142/800/500",
-    demoUrl: "https://ecotrack.earth",
-    featured: true,
-    achievements: ["Monitoring 150+ urban locations", "Predicted pollution events with 92% accuracy"]
-  },
-  {
-    id: 6,
-    title: "RetroRealm",
-    description: "A virtual reality arcade featuring perfectly emulated vintage games from the 70s, 80s, and 90s. Includes a physics-based environment where players can walk around a period-accurate arcade.",
-    tags: ["Unity", "VR", "C#", "Emulation", "3D Modeling"],
-    image: "https://picsum.photos/id/96/800/500",
-    demoUrl: "https://retrorealm.io"
-  },
-  {
-    id: 7,
-    title: "MediChain",
-    description: "Blockchain-based medical records system ensuring patient data privacy while enabling secure sharing between healthcare providers. Implements zero-knowledge proofs for sensitive information.",
-    tags: ["Blockchain", "Ethereum", "Zero-knowledge Proofs", "Healthcare"],
-    image: "https://picsum.photos/id/175/800/500",
-    repoUrl: "https://github.com/johnsmith/medichain",
-    achievements: ["Pilot program with 3 hospitals", "Published security paper at IEEE"]
-  },
-  {
-    id: 8,
-    title: "LinguaGen",
-    description: "An AI-powered language learning platform using computational linguistics to generate personalized learning materials based on user's native language and learning patterns.",
-    tags: ["NLP", "Machine Learning", "React", "Python"],
-    image: "https://picsum.photos/id/20/800/500",
-    demoUrl: "https://linguagen.app"
-  },
-  {
-    id: 9,
-    title: "AutoSymphony",
-    description: "Experimental music composition AI that generates original orchestral arrangements based on emotional input and style preferences. Used in indie film scoring and game development.",
-    tags: ["TensorFlow", "Audio Processing", "MIDI", "GANs"],
-    image: "https://picsum.photos/id/187/800/500",
-    demoUrl: "https://autosymphony.io",
-    repoUrl: "https://github.com/johnsmith/autosymphony"
-  },
-  {
-    id: 10,
-    title: "Holotecture",
-    description: "Augmented reality architecture visualization tool that helps architects and clients see building designs at scale in real environments before construction begins.",
-    tags: ["AR", "Unity", "BIM Integration", "3D Rendering"],
-    image: "https://picsum.photos/id/162/800/500",
-    demoUrl: "https://holotecture.build"
-  }
-];
-
-// Portfolio data
-const portfolioData = {
-  experience: [
-    {
-      company: "TechNova Labs",
-      position: "Principal Software Architect",
-      period: "2020 - Present",
-      description: "Leading architecture design for cloud-native applications and mentoring engineering teams. Spearheaded company-wide migration to microservices architecture, reducing deployment time by 70%.",
-      technologies: ["React", "Node.js", "AWS", "Kubernetes", "GraphQL"],
-      achievements: [
-        "Redesigned payment processing system handling $2M daily transactions",
-        "Reduced infrastructure costs by 35% through cloud optimization",
-        "Established engineering excellence program adopted by 4 departments"
-      ],
-      logo: "https://picsum.photos/id/28/100/100"
-    },
-    {
-      company: "DataSphere Systems",
-      position: "Senior Full Stack Developer",
-      period: "2017 - 2020",
-      description: "Developed enterprise data visualization platform used by Fortune 500 clients. Led team of 6 engineers and collaborated with product managers to deliver key features.",
-      technologies: ["Angular", "Python", "PostgreSQL", "Docker", "Azure"],
-      achievements: [
-        "Built real-time analytics dashboard processing 50M data points daily",
-        "Improved application performance by 60% through optimization",
-        "Awarded company's 'Innovator of the Year' for AI integration initiative"
-      ],
-      logo: "https://picsum.photos/id/42/100/100"
-    },
-    {
-      company: "LegacyTech Financial Services",
-      position: "Systems Analyst & COBOL Specialist",
-      period: "2014 - 2017",
-      description: "Maintained and modernized critical banking infrastructure during major digital transformation. Created integration layers between legacy systems and modern web services.",
-      technologies: ["COBOL", "Java", "Oracle", "RESTful APIs", "JCL"],
-      achievements: [
-        "Successfully migrated 30-year-old banking system with zero downtime",
-        "Implemented secure API gateway for legacy systems",
-        "Reduced manual processing time by 80% through automation"
-      ],
-      logo: "https://picsum.photos/id/60/100/100"
-    },
-    {
-      company: "NASA Jet Propulsion Laboratory",
-      position: "Research Software Engineer (Contract)",
-      period: "2012 - 2014",
-      description: "Contributed to mission-critical software for Mars rover operations. Worked with scientific computing teams to optimize data processing pipelines for telemetry analysis.",
-      technologies: ["C++", "Python", "FORTRAN", "CUDA", "Scientific Computing"],
-      achievements: [
-        "Developed image processing algorithms for Mars terrain analysis",
-        "Optimized computation-intensive simulations, reducing runtime by 40%",
-        "Co-authored research paper on distributed computing for space missions"
-      ],
-      logo: "https://picsum.photos/id/73/100/100"
-    }
-  ],
-  education: [
-    {
-      institution: "Massachusetts Institute of Technology",
-      degree: "Master of Science in Computer Science",
-      period: "2010 - 2012",
-      description: "Specialized in distributed systems and machine learning. Teaching assistant for Advanced Algorithms course.",
-      thesis: "Distributed Consensus Algorithms for Autonomous Vehicle Coordination",
-      logo: "https://picsum.photos/id/15/100/100"
-    },
-    {
-      institution: "Stanford University",
-      degree: "Bachelor of Science in Computer Science",
-      period: "2006 - 2010",
-      description: "Graduated with honors. Active in competitive programming and robotics club.",
-      thesis: "Efficient Path Planning Algorithms for Multi-Agent Systems",
-      logo: "https://picsum.photos/id/16/100/100"
-    }
-  ],
-  certifications: [
-    {
-      name: "AWS Solutions Architect Professional",
-      issuer: "Amazon Web Services",
-      date: "2022",
-      logo: "https://picsum.photos/id/119/100/100"
-    },
-    {
-      name: "Google Cloud Professional Architect",
-      issuer: "Google",
-      date: "2021",
-      logo: "https://picsum.photos/id/120/100/100"
-    },
-    {
-      name: "Certified Kubernetes Administrator",
-      issuer: "Cloud Native Computing Foundation",
-      date: "2020",
-      logo: "https://picsum.photos/id/121/100/100"
-    },
-    {
-      name: "Azure DevOps Expert",
-      issuer: "Microsoft",
-      date: "2019",
-      logo: "https://picsum.photos/id/122/100/100"
-    }
-  ],
-  speaking: [
-    {
-      event: "React Summit 2023",
-      topic: "Beyond Hooks: The Future of React State Management",
-      location: "Amsterdam, Netherlands",
-      date: "June 2023",
-      image: "https://picsum.photos/id/139/800/400"
-    },
-    {
-      event: "COBOL Connect Conference",
-      topic: "Bridging Decades: Integrating Legacy COBOL with Modern Microservices",
-      location: "Chicago, USA",
-      date: "March 2023",
-      image: "https://picsum.photos/id/140/800/400"
-    },
-    {
-      event: "AWS re:Invent",
-      topic: "Serverless at Scale: Lessons from the Trenches",
-      location: "Las Vegas, USA",
-      date: "November 2022",
-      image: "https://picsum.photos/id/141/800/400"
-    }
-  ]
+type Story = {
+    id: number;
+    user: User;
+    image: string;
 };
 
-// Theme configuration
-const themeConfig = {
-  light: {
-    main: {
-      background: 'bg-gradient-to-br from-white to-[#fef8f3]',
-      text: 'text-[#1c1c1c]',
-      textSecondary: 'text-[#1c1c1c]/70',
-      hover: 'hover:text-[#1c1c1c]',
-    },
-    sidebar: {
-      background: 'bg-[#fefcfb]',
-      activeBackground: 'bg-[#fceee7]',
-      hoverBackground: 'hover:bg-[#fceee7]/50',
-      border: 'border-[#e9ecef]',
-    },
-    content: {
-      background: 'bg-white',
-      inputBorder: 'border-[#e9ecef]',
-      focusRing: 'focus:ring-[#fceee7]',
-      card: '',
-      cardHover: '',
-    },
-    button: {
-      primary: 'text-[#b85c38] hover:text-[#a04b2b]',
-    },
-    accent: 'text-[#b85c38]'
-  },
-  dark: {
-    main: {
-      background: 'bg-[#1a1a1a]',
-      text: 'text-white',
-      textSecondary: 'text-[#a0a0a0]',
-      hover: 'hover:text-white',
-    },
-    sidebar: {
-      background: 'bg-[#2d2d2d]',
-      activeBackground: 'bg-[#404040]',
-      hoverBackground: 'hover:bg-[#363636]',
-      border: 'border-[#404040]',
-    },
-    content: {
-      background: 'bg-[#2d2d2d]',
-      inputBorder: 'border-[#404040]',
-      focusRing: 'focus:ring-[#404040]',
-      card: '',
-      cardHover: '',
-    },
-    button: {
-      primary: 'text-[#b85c38] hover:text-[#a04b2b]',
-    },
-    accent: 'text-[#b85c38]'
-  }
+type Suggestion = {
+    id: number;
+    user: User;
+    followed?: boolean;
+};
+
+type Recommendation = {
+    id: number;
+    title: string;
+    icon: string;
+};
+
+type Message = {
+    id: number;
+    sender: User;
+    receiver: User;
+    text: string;
+    time: string;
+    isRead: boolean;
+};
+
+type Chat = {
+    id: number;
+    user: User;
+    messages: Message[];
+    lastMessage?: Message;
+    unreadCount: number;
+};
+
+type MobileMenuProps = {
+    currentUser: {
+        name: string;
+        username: string;
+        avatar: string;
+    };
+    activeSection: string;
+    onSectionChange: (section: string) => void;
+};
+
+function isGithubAvatarUrl(url: string): boolean {
+    return url.includes("avatars.githubusercontent.com");
+}
+
+function stabilizeAvatarUrl(url: string): string {
+    if (isGithubAvatarUrl(url)) {
+        const match = url.match(/\/u\/(\d+)/);
+        if (match) {
+            return `https://avatars.githubusercontent.com/u/${match[1]}?v=4`;
+        }
+    }
+    return url;
+}
+
+function AvatarImage({
+    src,
+    alt,
+    width,
+    height,
+    className,
+    style,
+    fill,
+}: {
+    src: string;
+    alt: string;
+    width?: number;
+    height?: number;
+    className?: string;
+    style?: React.CSSProperties;
+    fill?: boolean;
+}) {
+    const stableUrl = stabilizeAvatarUrl(src);
+
+    if (isGithubAvatarUrl(stableUrl)) {
+        return (
+            <img
+                src={stableUrl}
+                alt={alt}
+                width={width}
+                height={height}
+                className={`${className || ""} ${fill ? "object-cover w-full h-full" : ""}`}
+                style={{
+                    ...(width && !fill ? { width: `${width}px` } : {}),
+                    ...(height && !fill ? { height: `${height}px` } : {}),
+                    ...style,
+                }}
+            />
+        );
+    }
+
+    if (fill) {
+        return <Image src={stableUrl} alt={alt} fill className={className || ""} style={style} />;
+    }
+
+    return <Image src={stableUrl} alt={alt} width={width!} height={height!} className={className || ""} style={style} />;
+}
+
+const fonts = {
+    heading: "system-ui",
+    body: "system-ui",
+};
+
+const animations = {
+    fadeIn: "animate-fadeIn",
+    slideUp: "animate-slideUp",
+    pulse: "animate-pulse",
+    bounce: "animate-bounce",
+    spin: "animate-spin",
+    scale: "transition-transform duration-200 hover:scale-105",
+};
+
+const SidebarItem = ({
+    icon,
+    label,
+    count,
+    isActive,
+    onClick,
+}: {
+    icon: React.ReactNode;
+    label: string;
+    count?: number;
+    isActive?: boolean;
+    onClick?: () => void;
+}) => (
+    <li className="transform transition-transform duration-200 hover:translate-x-1">
+        <a
+            href="#"
+            onClick={(e) => {
+                e.preventDefault();
+                if (onClick) onClick();
+            }}
+            className={`flex items-center p-4 rounded-lg mb-2 cursor-pointer transition-all duration-200 ${
+                isActive ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"
+            }`}
+        >
+            <div className="w-6 h-6 mr-3 flex items-center justify-center">{icon}</div>
+            {label}
+            {count && (
+                <span
+                    className={`ml-auto ${
+                        isActive ? "bg-gray-700" : "bg-gray-900"
+                    } text-white text-xs rounded-full w-5 h-5 flex items-center justify-center`}
+                >
+                    {count}
+                </span>
+            )}
+        </a>
+    </li>
+);
+
+function MobileMenu({ currentUser, activeSection, onSectionChange }: MobileMenuProps) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (isOpen && !target.closest(".mobile-menu-content") && !target.closest(".mobile-menu-trigger")) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "auto";
+        }
+
+        return () => {
+            document.body.style.overflow = "auto";
+        };
+    }, [isOpen]);
+
+    const handleSectionChange = (section: string) => {
+        onSectionChange(section);
+        setIsOpen(false);
+    };
+
+    return (
+        <>
+            <button
+                className="md:hidden mobile-menu-trigger flex items-center justify-center w-10 h-10 text-gray-600 cursor-pointer"
+                onClick={() => setIsOpen(true)}
+            >
+                <Menu size={24} />
+            </button>
+            {isOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-40">
+                    <div className="mobile-menu-content fixed inset-y-0 left-0 max-w-[280px] w-full bg-white shadow-lg transform transition-transform duration-300 z-50">
+                        <div className="flex items-center justify-between p-4 border-b">
+                            <div className="flex items-center">
+                                <div className="relative w-10 h-10 mr-3">
+                                    <div className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-gradient-to-r from-purple-500 via-pink-400 to-orange-300"></div>
+                                    <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-teal-400"></div>
+                                    <AvatarImage
+                                        src={currentUser.avatar}
+                                        alt={currentUser.name}
+                                        width={40}
+                                        height={40}
+                                        className="rounded-full border-2 border-white z-10 relative"
+                                    />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-sm">{currentUser.name}</h3>
+                                    <p className="text-gray-500 text-xs">@{currentUser.username}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-gray-700 cursor-pointer">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <nav className="p-4">
+                            <ul className="space-y-2">
+                                <li>
+                                    <button
+                                        onClick={() => handleSectionChange("newsfeed")}
+                                        className={`flex items-center w-full p-3 rounded-lg cursor-pointer ${
+                                            activeSection === "newsfeed" ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                    >
+                                        <HomeIcon
+                                            className={`w-5 h-5 mr-3 ${activeSection === "newsfeed" ? "text-white" : "text-gray-700"}`}
+                                        />
+                                        News Feed
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        onClick={() => handleSectionChange("messages")}
+                                        className={`flex items-center w-full p-3 rounded-lg cursor-pointer ${
+                                            activeSection === "messages" ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                    >
+                                        <MessageSquare
+                                            className={`w-5 h-5 mr-3 ${activeSection === "messages" ? "text-white" : "text-gray-700"}`}
+                                        />
+                                        Messages
+                                        <span className="ml-auto bg-gray-900 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                            6
+                                        </span>
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        onClick={() => handleSectionChange("friends")}
+                                        className={`flex items-center w-full p-3 rounded-lg cursor-pointer ${
+                                            activeSection === "friends" ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                    >
+                                        <Users className={`w-5 h-5 mr-3 ${activeSection === "friends" ? "text-white" : "text-gray-700"}`} />
+                                        Friends
+                                        <span className="ml-auto bg-gray-900 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                            3
+                                        </span>
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        onClick={() => handleSectionChange("notifications")}
+                                        className={`flex items-center w-full p-3 rounded-lg cursor-pointer ${
+                                            activeSection === "notifications" ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                    >
+                                        <Bell
+                                            className={`w-5 h-5 mr-3 ${activeSection === "notifications" ? "text-white" : "text-gray-700"}`}
+                                        />
+                                        Notifications
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        onClick={() => handleSectionChange("settings")}
+                                        className={`flex items-center w-full p-3 rounded-lg cursor-pointer ${
+                                            activeSection === "settings" ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                    >
+                                        <Settings
+                                            className={`w-5 h-5 mr-3 ${activeSection === "settings" ? "text-white" : "text-gray-700"}`}
+                                        />
+                                        Settings
+                                    </button>
+                                </li>
+                            </ul>
+                        </nav>
+                        <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+                            <button className="w-full py-2 bg-black text-white rounded-lg cursor-pointer">Sign Out</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
+
+const PostCard = ({
+    post,
+    currentUser,
+    likedPosts,
+    activeCommentInput,
+    openDropdownId,
+    onLikeToggle,
+    onCommentToggle,
+    onDropdownToggle,
+    onCommentSubmit,
+    onSavePost,
+    onHidePost,
+    onReportPost,
+    commentText,
+    setCommentText,
+}: {
+    post: Post & { comments?: { user: User; text: string; timeAgo: string }[] };
+    currentUser: User;
+    likedPosts: number[];
+    activeCommentInput: number | null;
+    openDropdownId: number | null;
+    onLikeToggle: (id: number) => void;
+    onCommentToggle: (id: number) => void;
+    onDropdownToggle: (id: number) => void;
+    onCommentSubmit: (id: number) => void;
+    onSavePost: (id: number) => void;
+    onHidePost: (id: number) => void;
+    onReportPost: (id: number) => void;
+    commentText: string;
+    setCommentText: (text: string) => void;
+}) => {
+    return (
+        <div
+            className={`rounded-xl overflow-hidden ${animations.fadeIn} ${
+                post.id % 4 === 0
+                    ? "bg-[#ffe8d9]"
+                    : post.id % 3 === 0
+                    ? "bg-[#daffee]"
+                    : post.id % 2 === 0
+                    ? "bg-[#fff5df]"
+                    : "bg-[#dfebff]"
+            }`}
+        >
+            <div className="p-3 sm:p-4">
+                <div className="flex justify-between mb-4">
+                    <div className="flex">
+                        <AvatarImage
+                            src={post.user.avatar}
+                            alt={post.user.name}
+                            width={40}
+                            height={40}
+                            className="rounded-full mr-2 sm:mr-3 w-8 h-8 sm:w-10 sm:h-10"
+                        />
+                        <div>
+                            <h4 className="font-bold text-sm sm:text-base" style={{ fontFamily: fonts.heading }}>
+                                {post.user.name}
+                            </h4>
+                            <p className="text-gray-500 text-xs sm:text-sm">{post.timeAgo}</p>
+                        </div>
+                    </div>
+                    <div className="relative">
+                        <button className="text-gray-400 cursor-pointer" onClick={() => onDropdownToggle(post.id)}>
+                            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="6" r="2" />
+                                <circle cx="12" cy="12" r="2" />
+                                <circle cx="12" cy="18" r="2" />
+                            </svg>
+                        </button>
+
+                        {openDropdownId === post.id && (
+                            <div className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-lg py-2 w-48 z-10">
+                                <button
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                                    onClick={() => onSavePost(post.id)}
+                                >
+                                    Save post
+                                </button>
+                                <button
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                                    onClick={() => onHidePost(post.id)}
+                                >
+                                    Hide post
+                                </button>
+                                <button
+                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 cursor-pointer"
+                                    onClick={() => onReportPost(post.id)}
+                                >
+                                    Report post
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="mb-4">
+                    <p className="text-sm sm:text-base">
+                        {post.content}
+                        {post.mentions &&
+                            post.mentions.map((mention, idx) => (
+                                <span key={idx}>
+                                    {idx > 0 && ", "}
+                                    <a href="#" className="ml-1 font-semibold text-blue-600 hover:underline cursor-pointer">
+                                        {mention.name}
+                                    </a>
+                                </span>
+                            ))}
+                        {post.mentions && "!"}
+                    </p>
+
+                    {post.prompt && (
+                        <div className="mt-2 p-3 bg-black/5 rounded-lg">
+                            <p className="text-xs sm:text-sm font-medium mb-1">Prompt:</p>
+                            <p className="text-xs sm:text-sm text-gray-700">{post.prompt}</p>
+                            {post.model && (
+                                <div className="mt-1 flex items-center">
+                                    <span className="text-xs text-gray-500">Model: {post.model}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {post.images && post.images.length > 0 && (
+                    <div
+                        className={`grid ${
+                            post.images.length === 1
+                                ? "grid-cols-1"
+                                : post.images.length === 2
+                                ? "grid-cols-2"
+                                : "grid-cols-2 sm:grid-cols-3"
+                        } gap-2 mb-4`}
+                    >
+                        {post.images.map((img, idx) => (
+                            <div
+                                key={idx}
+                                className={`${
+                                    post.images.length > 2 && idx === 2 ? "hidden sm:block" : ""
+                                } rounded-lg overflow-hidden h-36 sm:h-56 relative`}
+                            >
+                                <AvatarImage src={img} alt="Post image" fill className="object-cover" />
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div className="flex items-center text-gray-500 text-xs sm:text-sm">
+                    <div className="flex items-center mr-3 sm:mr-6">
+                        <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                        <span>{post.likes}</span>
+                    </div>
+
+                    <button
+                        className={`flex items-center mr-3 sm:mr-6 cursor-pointer ${likedPosts.includes(post.id) ? "text-red-500" : ""}`}
+                        onClick={() => onLikeToggle(post.id)}
+                    >
+                        <Heart className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${likedPosts.includes(post.id) ? "fill-current" : ""}`} />
+                        <span>Like</span>
+                    </button>
+
+                    <button
+                        className={`flex items-center cursor-pointer ${activeCommentInput === post.id ? "text-blue-500" : ""}`}
+                        onClick={() => onCommentToggle(post.id)}
+                    >
+                        <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                        <span>Comment</span>
+                    </button>
+                </div>
+
+                {post.comments && post.comments.length > 0 && (
+                    <div className="mt-4">
+                        <h5 className="text-sm font-semibold mb-3">Comments</h5>
+                        <div className="space-y-3">
+                            {post.comments.map((comment, idx) => (
+                                <div key={idx} className="flex">
+                                    <AvatarImage
+                                        src={comment.user.avatar}
+                                        alt={comment.user.name}
+                                        width={32}
+                                        height={32}
+                                        className="rounded-full mr-2 w-7 h-7"
+                                    />
+                                    <div className="bg-white rounded-xl p-2 flex-1">
+                                        <div className="flex justify-between">
+                                            <h6 className="text-xs font-semibold">{comment.user.name}</h6>
+                                            <span className="text-xs text-gray-500">{comment.timeAgo}</span>
+                                        </div>
+                                        <p className="text-xs mt-1">{comment.text}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {activeCommentInput === post.id && (
+                    <div className="mt-4">
+                        <AvatarImage
+                            src={currentUser.avatar}
+                            alt={currentUser.name}
+                            width={32}
+                            height={32}
+                            className="rounded-full mr-2 w-8 h-8 inline-block"
+                        />
+                        <div className="inline-flex flex-1 w-[calc(100%-40px)]">
+                            <input
+                                type="text"
+                                placeholder="Write a comment..."
+                                className="flex-1 bg-white border border-gray-200 rounded-l-full px-4 py-2 text-gray-700 focus:outline-none text-sm"
+                                value={commentText}
+                                onChange={(e) => setCommentText(e.target.value)}
+                                onKeyPress={(e) => e.key === "Enter" && onCommentSubmit(post.id)}
+                            />
+                            <button
+                                className="bg-black text-white px-4 rounded-r-full flex items-center text-sm cursor-pointer"
+                                onClick={() => onCommentSubmit(post.id)}
+                            >
+                                Post
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const UserAvatar = ({ user, size = "md", showStatus = false }: { user: User; size?: "sm" | "md" | "lg"; showStatus?: boolean }) => {
+    const sizes = {
+        sm: { width: 32, height: 32, className: "w-8 h-8" },
+        md: { width: 40, height: 40, className: "w-10 h-10" },
+        lg: { width: 48, height: 48, className: "w-12 h-12" },
+    };
+
+    const { width, height, className } = sizes[size];
+
+    return (
+        <div className="relative group">
+            {showStatus && (
+                <>
+                    <div className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-gradient-to-r from-purple-500 via-pink-400 to-orange-300 group-hover:animate-spin group-hover:scale-110 transition-all duration-500"></div>
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-teal-400 group-hover:animate-pulse group-hover:scale-125 transition-all duration-500"></div>
+                </>
+            )}
+            <div className="relative overflow-hidden rounded-full transition-transform duration-300 group-hover:scale-105">
+                <AvatarImage
+                    src={user.avatar}
+                    alt={user.name}
+                    width={width}
+                    height={height}
+                    className={`rounded-full ${className} ${showStatus ? "border-2 border-white z-10 relative" : ""}`}
+                />
+                {showStatus && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-400/20 to-teal-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const generateRandomUsers = (startId: number, count: number): Suggestion[] => {
+    const suggestions: Suggestion[] = [];
+
+    const firstNames = ["Alex", "Jamie", "Jordan", "Taylor", "Morgan", "Casey", "Riley", "Charlie", "Avery", "Quinn"];
+    const lastNames = ["Smith", "Johnson", "Williams", "Jones", "Brown", "Davis", "Miller", "Wilson", "Moore", "Taylor"];
+
+    for (let i = 0; i < count; i++) {
+        const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+        const randomUserId = Math.floor(Math.random() * 1000000);
+
+        suggestions.push({
+            id: startId + i,
+            user: {
+                id: startId + i + 10,
+                name: `${firstName} ${lastName}`,
+                username: `${firstName.toLowerCase()}${lastName.toLowerCase()}`,
+                avatar: `https://avatars.githubusercontent.com/u/${randomUserId}?v=4`,
+            },
+            followed: false,
+        });
+    }
+
+    return suggestions;
+};
+
+const SuggestionCard = ({ suggestion, onFollowUser }: { suggestion: Suggestion; onFollowUser: (id: number) => void }) => {
+    return (
+        <div
+            className={`flex items-center justify-between p-3 border rounded-lg hover:shadow-sm transition-all duration-300 ${animations.fadeIn} hover:translate-y-[-2px]`}
+        >
+            <div className="flex items-center">
+                <UserAvatar user={suggestion.user} size="md" />
+                <div className="ml-3">
+                    <h4 className="font-medium" style={{ fontFamily: fonts.heading }}>
+                        {suggestion.user.name}
+                    </h4>
+                    <p className="text-gray-500 text-sm">@{suggestion.user.username}</p>
+                </div>
+            </div>
+            <button
+                onClick={() => onFollowUser(suggestion.id)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 transform active:scale-95 ${
+                    suggestion.followed ? "bg-blue-100 text-blue-600 hover:bg-blue-200" : "bg-black text-white hover:bg-gray-800"
+                }`}
+            >
+                {suggestion.followed ? (
+                    <span className="flex items-center">
+                        <CheckCircle size={16} className="mr-1" />
+                        Followed
+                    </span>
+                ) : (
+                    "Follow"
+                )}
+            </button>
+        </div>
+    );
+};
+
+const FriendCard = ({
+    friend,
+    onRemoveFriend,
+    onMessageFriend,
+}: {
+    friend: User;
+    onRemoveFriend: (id: number) => void;
+    onMessageFriend: (friend: User) => void;
+}) => {
+    return (
+        <div
+            className={`bg-white rounded-xl border border-gray-200 p-4 flex flex-col items-center transition-all duration-300 ${animations.fadeIn} hover:shadow-md hover:border-gray-300`}
+        >
+            <UserAvatar user={friend} size="lg" />
+            <h3 className="font-semibold mt-3 mb-1">{friend.name}</h3>
+            <p className="text-gray-500 text-sm mb-4">@{friend.username}</p>
+            <div className="flex space-x-2 w-full">
+                <button
+                    className="flex-1 bg-black text-white py-2 rounded-lg text-sm cursor-pointer transition-all duration-200 transform active:scale-95 hover:bg-gray-800"
+                    onClick={() => onMessageFriend(friend)}
+                >
+                    Message
+                </button>
+                <button
+                    className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm cursor-pointer"
+                    onClick={() => onRemoveFriend(friend.id)}
+                >
+                    Remove
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const SidebarSuggestionCard = ({ suggestion, onFollowUser }: { suggestion: Suggestion; onFollowUser: (id: number) => void }) => {
+    return (
+        <div className="flex items-center justify-between">
+            <div className="flex items-center">
+                <UserAvatar user={suggestion.user} size="md" />
+                <div className="max-w-[120px] ml-3">
+                    <h4 className="font-medium truncate" style={{ fontFamily: fonts.heading }}>
+                        {suggestion.user.name}
+                    </h4>
+                    <p className="text-gray-500 text-sm truncate">@{suggestion.user.username}</p>
+                </div>
+            </div>
+            <button
+                onClick={() => onFollowUser(suggestion.id)}
+                className={`px-3 py-1 text-xs rounded-full cursor-pointer ${
+                    suggestion.followed ? "bg-blue-100 text-blue-600" : "bg-black text-white"
+                }`}
+            >
+                {suggestion.followed ? "Followed" : "Follow"}
+            </button>
+        </div>
+    );
 };
 
 export default function Home() {
-  const [activeMenu, setActiveMenu] = useState('Home');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [mounted, setMounted] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  
-  // Get active theme styles
-  const theme = isDarkMode ? themeConfig.dark : themeConfig.light;
-
-  // Wait until mounted to check for saved theme preference
-  useEffect(() => {
-    setMounted(true);
-    // Check for saved theme preference
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      setIsDarkMode(true);
-    }
-  }, []);
-
-  // Scroll to top when active menu changes
-  useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
+    const [currentUser, setCurrentUser] = useState<User>({
+        id: 1,
+        name: "Bogdan Nikitin",
+        username: "nikitinteam",
+        avatar: "https://avatars.githubusercontent.com/u/59017652?v=4",
     });
-  }, [activeMenu]);
 
-  const toggleTheme = () => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    // Save preference
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
-  };
+    const [activeSection, setActiveSection] = useState("newsfeed");
 
-  // Custom handler for menu switching with scroll-to-top behavior
-  const handleMenuChange = (menuName: string) => {
-    setActiveMenu(menuName);
-  };
+    const [activeFeedFilter, setActiveFeedFilter] = useState("friends");
 
-  const menuItems = [
-    { name: 'Home', icon: <FiHome className="w-5 h-5" /> },
-    { name: 'About Me', icon: <FiUser className="w-5 h-5" /> },
-    { name: 'Skills', icon: <FiCode className="w-5 h-5" /> },
-    { name: 'Projects', icon: <FiLayers className="w-5 h-5" /> },
-    { name: 'Portfolio', icon: <FiBriefcase className="w-5 h-5" /> },
-    { name: 'Blog Posts', icon: <FiBook className="w-5 h-5" /> },
-  ];
+    const [activeFriendsFilter, setActiveFriendsFilter] = useState("friends");
 
-  const filteredPosts = blogPosts.filter(post =>
-    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    const [likedPosts, setLikedPosts] = useState<number[]>([]);
+    const [activeCommentInput, setActiveCommentInput] = useState<number | null>(null);
+    const [commentText, setCommentText] = useState("");
+    const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
 
-  // Skill bar component with proper types
-  type SkillBarProps = {
-    name: string;
-    level: number;
-    years: number;
-    icon?: React.ReactNode;
-    description?: string;
-  };
+    const [postText, setPostText] = useState("");
+    const [promptText, setPromptText] = useState("");
+    const [selectedModel, setSelectedModel] = useState("midjourney");
+    const [selectedImages, setSelectedImages] = useState<string[]>([]);
+    const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+    const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
+    const imageInputRef = useRef<HTMLInputElement>(null);
+    const [showPromptInput, setShowPromptInput] = useState(false);
 
-  const SkillBar = ({ name, level, years, icon, description }: SkillBarProps) => (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="mb-4"
-    >
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center space-x-2">
-          {icon && <span>{icon}</span>}
-          <span className={`font-medium ${theme.main.text}`}>{name}</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span className={`text-sm ${theme.accent}`}>{years} {years === 1 ? 'year' : 'years'}</span>
-          <motion.span 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className={`text-sm ${theme.main.textSecondary}`}
-          >
-            {level}%
-          </motion.span>
-        </div>
-      </div>
-      <div className={`w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden`}>
-        <motion.div 
-          initial={{ width: 0 }}
-          animate={{ width: `${level}%` }}
-          transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
-          className="h-full bg-gradient-to-r from-[#b85c38] to-[#e8956c] rounded-full"
-        ></motion.div>
-      </div>
-      {description && (
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
-          className={`text-xs ${theme.main.textSecondary} mt-1 italic`}
-        >
-          {description}
-        </motion.p>
-      )}
-    </motion.div>
-  );
+    const [friendsPosts, setFriendsPosts] = useState<(Post & { comments?: { user: User; text: string; timeAgo: string }[] })[]>([
+        {
+            id: 1,
+            user: {
+                id: 2,
+                name: "George Lobko",
+                username: "georgelobko",
+                avatar: "https://avatars.githubusercontent.com/u/383979?v=4",
+            },
+            content: "Created this surreal cityscape with towering crystal structures and floating islands.",
+            prompt: "A futuristic cityscape with crystal spires and floating islands, 8k, hyperrealistic, cinematic lighting",
+            model: "Midjourney v6",
+            images: ["https://picsum.photos/id/29/600/400", "https://picsum.photos/id/30/600/400"],
+            likes: 6355,
+            timeAgo: "2 hours ago",
+            mentions: [
+                { name: "Silena", username: "silena" },
+                { name: "Olya", username: "olya" },
+            ],
+            reactions: [
+                { emoji: "🔥", count: 1 },
+                { emoji: "😍", count: 1 },
+                { emoji: "😱", count: 1 },
+                { emoji: "❤️", count: 1 },
+            ],
+            comments: [
+                {
+                    user: {
+                        id: 10,
+                        name: "Maria K.",
+                        username: "mariak",
+                        avatar: "https://avatars.githubusercontent.com/u/1410106?v=4",
+                    },
+                    text: "Stunning! What settings did you use for the lighting?",
+                    timeAgo: "1 hour ago",
+                },
+            ],
+        },
+        {
+            id: 2,
+            user: {
+                id: 3,
+                name: "Vitaliy Boyko",
+                username: "vitaliyboyko",
+                avatar: "https://avatars.githubusercontent.com/u/1410106?v=4",
+            },
+            content: "My latest portrait series exploring emotional depth through AI. Tried a new technique with detailed prompting.",
+            prompt: "Portrait of a weathered explorer with deep emotional eyes, detailed skin texture, cinematic lighting, 8k, photorealistic",
+            model: "DALL-E 3",
+            images: ["https://picsum.photos/id/65/600/400"],
+            likes: 129,
+            timeAgo: "3 hours ago",
+            comments: [],
+        },
+    ]);
 
-  // Animation variants for staggered animations
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
+    const [recentsPosts, setRecentsPosts] = useState<(Post & { comments?: { user: User; text: string; timeAgo: string }[] })[]>([
+        {
+            id: 3,
+            user: {
+                id: 11,
+                name: "Alex Morgan",
+                username: "alexmorgan",
+                avatar: "https://avatars.githubusercontent.com/u/6270131?v=4",
+            },
+            content: "My latest experiment with surreal landscapes and glowing creatures.",
+            prompt: "Bioluminescent creatures in a surreal alien landscape, fantastical, 8k, cinematic lighting, hyper-detailed",
+            model: "Stable Diffusion XL",
+            images: ["https://picsum.photos/id/1/600/400"],
+            likes: 421,
+            timeAgo: "20 minutes ago",
+            comments: [],
+        },
+        {
+            id: 4,
+            user: {
+                id: 12,
+                name: "Sophia Chen",
+                username: "sophiachen",
+                avatar: "https://avatars.githubusercontent.com/u/18194757?v=4",
+            },
+            content: "Just finished this cyberpunk cityscape series. The neon lighting was particularly challenging to get right.",
+            prompt: "Cyberpunk cityscape at night, neon lights reflecting on wet streets, dense urban environment, flying cars, 8k, detailed, cinematic",
+            model: "DALL-E 3",
+            images: ["https://picsum.photos/id/24/600/400"],
+            likes: 87,
+            timeAgo: "Just now",
+            comments: [
+                {
+                    user: {
+                        id: 13,
+                        name: "James Peterson",
+                        username: "jamesp",
+                        avatar: "https://avatars.githubusercontent.com/u/16659427?v=4",
+                    },
+                    text: "The reflections on the wet pavement are incredible! What resolution did you generate at?",
+                    timeAgo: "5 minutes ago",
+                },
+            ],
+        },
+    ]);
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut"
-      }
-    }
-  };
+    const [popularPosts, setPopularPosts] = useState<(Post & { comments?: { user: User; text: string; timeAgo: string }[] })[]>([
+        {
+            id: 5,
+            user: {
+                id: 14,
+                name: "Mike Tyson",
+                username: "ironmike",
+                avatar: "https://avatars.githubusercontent.com/u/3765077?v=4",
+            },
+            content: "My new fantasy character series. This warrior was generated after 20+ iterations to get the right composition.",
+            prompt: "Epic fantasy warrior with glowing magical armor, battle-worn, standing on mountain peak at sunset, ultra-detailed, photorealistic, dramatic lighting",
+            model: "Midjourney v6",
+            images: ["https://picsum.photos/id/26/600/400", "https://picsum.photos/id/27/600/400"],
+            likes: 8947,
+            timeAgo: "2 days ago",
+            comments: [
+                {
+                    user: {
+                        id: 15,
+                        name: "Roberto Carlos",
+                        username: "roberto11",
+                        avatar: "https://avatars.githubusercontent.com/u/9335367?v=4",
+                    },
+                    text: "Incredible detail on the armor! 🔥",
+                    timeAgo: "1 day ago",
+                },
+                {
+                    user: {
+                        id: 16,
+                        name: "Luna Smith",
+                        username: "lunasmith",
+                        avatar: "https://avatars.githubusercontent.com/u/5041065?v=4",
+                    },
+                    text: "Would you mind sharing your negative prompts too? I've been struggling with armor textures.",
+                    timeAgo: "12 hours ago",
+                },
+            ],
+        },
+        {
+            id: 6,
+            user: {
+                id: 17,
+                name: "Emma Watson",
+                username: "emmaw",
+                avatar: "https://avatars.githubusercontent.com/u/7489775?v=4",
+            },
+            content: "My entry for the #AIForGood challenge - visualizing sustainable future cities using generative AI.",
+            prompt: "Sustainable futuristic city with vertical gardens, solar panels, flying electric vehicles, people cycling, clean energy infrastructure, utopian, photorealistic, 8k",
+            model: "Leonardo AI",
+            images: ["https://picsum.photos/id/10/600/400"],
+            likes: 12546,
+            timeAgo: "5 days ago",
+            comments: [],
+        },
+    ]);
 
-  // Avoid rendering until client-side to prevent hydration mismatch
-  if (!mounted) {
-    return <div className="min-h-screen bg-[#fefcfb]"></div>;
-  }
+    const [posts, setPosts] = useState<(Post & { comments?: { user: User; text: string; timeAgo: string }[] })[]>(friendsPosts);
 
-  // Render content based on active menu
-  const renderContent = () => {
-    switch (activeMenu) {
-      case 'Home':
-        return (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-6xl"
-          >
-            {/* Hero Section */}
-            <motion.section 
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="mb-16"
-            >
-              <div className="flex flex-col md:flex-row gap-8 items-center">
-                <motion.div 
-                  initial={{ opacity: 0, x: -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="md:w-1/2"
-                >
-                  <h1 className={`text-4xl font-bold ${theme.main.text} mb-4`}>
-                    John Smith
-                  </h1>
-                  <h2 className={`text-2xl ${theme.accent} mb-6`}>
-                    Full Stack Developer & <span className="line-through">Problem Solver</span> Problem Creator
-                  </h2>
-                  <p className={`${theme.main.textSecondary} text-lg mb-6`}>
-                    {aboutMeContent.intro}
-                  </p>
-                  <div className="flex space-x-4">
-                    <motion.button 
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleMenuChange('Projects')}
-                      className={`px-6 py-3 rounded-lg bg-[#b85c38] text-white font-medium hover:bg-[#a04b2b] transition-colors cursor-pointer`}
-                    >
-                      View Projects
-                    </motion.button>
-                    <motion.button 
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleMenuChange('Portfolio')}
-                      className={`px-6 py-3 rounded-lg border border-[#b85c38] ${theme.accent} font-medium hover:bg-[#fceee7]/50 transition-colors cursor-pointer`}
-                    >
-                      My Experience
-                    </motion.button>
-                  </div>
-                </motion.div>
-                <motion.div 
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="md:w-1/2"
-                >
-                  <div className="relative">
-                    <div className="relative h-[400px] w-full rounded-2xl overflow-hidden">
-                      <Image
-                        src="https://picsum.photos/id/1025/800/800"
-                        alt="John Smith"
-                        fill
-                        className="object-cover"
-                        priority
-                      />
-                    </div>
-                    <motion.div 
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.6 }}
-                      className={`absolute -bottom-6 -left-6 p-4 ${theme.content.background} rounded-xl shadow-lg`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <FiCode className={`w-6 h-6 ${theme.accent}`} />
-                        <span className={`font-bold ${theme.main.text}`}>15+ Years Coding</span>
-                      </div>
-                    </motion.div>
-                    <motion.div 
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.6 }}
-                      className={`absolute -top-6 -right-6 p-4 ${theme.content.background} rounded-xl shadow-lg`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <FiBriefcase className={`w-6 h-6 ${theme.accent}`} />
-                        <span className={`font-bold ${theme.main.text}`}>10+ Projects</span>
-                      </div>
-                    </motion.div>
-                  </div>
-                </motion.div>
-              </div>
-            </motion.section>
+    useEffect(() => {
+        if (activeFeedFilter === "recents") {
+            setPosts(recentsPosts);
+        } else if (activeFeedFilter === "friends") {
+            setPosts(friendsPosts);
+        } else if (activeFeedFilter === "popular") {
+            setPosts(popularPosts);
+        }
+    }, [activeFeedFilter, friendsPosts, recentsPosts, popularPosts]);
 
-            {/* Stats Section */}
-            <motion.section 
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="mb-16"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {[
-                  { value: "15+", label: "Years of Experience" },
-                  { value: "50+", label: "Completed Projects" },
-                  { value: "24/7", label: "Development Support" },
-                  { value: "99%", label: "Client Satisfaction" }
-                ].map((stat, index) => (
-                  <motion.div 
-                    key={index}
-                    variants={itemVariants}
-                    whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6 flex flex-col items-center justify-center`}
-                  >
-                    <span className={`text-4xl font-bold ${theme.accent} mb-2`}>{stat.value}</span>
-                    <span className={`${theme.main.textSecondary} text-center`}>{stat.label}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.section>
+    const [stories, setStories] = useState<Story[]>([
+        {
+            id: 1,
+            user: {
+                id: 4,
+                name: "Anatoly P.",
+                username: "anatolyp",
+                avatar: "https://avatars.githubusercontent.com/u/3765077?v=4",
+            },
+            image: "https://picsum.photos/id/24/400/500",
+        },
+        {
+            id: 2,
+            user: {
+                id: 5,
+                name: "Lolita Earns",
+                username: "lolitaearns",
+                avatar: "https://avatars.githubusercontent.com/u/9335367?v=4",
+            },
+            image: "https://picsum.photos/id/25/400/500",
+        },
+        {
+            id: 3,
+            user: {
+                id: 8,
+                name: "Marcus Chen",
+                username: "marcuschen",
+                avatar: "https://avatars.githubusercontent.com/u/5041065?v=4",
+            },
+            image: "https://picsum.photos/id/28/400/500",
+        },
+        {
+            id: 4,
+            user: {
+                id: 10,
+                name: "Samira Ahmed",
+                username: "samira_art",
+                avatar: "https://avatars.githubusercontent.com/u/7489775?v=4",
+            },
+            image: "https://picsum.photos/id/29/400/500",
+        },
+    ]);
 
-            {/* About & Services Section */}
-            <motion.section 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="mb-16"
-            >
-              <div className="mb-8">
-                <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>About Me</h2>
-                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
-              </div>
+    const [suggestionsModalOpen, setSuggestionsModalOpen] = useState(false);
+    const [allSuggestions, setAllSuggestions] = useState<Suggestion[]>([]);
+    const [locationInput, setLocationInput] = useState("");
+    const [showLocationInput, setShowLocationInput] = useState(false);
+    const locationInputRef = useRef<HTMLInputElement>(null);
 
-              <div className="flex flex-col md:flex-row gap-8">
-                <motion.div 
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="md:w-1/2"
-                >
-                  <p className={`${theme.main.textSecondary} mb-4`}>
-                    {aboutMeContent.bio}
-                  </p>
-                  <p className={`${theme.main.textSecondary} mb-6`}>
-                    {aboutMeContent.personalLife}
-                  </p>
-                  <motion.button 
-                    whileHover={{ scale: 1.05, x: 5 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleMenuChange('About Me')}
-                    className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium flex items-center cursor-pointer`}
-                  >
-                    <span>Learn More</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </motion.button>
-                </motion.div>
+    const [suggestions, setSuggestions] = useState<Suggestion[]>([
+        {
+            id: 1,
+            user: {
+                id: 6,
+                name: "Nick Shelburne",
+                username: "nickshelburne",
+                avatar: "https://avatars.githubusercontent.com/u/16659427?v=4",
+            },
+            followed: false,
+        },
+        {
+            id: 2,
+            user: {
+                id: 7,
+                name: "Brittni Lando",
+                username: "brittnilando",
+                avatar: "https://avatars.githubusercontent.com/u/6655696?v=4",
+            },
+            followed: false,
+        },
+        {
+            id: 3,
+            user: {
+                id: 8,
+                name: "Ivan Shevchenko",
+                username: "ivanshevchenko",
+                avatar: "https://avatars.githubusercontent.com/u/8460711?v=4",
+            },
+            followed: false,
+        },
+    ]);
 
-                <motion.div 
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="md:w-1/2"
-                >
-                  <div className="grid grid-cols-2 gap-4">
-                    {[
-                      { icon: <FiCode className={`w-8 h-8 ${theme.accent} mb-3`} />, title: "Web Development", desc: "Crafting responsive and performant web applications using modern frameworks." },
-                      { icon: <FiLayers className={`w-8 h-8 ${theme.accent} mb-3`} />, title: "Legacy System Integration", desc: "Bridging old and new technologies with secure, efficient solutions." },
-                      { icon: <FiSearch className={`w-8 h-8 ${theme.accent} mb-3`} />, title: "Technical Consulting", desc: "Expert guidance on architecture, technology selection, and best practices." },
-                      { icon: <FiUser className={`w-8 h-8 ${theme.accent} mb-3`} />, title: "Developer Training", desc: "Mentorship and technical training for teams transitioning to new technologies." }
-                    ].map((service, index) => (
-                      <motion.div 
-                        key={index}
-                        variants={itemVariants}
-                        whileHover={{ y: -5, boxShadow: "0 10px 15px -5px rgba(0, 0, 0, 0.1)" }}
-                        className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}
-                      >
-                        {service.icon}
-                        <h3 className={`text-lg font-semibold ${theme.main.text} mb-2`}>{service.title}</h3>
-                        <p className={`${theme.main.textSecondary} text-sm`}>{service.desc}</p>
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-              </div>
-            </motion.section>
+    const [recommendations, setRecommendations] = useState<Recommendation[]>([
+        {
+            id: 1,
+            title: "AI Art",
+            icon: "https://picsum.photos/id/20/200/200",
+        },
+        {
+            id: 2,
+            title: "Prompting",
+            icon: "https://picsum.photos/id/21/200/200",
+        },
+        {
+            id: 3,
+            title: "Digital Art",
+            icon: "https://picsum.photos/id/22/200/200",
+        },
+        {
+            id: 4,
+            title: "Illustration",
+            icon: "https://picsum.photos/id/23/200/200",
+        },
+    ]);
 
-            {/* Skills Overview */}
-            <section className="mb-16">
-              <div className="mb-8">
-                <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>Skills Overview</h2>
-                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
-              </div>
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const moreSuggestions = [...suggestions, ...generateRandomUsers(4, 20)];
+            setAllSuggestions(moreSuggestions);
+        }
+    }, [suggestions]);
 
-              <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-8`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {skillsContent.mainSkills.slice(0, 3).map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                  {skillsContent.backendSkills.slice(0, 1).map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                  {skillsContent.cloudSkills.slice(0, 1).map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                  {skillsContent.legacyAndSpecializedSkills.slice(0, 1).map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-                
-                <div className="mt-8 text-center">
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleMenuChange('Skills')}
-                    className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
-                  >
-                    <span>View All Skills</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </motion.button>
-                </div>
-              </div>
-            </section>
-
-            {/* Featured Projects */}
-            <section className="mb-16">
-              <div className="mb-8">
-                <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>Featured Projects</h2>
-                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {projectsData.filter(p => p.featured).slice(0, 2).map((project) => (
-                  <div 
-                    key={project.id}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden group`}
-                  >
-                    <div className="relative h-64">
-                      <Image
-                        src={project.image}
-                        alt={project.title}
-                        fill
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-                        <div className="p-6">
-                          <h3 className="text-xl font-bold text-white mb-2">{project.title}</h3>
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            {project.tags.slice(0, 3).map((tag, idx) => (
-                              <span key={idx} className="text-xs px-2 py-1 bg-white/20 text-white rounded-full">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 text-center">
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleMenuChange('Projects')}
-                  className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
-                >
-                  <span>View All Projects</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </motion.button>
-              </div>
-            </section>
-
-            {/* Recent Blog Posts */}
-            <section>
-              <div className="mb-8">
-                <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>Recent Blog Posts</h2>
-                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {blogPosts.slice(0, 2).map((post) => (
-                  <div 
-                    key={post.id}
-                    className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder}`}
-                  >
-                    <div className={`${theme.accent} text-xs mb-2 font-medium`}>{post.date} • {post.readTime}</div>
-                    <h3 className={`text-xl font-semibold ${theme.main.text} mb-2`}>
-                      {post.title}
-                    </h3>
-                    <p className={`${theme.main.textSecondary} mb-4`}>
-                      {post.description}
-                    </p>
-                    <div className="flex justify-end">
-                      <motion.button 
-                        whileHover={{ scale: 1.05, x: 5 }}
-                        whileTap={{ scale: 0.95 }}
-                        className={`${theme.button.primary} font-medium transition-colors flex items-center space-x-1 cursor-pointer`}
-                      >
-                        <span>Read more</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                      </motion.button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 text-center">
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleMenuChange('Blog Posts')}
-                  className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
-                >
-                  <span>View All Posts</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </motion.button>
-              </div>
-            </section>
-          </motion.div>
+    const handleFollowUser = (id: number) => {
+        setSuggestions(
+            suggestions.map((suggestion) => (suggestion.id === id ? { ...suggestion, followed: !suggestion.followed } : suggestion))
         );
-      
-      case 'About Me':
-        return (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-3xl"
-          >
-            <motion.h1 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`text-3xl font-bold ${theme.main.text} mb-6`}
-            >
-              About Me
-            </motion.h1>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} mb-8`}
-            >
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className={`${theme.main.text} mb-4 text-lg`}
-              >
-                {aboutMeContent.intro}
-              </motion.p>
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className={`${theme.main.textSecondary} mb-6`}
-              >
-                {aboutMeContent.bio}
-              </motion.p>
 
-              <motion.div 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
-              >
-                {aboutMeContent.images.map((image, index) => (
-                  <motion.div 
-                    key={index}
-                    variants={itemVariants}
-                    whileHover={{ y: -5, scale: 1.03 }}
-                    className="flex flex-col space-y-2"
-                  >
-                    <div className="relative h-48 rounded-lg overflow-hidden">
-                      <Image
-                        src={image.src}
-                        alt={image.alt}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <p className={`text-sm ${theme.main.textSecondary} italic`}>{image.caption}</p>
-                  </motion.div>
-                ))}
-              </motion.div>
-
-              <motion.h2 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-                className={`text-xl font-semibold ${theme.main.text} mb-3`}
-              >
-                What I'm interested in
-              </motion.h2>
-              <motion.ul 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="list-disc pl-5 mb-6"
-              >
-                {aboutMeContent.interests.map((interest, index) => (
-                  <motion.li 
-                    key={index} 
-                    variants={itemVariants}
-                    className={`${theme.main.textSecondary} mb-1`}
-                  >
-                    {interest}
-                  </motion.li>
-                ))}
-              </motion.ul>
-
-              <motion.h2 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
-                className={`text-xl font-semibold ${theme.main.text} mb-3`}
-              >
-                Outside of work
-              </motion.h2>
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className={`${theme.main.textSecondary} mb-4`}
-              >
-                {aboutMeContent.personalLife}
-              </motion.p>
-              
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.7, duration: 0.5 }}
-                className="border-t border-b py-4 my-6 border-opacity-10 border-current"
-              >
-                <p className={`${theme.main.text} text-center italic`}>"{aboutMeContent.philosophy}"</p>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8, duration: 0.7 }}
-                className="flex justify-center"
-              >
-                <div className="relative h-60 w-full rounded-lg overflow-hidden">
-                  <Image
-                    src="https://picsum.photos/id/239/1200/400"
-                    alt="Panorama shot of my workspace"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              </motion.div>
-            </motion.div>
-          </motion.div>
+        setAllSuggestions(
+            allSuggestions.map((suggestion) => (suggestion.id === id ? { ...suggestion, followed: !suggestion.followed } : suggestion))
         );
-      
-      case 'Skills':
-        return (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-3xl"
-          >
-            <motion.h1 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`text-3xl font-bold ${theme.main.text} mb-6`}
-            >
-              Technical Skills
-            </motion.h1>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} mb-8`}
-            >
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className={`${theme.main.text} mb-6 text-lg`}
-              >
-                {skillsContent.intro}
-              </motion.p>
-              
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="mb-8"
-              >
-                <motion.h2 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className={`text-xl font-semibold ${theme.main.text} mb-4 flex items-center`}
-                >
-                  <motion.div
-                    initial={{ rotate: -90 }}
-                    animate={{ rotate: 0 }}
-                    transition={{ delay: 0.4, duration: 0.5 }}
-                  >
-                    <FiCode className="mr-2" />
-                  </motion.div>
-                  Primary Languages & Frameworks
-                </motion.h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                  {skillsContent.mainSkills.map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="mb-8"
-              >
-                <motion.h2 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className={`text-xl font-semibold ${theme.main.text} mb-4`}
-                >
-                  Backend Development
-                </motion.h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                  {skillsContent.backendSkills.map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                className="mb-8"
-              >
-                <motion.h2 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className={`text-xl font-semibold ${theme.main.text} mb-4`}
-                >
-                  Database Technologies
-                </motion.h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                  {skillsContent.databaseSkills.map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="mb-8"
-              >
-                <motion.h2 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className={`text-xl font-semibold ${theme.main.text} mb-4`}
-                >
-                  Cloud & DevOps
-                </motion.h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                  {skillsContent.cloudSkills.map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
-                className="mb-8"
-              >
-                <motion.h2 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.6 }}
-                  className={`text-xl font-semibold ${theme.main.text} mb-4 flex items-center`}
-                >
-                  <motion.span 
-                    initial={{ scale: 0.7 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.7, duration: 0.5, type: "spring" }}
-                    className={theme.accent}
-                  >
-                    Legacy & Specialized Systems
-                  </motion.span>
-                </motion.h2>
-                <div className="grid grid-cols-1 gap-x-8">
-                  {skillsContent.legacyAndSpecializedSkills.map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
-                className="mb-8"
-              >
-                <motion.h2 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.7 }}
-                  className={`text-xl font-semibold ${theme.main.text} mb-4`}
-                >
-                  Emerging Technologies
-                </motion.h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                  {skillsContent.emergingTechSkills.map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9, duration: 0.5 }}
-                className="border-t border-b py-4 my-6 border-opacity-10 border-current"
-              >
-                <p className={`${theme.main.text} text-center italic`}>"{skillsContent.quote}"</p>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1, duration: 0.7 }}
-                whileHover={{ scale: 1.02 }}
-                className="relative h-60 w-full rounded-lg overflow-hidden"
-              >
-                <Image
-                  src="https://picsum.photos/id/119/1200/400"
-                  alt="Workstation with multiple screens"
-                  fill
-                  className="object-cover"
-                />
-              </motion.div>
-            </motion.div>
-          </motion.div>
+
+        const suggestion = suggestions.find((s) => s.id === id) || allSuggestions.find((s) => s.id === id);
+        if (suggestion) {
+            const isNowFollowed = !suggestion.followed;
+            toast.success(isNowFollowed ? `You are now following ${suggestion.user.name}` : `You unfollowed ${suggestion.user.name}`, {
+                position: "top-right",
+                autoClose: 3000,
+            });
+        }
+    };
+
+    const handleToggleLocationInput = () => {
+        setShowLocationInput(true);
+        setIsLocationPickerOpen(!isLocationPickerOpen);
+
+        if (!showLocationInput) {
+            setTimeout(() => {
+                locationInputRef.current?.focus();
+            }, 100);
+        }
+    };
+
+    const handleLocationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocationInput(e.target.value);
+    };
+
+    const handleLocationSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (locationInput.trim()) {
+            handleLocationSelect(locationInput);
+        }
+    };
+
+    const handleLocationSelect = (location: string) => {
+        setSelectedLocation(location);
+        setIsLocationPickerOpen(false);
+        setShowLocationInput(false);
+        setLocationInput("");
+        toast.info(`Location set to: ${location}`, {
+            position: "top-right",
+            autoClose: 2000,
+        });
+    };
+
+    const [activeStory, setActiveStory] = useState<Story | null>(null);
+    const [storyProgress, setStoryProgress] = useState(0);
+    const [storyTimer, setStoryTimer] = useState<NodeJS.Timeout | null>(null);
+
+    const handleStoryClick = (story: Story) => {
+        setActiveStory(story);
+        setStoryProgress(0);
+    };
+
+    const closeStory = () => {
+        setActiveStory(null);
+        setStoryProgress(0);
+        if (storyTimer) {
+            clearInterval(storyTimer);
+            setStoryTimer(null);
+        }
+    };
+
+    useEffect(() => {
+        if (activeStory) {
+            if (storyTimer) {
+                clearInterval(storyTimer);
+            }
+
+            const timer = setInterval(() => {
+                setStoryProgress((prev) => {
+                    if (prev >= 100) {
+                        clearInterval(timer);
+                        setActiveStory(null);
+                        return 0;
+                    }
+                    return prev + (100 / 7000) * 100;
+                });
+            }, 100);
+
+            setStoryTimer(timer);
+
+            return () => {
+                clearInterval(timer);
+            };
+        }
+    }, [activeStory]);
+
+    const handleLikeToggle = (postId: number) => {
+        if (likedPosts.includes(postId)) {
+            setLikedPosts(likedPosts.filter((id) => id !== postId));
+            setPosts(posts.map((post) => (post.id === postId ? { ...post, likes: post.likes - 1 } : post)));
+        } else {
+            setLikedPosts([...likedPosts, postId]);
+            setPosts(posts.map((post) => (post.id === postId ? { ...post, likes: post.likes + 1 } : post)));
+        }
+    };
+
+    const handleCommentToggle = (postId: number) => {
+        setActiveCommentInput(activeCommentInput === postId ? null : postId);
+        setCommentText("");
+    };
+
+    const handleCommentSubmit = (postId: number) => {
+        if (commentText.trim()) {
+            const updatedPosts = posts.map((post) =>
+                post.id === postId
+                    ? {
+                          ...post,
+                          comments: [
+                              ...(post.comments || []),
+                              {
+                                  user: currentUser,
+                                  text: commentText,
+                                  timeAgo: "Just now",
+                              },
+                          ],
+                      }
+                    : post
+            );
+
+            if (activeFeedFilter === "recents") {
+                setRecentsPosts(updatedPosts.filter((post) => recentsPosts.some((p) => p.id === post.id)));
+            } else if (activeFeedFilter === "friends") {
+                setFriendsPosts(updatedPosts.filter((post) => friendsPosts.some((p) => p.id === post.id)));
+            } else if (activeFeedFilter === "popular") {
+                setPopularPosts(updatedPosts.filter((post) => popularPosts.some((p) => p.id === post.id)));
+            }
+
+            setPosts(updatedPosts);
+            setCommentText("");
+            setActiveCommentInput(null);
+        }
+    };
+
+    const toggleDropdown = (postId: number) => {
+        setOpenDropdownId(openDropdownId === postId ? null : postId);
+    };
+
+    const hidePost = (postId: number) => {
+        setPosts(posts.filter((post) => post.id !== postId));
+        setOpenDropdownId(null);
+        toast.success("Post hidden successfully", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+        });
+    };
+
+    const savePost = (postId: number) => {
+        toast.success("Post saved to bookmarks", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+        });
+        setOpenDropdownId(null);
+    };
+
+    const reportPost = (postId: number) => {
+        toast.info("Post reported. We'll review it shortly.", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+        });
+        setOpenDropdownId(null);
+    };
+
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const newImages = Array.from(e.target.files).map((file) => URL.createObjectURL(file));
+            setSelectedImages([...selectedImages, ...newImages]);
+            toast.success(`${newImages.length} image${newImages.length > 1 ? "s" : ""} selected!`, {
+                position: "top-right",
+                autoClose: 2000,
+            });
+        }
+    };
+
+    const clearSelectedItems = () => {
+        setSelectedImages([]);
+        setSelectedLocation(null);
+    };
+
+    const handlePostSubmit = () => {
+        if (!postText.trim() && selectedImages.length === 0) {
+            toast.error("Please write something or add an image to share", {
+                position: "top-right",
+                autoClose: 3000,
+            });
+            return;
+        }
+
+        const newPost: Post & { comments?: { user: User; text: string; timeAgo: string }[] } = {
+            id: Date.now(),
+            user: currentUser,
+            content: postText,
+            prompt: promptText || undefined,
+            model: selectedModel || undefined,
+            images: selectedImages,
+            likes: 0,
+            timeAgo: "Just now",
+            comments: [],
+        };
+
+        if (activeFeedFilter === "recents") {
+            setRecentsPosts([newPost, ...recentsPosts]);
+        } else if (activeFeedFilter === "friends") {
+            setFriendsPosts([newPost, ...friendsPosts]);
+        } else if (activeFeedFilter === "popular") {
+            setPopularPosts([newPost, ...popularPosts]);
+        }
+
+        setPostText("");
+        setPromptText("");
+        clearSelectedItems();
+        toast.success("AI artwork shared successfully!", {
+            position: "top-right",
+            autoClose: 3000,
+        });
+    };
+
+    const [chats, setChats] = useState<Chat[]>([
+        {
+            id: 1,
+            user: {
+                id: 101,
+                name: "Emily Johnson",
+                username: "emilyjohnson",
+                avatar: "https://avatars.githubusercontent.com/u/2198736?v=4",
+            },
+            messages: [
+                {
+                    id: 1,
+                    sender: {
+                        id: 101,
+                        name: "Emily Johnson",
+                        username: "emilyjohnson",
+                        avatar: "https://avatars.githubusercontent.com/u/2198736?v=4",
+                    },
+                    receiver: currentUser,
+                    text: "Hi there! How's your project coming along?",
+                    time: "10:20 AM",
+                    isRead: true,
+                },
+                {
+                    id: 2,
+                    sender: currentUser,
+                    receiver: {
+                        id: 101,
+                        name: "Emily Johnson",
+                        username: "emilyjohnson",
+                        avatar: "https://avatars.githubusercontent.com/u/2198736?v=4",
+                    },
+                    text: "Hey Emily! It's going well, thanks for asking. I'm just finishing up the UI design.",
+                    time: "10:22 AM",
+                    isRead: true,
+                },
+                {
+                    id: 3,
+                    sender: {
+                        id: 101,
+                        name: "Emily Johnson",
+                        username: "emilyjohnson",
+                        avatar: "https://avatars.githubusercontent.com/u/2198736?v=4",
+                    },
+                    receiver: currentUser,
+                    text: "That's great! Can't wait to see it. Are we still meeting tomorrow?",
+                    time: "10:25 AM",
+                    isRead: false,
+                },
+            ],
+            unreadCount: 1,
+        },
+        {
+            id: 2,
+            user: {
+                id: 102,
+                name: "Michael Torres",
+                username: "michael_t",
+                avatar: "https://avatars.githubusercontent.com/u/6712348?v=4",
+            },
+            messages: [
+                {
+                    id: 1,
+                    sender: {
+                        id: 102,
+                        name: "Michael Torres",
+                        username: "michael_t",
+                        avatar: "https://avatars.githubusercontent.com/u/6712348?v=4",
+                    },
+                    receiver: currentUser,
+                    text: "Hey, did you see the new design system docs?",
+                    time: "Yesterday",
+                    isRead: true,
+                },
+                {
+                    id: 2,
+                    sender: currentUser,
+                    receiver: {
+                        id: 102,
+                        name: "Michael Torres",
+                        username: "michael_t",
+                        avatar: "https://avatars.githubusercontent.com/u/6712348?v=4",
+                    },
+                    text: "Not yet! I'll check them out today.",
+                    time: "Yesterday",
+                    isRead: true,
+                },
+            ],
+            unreadCount: 0,
+        },
+        {
+            id: 3,
+            user: {
+                id: 103,
+                name: "Sarah Miller",
+                username: "sarahm",
+                avatar: "https://avatars.githubusercontent.com/u/3198726?v=4",
+            },
+            messages: [
+                {
+                    id: 1,
+                    sender: {
+                        id: 103,
+                        name: "Sarah Miller",
+                        username: "sarahm",
+                        avatar: "https://avatars.githubusercontent.com/u/3198726?v=4",
+                    },
+                    receiver: currentUser,
+                    text: "Are we still on for coffee this weekend?",
+                    time: "2 days ago",
+                    isRead: true,
+                },
+            ],
+            unreadCount: 0,
+        },
+        {
+            id: 4,
+            user: {
+                id: 104,
+                name: "David Lee",
+                username: "davidlee",
+                avatar: "https://avatars.githubusercontent.com/u/8126734?v=4",
+            },
+            messages: [
+                {
+                    id: 1,
+                    sender: currentUser,
+                    receiver: {
+                        id: 104,
+                        name: "David Lee",
+                        username: "davidlee",
+                        avatar: "https://avatars.githubusercontent.com/u/8126734?v=4",
+                    },
+                    text: "Hey David, can you send me those project files?",
+                    time: "3 days ago",
+                    isRead: true,
+                },
+                {
+                    id: 2,
+                    sender: {
+                        id: 104,
+                        name: "David Lee",
+                        username: "davidlee",
+                        avatar: "https://avatars.githubusercontent.com/u/8126734?v=4",
+                    },
+                    receiver: currentUser,
+                    text: "Sure thing! I'll email them to you right away.",
+                    time: "3 days ago",
+                    isRead: true,
+                },
+                {
+                    id: 3,
+                    sender: {
+                        id: 104,
+                        name: "David Lee",
+                        username: "davidlee",
+                        avatar: "https://avatars.githubusercontent.com/u/8126734?v=4",
+                    },
+                    receiver: currentUser,
+                    text: "Just sent them. Let me know if you need anything else!",
+                    time: "3 days ago",
+                    isRead: true,
+                },
+            ],
+            unreadCount: 0,
+        },
+        {
+            id: 5,
+            user: {
+                id: 105,
+                name: "Jessica Wang",
+                username: "jwang",
+                avatar: "https://avatars.githubusercontent.com/u/1976342?v=4",
+            },
+            messages: [
+                {
+                    id: 1,
+                    sender: {
+                        id: 105,
+                        name: "Jessica Wang",
+                        username: "jwang",
+                        avatar: "https://avatars.githubusercontent.com/u/1976342?v=4",
+                    },
+                    receiver: currentUser,
+                    text: "Hi! Just wanted to remind you about our team meeting tomorrow at 2pm.",
+                    time: "4 days ago",
+                    isRead: true,
+                },
+                {
+                    id: 2,
+                    sender: currentUser,
+                    receiver: {
+                        id: 105,
+                        name: "Jessica Wang",
+                        username: "jwang",
+                        avatar: "https://avatars.githubusercontent.com/u/1976342?v=4",
+                    },
+                    text: "Thanks for the reminder! I'll be there.",
+                    time: "4 days ago",
+                    isRead: true,
+                },
+            ],
+            unreadCount: 0,
+        },
+    ]);
+
+    const [activeChat, setActiveChat] = useState<Chat | null>(null);
+    const [newMessage, setNewMessage] = useState("");
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (chats.length > 0 && !activeChat && activeSection === "messages") {
+            setActiveChat(chats[0]);
+        }
+    }, [chats, activeChat, activeSection]);
+
+    useEffect(() => {
+        if (chatContainerRef.current && activeChat) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [activeChat]);
+
+    const handleSendMessage = () => {
+        if (!newMessage.trim() || !activeChat) return;
+
+        const newMessageObj: Message = {
+            id: Date.now(),
+            sender: currentUser,
+            receiver: activeChat.user,
+            text: newMessage,
+            time: "Just now",
+            isRead: true,
+        };
+
+        const updatedChats = chats.map((chat) =>
+            chat.id === activeChat.id
+                ? {
+                      ...chat,
+                      messages: [...chat.messages, newMessageObj],
+                      lastMessage: newMessageObj,
+                  }
+                : chat
         );
-      
-      case 'Projects':
-        return (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-5xl"
-          >
-            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>Projects</h1>
-            
-            <div className="mb-8">
-              <p className={`${theme.main.text} text-lg max-w-3xl`}>
-                A collection of my most significant projects spanning from game development and legacy systems to cutting-edge AI and blockchain applications.
-              </p>
-            </div>
-            
-            {/* Featured Projects */}
-            <div className="mb-12">
-              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6`}>Featured Projects</h2>
-              <div className="grid grid-cols-1 gap-8">
-                {projectsData.filter(p => p.featured).map((project) => (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
-                  >
-                    <div className="md:flex">
-                      <div className="md:w-2/5 relative h-64 md:h-auto">
-                        <Image
-                          src={project.image}
-                          alt={project.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="p-6 md:w-3/5">
-                        <h3 className={`text-xl font-bold ${theme.main.text} mb-2`}>{project.title}</h3>
-                        <p className={`${theme.main.textSecondary} mb-4`}>{project.description}</p>
-                        
-                        {project.achievements && (
-                          <div className="mb-4">
-                            <h4 className={`text-sm font-semibold ${theme.accent} mb-2`}>Achievements:</h4>
-                            <ul className={`list-disc list-inside ${theme.main.textSecondary} text-sm`}>
-                              {project.achievements.map((achievement, idx) => (
-                                <li key={idx}>{achievement}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {project.tags.map((tag, idx) => (
-                            <span key={idx} className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}>
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                        
-                        <div className="flex space-x-4 mt-4">
-                          {project.demoUrl && (
-                            <a 
-                              href={project.demoUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className={`${theme.button.primary} text-sm font-medium flex items-center`}
+
+        setChats(updatedChats);
+        setActiveChat(updatedChats.find((chat) => chat.id === activeChat.id) || null);
+        setNewMessage("");
+    };
+
+    const handleChatSelect = (chat: Chat) => {
+        if (chat.id === activeChat?.id) return;
+
+        const updatedChats = chats.map((c) =>
+            c.id === chat.id
+                ? {
+                      ...c,
+                      messages: c.messages.map((msg) => ({
+                          ...msg,
+                          isRead: true,
+                      })),
+                      unreadCount: 0,
+                  }
+                : c
+        );
+
+        setChats(updatedChats);
+        setActiveChat(updatedChats.find((c) => c.id === chat.id) || null);
+    };
+
+    const [friends, setFriends] = useState<User[]>([
+        {
+            id: 201,
+            name: "James Wilson",
+            username: "jwilson",
+            avatar: "https://avatars.githubusercontent.com/u/337642?v=4",
+        },
+        {
+            id: 202,
+            name: "Anna Petrova",
+            username: "annapetrova",
+            avatar: "https://avatars.githubusercontent.com/u/348752?v=4",
+        },
+        {
+            id: 203,
+            name: "Richard Lee",
+            username: "richardlee",
+            avatar: "https://avatars.githubusercontent.com/u/356428?v=4",
+        },
+        {
+            id: 204,
+            name: "Sophia Chen",
+            username: "sophiachen",
+            avatar: "https://avatars.githubusercontent.com/u/367542?v=4",
+        },
+        {
+            id: 205,
+            name: "Carlos Rodriguez",
+            username: "crodriguez",
+            avatar: "https://avatars.githubusercontent.com/u/379865?v=4",
+        },
+        {
+            id: 206,
+            name: "Emma Johnson",
+            username: "emmaj",
+            avatar: "https://avatars.githubusercontent.com/u/386427?v=4",
+        },
+        {
+            id: 207,
+            name: "Alex Tanner",
+            username: "alextanner",
+            avatar: "https://avatars.githubusercontent.com/u/395476?v=4",
+        },
+        {
+            id: 208,
+            name: "Lily Zhang",
+            username: "lilyzhang",
+            avatar: "https://avatars.githubusercontent.com/u/407652?v=4",
+        },
+    ]);
+
+    const handleRemoveFriend = (friendId: number) => {
+        setFriends(friends.filter((friend) => friend.id !== friendId));
+        toast.success("Friend removed successfully", {
+            position: "top-right",
+            autoClose: 3000,
+        });
+    };
+
+    const [editMode, setEditMode] = useState(false);
+    const [editedName, setEditedName] = useState("");
+    const [editedUsername, setEditedUsername] = useState("");
+    const [editedBio, setEditedBio] = useState("Product Designer and Developer based in New York");
+    const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+    const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+    const profileImageInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        setEditedName(currentUser.name);
+        setEditedUsername(currentUser.username);
+    }, [currentUser]);
+
+    const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+            setProfileImageFile(file);
+            setProfileImagePreview(URL.createObjectURL(file));
+        }
+    };
+
+    const handleSaveProfile = () => {
+        if (!editedName.trim() || !editedUsername.trim()) {
+            toast.error("Name and username cannot be empty", {
+                position: "top-right",
+                autoClose: 3000,
+            });
+            return;
+        }
+
+        setCurrentUser({
+            ...currentUser,
+            name: editedName,
+            username: editedUsername,
+
+            avatar: profileImagePreview || currentUser.avatar,
+        });
+
+        setEditMode(false);
+        toast.success("Profile updated successfully!", {
+            position: "top-right",
+            autoClose: 3000,
+        });
+    };
+
+    const handleCancelEdit = () => {
+        setEditMode(false);
+        setEditedName(currentUser.name);
+        setEditedUsername(currentUser.username);
+        setProfileImagePreview(null);
+        setProfileImageFile(null);
+    };
+
+    const handleMessageFriend = (friend: User) => {
+        let existingChat = chats.find((chat) => chat.user.id === friend.id);
+
+        if (!existingChat) {
+            const newChat: Chat = {
+                id: Date.now(),
+                user: friend,
+                messages: [],
+                unreadCount: 0,
+            };
+
+            setChats([newChat, ...chats]);
+            existingChat = newChat;
+        }
+
+        setActiveSection("messages");
+        setActiveChat(existingChat);
+    };
+
+    const handleTogglePromptInput = () => {
+        setShowPromptInput(!showPromptInput);
+    };
+
+    return (
+        <div className="min-h-screen bg-white">
+            <ToastContainer />
+
+            <input type="file" ref={imageInputRef} className="hidden" accept="image/*" multiple onChange={handleImageSelect} />
+
+            <input type="file" ref={profileImageInputRef} className="hidden" accept="image/*" onChange={handleProfileImageChange} />
+
+            {suggestionsModalOpen && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="p-5 border-b flex justify-between items-center">
+                            <h3 className="text-xl font-bold">Recommended AI Artists to Follow</h3>
+                            <button
+                                onClick={() => setSuggestionsModalOpen(false)}
+                                className="text-gray-500 hover:text-black cursor-pointer"
                             >
-                              <span>Live Demo</span>
-                              <FiExternalLink className="ml-1 w-4 h-4" />
-                            </a>
-                          )}
-                          {project.repoUrl && (
-                            <a 
-                              href={project.repoUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className={`${theme.main.textSecondary} hover:${theme.main.text} text-sm font-medium flex items-center`}
-                            >
-                              <FiGithub className="mr-1 w-4 h-4" />
-                              <span>Source Code</span>
-                            </a>
-                          )}
+                                <X size={24} />
+                            </button>
                         </div>
-                      </div>
+                        <div className="p-5 overflow-y-auto flex-1">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {allSuggestions.map((suggestion) => (
+                                    <SuggestionCard key={suggestion.id} suggestion={suggestion} onFollowUser={handleFollowUser} />
+                                ))}
+                            </div>
+                        </div>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Other Projects */}
-            <div>
-              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6`}>Other Notable Projects</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {projectsData.filter(p => !p.featured).map((project) => (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
-                  >
-                    <div className="relative h-48">
-                      <Image
-                        src={project.image}
-                        alt={project.title}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="p-5">
-                      <h3 className={`text-lg font-bold ${theme.main.text} mb-2`}>{project.title}</h3>
-                      <p className={`${theme.main.textSecondary} text-sm mb-3`}>{project.description}</p>
-                      
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {project.tags.slice(0, 3).map((tag, idx) => (
-                          <span key={idx} className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}>
-                            {tag}
-                          </span>
-                        ))}
-                        {project.tags.length > 3 && (
-                          <span className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.textSecondary}`}>
-                            +{project.tags.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="flex space-x-3 mt-3">
-                        {project.demoUrl && (
-                          <a 
-                            href={project.demoUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className={`${theme.button.primary} text-xs font-medium flex items-center`}
-                          >
-                            <span>Live Demo</span>
-                            <FiExternalLink className="ml-1 w-3 h-3" />
-                          </a>
-                        )}
-                        {project.repoUrl && (
-                          <a 
-                            href={project.repoUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className={`${theme.main.textSecondary} hover:${theme.main.text} text-xs font-medium flex items-center`}
-                          >
-                            <FiGithub className="mr-1 w-3 h-3" />
-                            <span>Source Code</span>
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        );
-      
-      case 'Portfolio':
-        return (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-4xl"
-          >
-            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>Professional Portfolio</h1>
-            
-            {/* Work Experience */}
-            <section className="mb-12">
-              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6 flex items-center`}>
-                <FiBriefcase className="mr-2" /> Work Experience
-              </h2>
-              
-              <div className="space-y-8">
-                {portfolioData.experience.map((job, index) => (
-                  <motion.div 
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
-                  >
-                    <div className="md:flex">
-                      <div className="p-6 md:w-full">
-                        <div className="flex flex-col md:flex-row md:items-center mb-4">
-                          <div className="flex items-center mb-3 md:mb-0">
-                            <div className="mr-4 relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                              <Image
-                                src={job.logo}
-                                alt={`${job.company} logo`}
+                </div>
+            )}
+
+            {activeStory && (
+                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
+                    <button
+                        onClick={closeStory}
+                        className="absolute top-6 right-6 z-20 text-white bg-transparent p-2 rounded-full cursor-pointer hover:bg-white hover:bg-opacity-20 transition-all"
+                    >
+                        <X size={28} />
+                    </button>
+
+                    <div className="relative w-full max-w-lg h-screen max-h-[80vh]">
+                        <div className="w-full h-full relative overflow-hidden rounded-2xl">
+                            <div className="absolute top-4 left-4 right-4 h-1.5 bg-gray-500/50 z-10 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-white transition-all duration-100 ease-linear"
+                                    style={{ width: `${storyProgress}%` }}
+                                ></div>
+                            </div>
+
+                            <AvatarImage
+                                src={activeStory.image}
+                                alt="Story"
                                 fill
                                 className="object-cover"
-                              />
+                                style={{ borderRadius: "16px" }}
+                            />
+
+                            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-full py-2 px-4 flex items-center shadow-md z-10 w-auto max-w-[90%]">
+                                <AvatarImage
+                                    src={activeStory.user.avatar}
+                                    alt={activeStory.user.name}
+                                    width={32}
+                                    height={32}
+                                    className="rounded-full mr-3"
+                                />
+                                <div className="text-black">
+                                    <h4 className="font-semibold text-sm">{activeStory.user.name}</h4>
+                                    <p className="text-xs text-gray-500">@{activeStory.user.username}</p>
+                                </div>
                             </div>
-                            <div>
-                              <h3 className={`text-xl font-bold ${theme.main.text}`}>{job.position}</h3>
-                              <div className="flex items-center">
-                                <span className={`font-medium ${theme.accent}`}>{job.company}</span>
-                                <span className={`mx-2 text-xs ${theme.main.textSecondary}`}>•</span>
-                                <span className={`text-sm ${theme.main.textSecondary}`}>{job.period}</span>
-                              </div>
-                            </div>
-                          </div>
                         </div>
-                        
-                        <p className={`${theme.main.textSecondary} mb-4`}>{job.description}</p>
-                        
-                        <div className="mb-4">
-                          <h4 className={`text-sm font-semibold ${theme.accent} mb-2`}>Key Achievements:</h4>
-                          <ul className={`list-disc list-inside ${theme.main.textSecondary}`}>
-                            {job.achievements.map((achievement, idx) => (
-                              <li key={idx} className="mb-1">{achievement}</li>
-                            ))}
-                          </ul>
-                        </div>
-                        
+                    </div>
+                </div>
+            )}
+
+            <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-100">
+                <div className="flex items-center">
+                    <h1 className="text-xl font-bold">AIrtistry</h1>
+                    <span className="ml-1 text-xs bg-gradient-to-r from-purple-500 via-pink-400 to-teal-400 text-transparent bg-clip-text font-semibold">
+                        AI Art Platform
+                    </span>
+                </div>
+                <div className="flex items-center space-x-3">
+                    <button className="w-10 h-10 flex items-center justify-center text-gray-600 cursor-pointer">
+                        <Search size={20} />
+                    </button>
+                    <MobileMenu currentUser={currentUser} activeSection={activeSection} onSectionChange={setActiveSection} />
+                </div>
+            </div>
+
+            <div className="flex h-[calc(100vh-60px)] md:h-screen">
+                <div className="hidden md:flex w-64 bg-white p-6 flex-col">
+                    <div className="flex items-center mb-10">
+                        <UserAvatar user={currentUser} size="lg" showStatus={true} />
                         <div>
-                          <h4 className={`text-sm font-semibold ${theme.main.text} mb-2`}>Technologies:</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {job.technologies.map((tech, idx) => (
-                              <span key={idx} className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}>
-                                {tech}
-                              </span>
-                            ))}
-                          </div>
+                            <h3 className="font-bold" style={{ fontFamily: fonts.heading }}>
+                                {currentUser.name}
+                            </h3>
+                            <p className="text-gray-500 text-sm">@{currentUser.username}</p>
                         </div>
-                      </div>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-            
-            {/* Education */}
-            <section className="mb-12">
-              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6 flex items-center`}>
-                <FiUser className="mr-2" /> Education
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {portfolioData.education.map((edu, index) => (
-                  <motion.div 
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}
-                  >
-                    <div className="flex items-center mb-3">
-                      <div className="mr-3 relative w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                        <Image
-                          src={edu.logo}
-                          alt={`${edu.institution} logo`}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div>
-                        <h3 className={`text-lg font-bold ${theme.main.text}`}>{edu.institution}</h3>
-                        <span className={`text-sm ${theme.main.textSecondary}`}>{edu.period}</span>
-                      </div>
-                    </div>
-                    
-                    <div className={`font-medium ${theme.accent} mb-2`}>{edu.degree}</div>
-                    <p className={`${theme.main.textSecondary} text-sm mb-3`}>{edu.description}</p>
-                    
-                    {edu.thesis && (
-                      <div className="mt-2">
-                        <span className={`text-sm font-medium ${theme.main.text}`}>Thesis: </span>
-                        <span className={`text-sm italic ${theme.main.textSecondary}`}>{edu.thesis}</span>
-                      </div>
+
+                    <nav className="flex-1">
+                        <ul className="space-y-3">
+                            <SidebarItem
+                                icon={<HomeIcon className={`h-4 w-4 ${activeSection === "newsfeed" ? "text-white" : "text-gray-700"}`} />}
+                                label="News Feed"
+                                isActive={activeSection === "newsfeed"}
+                                onClick={() => setActiveSection("newsfeed")}
+                            />
+                            <SidebarItem
+                                icon={
+                                    <MessageSquare className={`h-4 w-4 ${activeSection === "messages" ? "text-white" : "text-gray-700"}`} />
+                                }
+                                label="Messages"
+                                count={6}
+                                isActive={activeSection === "messages"}
+                                onClick={() => setActiveSection("messages")}
+                            />
+                            <SidebarItem
+                                icon={<Users className={`h-4 w-4 ${activeSection === "friends" ? "text-white" : "text-gray-700"}`} />}
+                                label="Friends"
+                                count={3}
+                                isActive={activeSection === "friends"}
+                                onClick={() => setActiveSection("friends")}
+                            />
+                            <SidebarItem
+                                icon={<Settings className={`h-4 w-4 ${activeSection === "settings" ? "text-white" : "text-gray-700"}`} />}
+                                label="Settings"
+                                isActive={activeSection === "settings"}
+                                onClick={() => setActiveSection("settings")}
+                            />
+                        </ul>
+                    </nav>
+                </div>
+
+                <div className="flex-1 bg-white overflow-y-auto">
+                    {activeSection === "newsfeed" ? (
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-bold" style={{ fontFamily: fonts.heading }}>
+                                    Feed
+                                </h2>
+
+                                <div className="flex">
+                                    <button
+                                        onClick={() => setActiveFeedFilter("recents")}
+                                        className={`cursor-pointer mr-6 transition-all duration-200 relative ${
+                                            activeFeedFilter === "recents"
+                                                ? "text-black font-semibold"
+                                                : "text-gray-500 hover:text-gray-800"
+                                        }`}
+                                    >
+                                        Recent
+                                        {activeFeedFilter === "recents" && (
+                                            <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-black rounded-full animate-fadeIn"></span>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveFeedFilter("friends")}
+                                        className={`cursor-pointer mr-6 transition-all duration-200 relative ${
+                                            activeFeedFilter === "friends"
+                                                ? "text-black font-semibold"
+                                                : "text-gray-500 hover:text-gray-800"
+                                        }`}
+                                    >
+                                        Artists I Follow
+                                        {activeFeedFilter === "friends" && (
+                                            <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-black rounded-full animate-fadeIn"></span>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveFeedFilter("popular")}
+                                        className={`cursor-pointer transition-all duration-200 relative ${
+                                            activeFeedFilter === "popular"
+                                                ? "text-black font-semibold"
+                                                : "text-gray-500 hover:text-gray-800"
+                                        }`}
+                                    >
+                                        Trending
+                                        {activeFeedFilter === "popular" && (
+                                            <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-black rounded-full animate-fadeIn"></span>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className={`bg-[#f4f1f2] rounded-xl p-4 mb-6 ${animations.fadeIn}`}>
+                                <div className="relative flex items-center">
+                                    <div className="absolute left-0 z-10">
+                                        <UserAvatar user={currentUser} size="sm" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Share your AI artwork..."
+                                        className="flex-1 bg-white rounded-full py-2 pl-16 pr-12 text-gray-700 focus:outline-none focus:ring-1 focus:ring-black transition-all duration-200"
+                                        value={postText}
+                                        onChange={(e) => setPostText(e.target.value)}
+                                    />
+                                </div>
+
+                                {showPromptInput && (
+                                    <div className={`mt-3 ${animations.slideUp}`}>
+                                        <textarea
+                                            placeholder="Enter your prompt here..."
+                                            className="w-full bg-white rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-black border border-gray-200 min-h-24 transition-all duration-200"
+                                            value={promptText}
+                                            onChange={(e) => setPromptText(e.target.value)}
+                                        />
+                                        <div className="mt-2 flex items-center">
+                                            <span className="text-sm text-gray-600 mr-2">AI Model:</span>
+                                            <select
+                                                className="bg-white border border-gray-200 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-black transition-all duration-200"
+                                                value={selectedModel}
+                                                onChange={(e) => setSelectedModel(e.target.value)}
+                                            >
+                                                <option value="midjourney">Midjourney</option>
+                                                <option value="dalle">DALL-E</option>
+                                                <option value="stable-diffusion">Stable Diffusion</option>
+                                                <option value="leonardo">Leonardo</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedImages.length > 0 && (
+                                    <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+                                        {selectedImages.map((img, idx) => (
+                                            <div key={idx} className="relative rounded-lg h-24 overflow-hidden">
+                                                <AvatarImage
+                                                    src={img}
+                                                    alt="Selected image"
+                                                    width={96}
+                                                    height={144}
+                                                    className="object-cover"
+                                                />
+                                                <button
+                                                    className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center cursor-pointer"
+                                                    onClick={() => setSelectedImages(selectedImages.filter((_, i) => i !== idx))}
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {selectedLocation && (
+                                    <div className="mt-3 flex items-center bg-white rounded-full px-3 py-2 text-sm">
+                                        <MapPin className="text-gray-500 w-4 h-4 mr-2" />
+                                        <span className="text-gray-700">{selectedLocation}</span>
+                                        <button className="ml-auto text-gray-500 cursor-pointer" onClick={() => setSelectedLocation(null)}>
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                )}
+
+                                {showLocationInput && !selectedLocation && (
+                                    <div className="mt-3">
+                                        <form onSubmit={handleLocationSubmit} className="flex">
+                                            <div className="relative flex-1">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <MapPin className="h-5 w-5 text-gray-400" />
+                                                </div>
+                                                <input
+                                                    ref={locationInputRef}
+                                                    type="text"
+                                                    className="bg-white w-full pl-10 pr-4 py-2 border border-gray-200 rounded-l-lg focus:outline-none"
+                                                    placeholder="Enter your location"
+                                                    value={locationInput}
+                                                    onChange={handleLocationInputChange}
+                                                />
+                                            </div>
+                                            <button type="submit" className="bg-gray-800 text-white px-4 rounded-r-lg cursor-pointer">
+                                                Add
+                                            </button>
+                                        </form>
+                                    </div>
+                                )}
+
+                                {isLocationPickerOpen && !selectedLocation && (
+                                    <div className="mt-3 bg-white rounded-lg shadow-lg p-3">
+                                        <h4 className="text-sm font-semibold mb-2">Popular locations:</h4>
+                                        <div className="space-y-2">
+                                            {["New York, USA", "London, UK", "Tokyo, Japan", "Sydney, Australia", "Paris, France"].map(
+                                                (location) => (
+                                                    <button
+                                                        key={location}
+                                                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-lg flex items-center cursor-pointer"
+                                                        onClick={() => handleLocationSelect(location)}
+                                                    >
+                                                        <MapPin className="text-gray-500 w-4 h-4 mr-2" />
+                                                        {location}
+                                                    </button>
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex mt-4 justify-between flex-wrap">
+                                    <div className="flex space-x-2 sm:space-x-4 mb-2 sm:mb-0">
+                                        <button
+                                            className="flex items-center text-gray-600 text-sm sm:text-base cursor-pointer transition-all duration-200 hover:text-black transform active:scale-95"
+                                            onClick={() => imageInputRef.current?.click()}
+                                        >
+                                            <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+                                            <span>Add Art</span>
+                                        </button>
+                                        <button
+                                            className="flex items-center text-gray-600 text-sm sm:text-base cursor-pointer transition-all duration-200 hover:text-black transform active:scale-95"
+                                            onClick={handleTogglePromptInput}
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                                                />
+                                            </svg>
+                                            <span>{showPromptInput ? "Hide Prompt" : "Add Prompt"}</span>
+                                        </button>
+                                        <button
+                                            className="flex items-center text-gray-600 text-sm sm:text-base cursor-pointer transition-all duration-200 hover:text-black transform active:scale-95"
+                                            onClick={handleToggleLocationInput}
+                                        >
+                                            <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+                                            <span>Location</span>
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <select className="mr-3 text-sm sm:text-base bg-transparent text-gray-500 cursor-pointer focus:outline-none focus:text-black transition-colors duration-200">
+                                            <option value="public">Public</option>
+                                            <option value="private">Private</option>
+                                        </select>
+                                        <button
+                                            className="bg-black text-white px-3 sm:px-5 py-1 sm:py-2 rounded-full flex items-center text-sm sm:text-base cursor-pointer transition-all duration-300 hover:bg-gray-800 transform active:scale-95"
+                                            onClick={handlePostSubmit}
+                                        >
+                                            <Send className="w-4 h-4 mr-2" />
+                                            <span>Share Art</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                {posts.map((post) => (
+                                    <PostCard
+                                        key={post.id}
+                                        post={post}
+                                        currentUser={currentUser}
+                                        likedPosts={likedPosts}
+                                        activeCommentInput={activeCommentInput}
+                                        openDropdownId={openDropdownId}
+                                        onLikeToggle={handleLikeToggle}
+                                        onCommentToggle={handleCommentToggle}
+                                        onDropdownToggle={toggleDropdown}
+                                        onCommentSubmit={handleCommentSubmit}
+                                        onSavePost={savePost}
+                                        onHidePost={hidePost}
+                                        onReportPost={reportPost}
+                                        commentText={commentText}
+                                        setCommentText={setCommentText}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    ) : activeSection === "messages" ? (
+                        <div className="h-full flex">
+                            <div className="w-80 border-r border-gray-200 h-full">
+                                <div className="p-4 border-b border-gray-200">
+                                    <h2 className="text-xl font-bold">Messages</h2>
+                                </div>
+                                <div className="overflow-y-auto h-[calc(100%-60px)]">
+                                    {chats.map((chat) => (
+                                        <div
+                                            key={chat.id}
+                                            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                                                activeChat?.id === chat.id ? "bg-gray-50" : ""
+                                            }`}
+                                            onClick={() => handleChatSelect(chat)}
+                                        >
+                                            <div className="flex items-center">
+                                                <div className="relative">
+                                                    <AvatarImage
+                                                        src={chat.user.avatar}
+                                                        alt={chat.user.name}
+                                                        width={48}
+                                                        height={48}
+                                                        className="rounded-full mr-3"
+                                                    />
+                                                    {chat.unreadCount > 0 && (
+                                                        <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                                            {chat.unreadCount}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-baseline">
+                                                        <h3 className="font-semibold truncate">{chat.user.name}</h3>
+                                                        <span className="text-xs text-gray-500">
+                                                            {chat.messages[chat.messages.length - 1]?.time}
+                                                        </span>
+                                                    </div>
+                                                    <p
+                                                        className={`text-sm truncate ${
+                                                            chat.unreadCount > 0 ? "font-semibold text-black" : "text-gray-500"
+                                                        }`}
+                                                    >
+                                                        {chat.messages[chat.messages.length - 1]?.text}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex-1 flex flex-col h-full">
+                                {activeChat ? (
+                                    <>
+                                        <div className="p-4 border-b border-gray-200 flex items-center">
+                                            <AvatarImage
+                                                src={activeChat.user.avatar}
+                                                alt={activeChat.user.name}
+                                                width={40}
+                                                height={40}
+                                                className="rounded-full mr-3"
+                                            />
+                                            <div>
+                                                <h3 className="font-semibold">{activeChat.user.name}</h3>
+                                                <p className="text-xs text-gray-500">@{activeChat.user.username}</p>
+                                            </div>
+                                        </div>
+
+                                        <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+                                            {activeChat.messages.map((message) => (
+                                                <div
+                                                    key={message.id}
+                                                    className={`flex ${
+                                                        message.sender.id === currentUser.id ? "justify-end" : "justify-start"
+                                                    }`}
+                                                >
+                                                    {message.sender.id !== currentUser.id && (
+                                                        <AvatarImage
+                                                            src={message.sender.avatar}
+                                                            alt={message.sender.name}
+                                                            width={32}
+                                                            height={32}
+                                                            className="rounded-full mr-2 self-end"
+                                                        />
+                                                    )}
+                                                    <div
+                                                        className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                                                            message.sender.id === currentUser.id
+                                                                ? "bg-black text-white rounded-br-none"
+                                                                : "bg-gray-100 text-gray-800 rounded-bl-none"
+                                                        }`}
+                                                    >
+                                                        <p className="text-sm">{message.text}</p>
+                                                        <span
+                                                            className={`text-xs block mt-1 ${
+                                                                message.sender.id === currentUser.id
+                                                                    ? "text-gray-300 text-right"
+                                                                    : "text-gray-500"
+                                                            }`}
+                                                        >
+                                                            {message.time}
+                                                        </span>
+                                                    </div>
+                                                    {message.sender.id === currentUser.id && (
+                                                        <AvatarImage
+                                                            src={message.sender.avatar}
+                                                            alt={message.sender.name}
+                                                            width={32}
+                                                            height={32}
+                                                            className="rounded-full ml-2 self-end"
+                                                        />
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="p-4 border-t border-gray-200">
+                                            <div className="flex items-center">
+                                                <button className="text-gray-400 p-2 rounded-full hover:bg-gray-100 cursor-pointer">
+                                                    <Paperclip size={20} />
+                                                </button>
+                                                <input
+                                                    type="text"
+                                                    className="flex-1 border border-gray-200 rounded-full px-4 py-2 mx-2 focus:outline-none focus:ring-1 focus:ring-black"
+                                                    placeholder="Type a message..."
+                                                    value={newMessage}
+                                                    onChange={(e) => setNewMessage(e.target.value)}
+                                                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                                                />
+                                                <button
+                                                    className={`p-2 rounded-full ${
+                                                        newMessage.trim() ? "bg-black text-white" : "bg-gray-100 text-gray-400"
+                                                    } cursor-pointer`}
+                                                    onClick={handleSendMessage}
+                                                    disabled={!newMessage.trim()}
+                                                >
+                                                    <Send size={20} className={newMessage.trim() ? "rotate-45" : "rotate-45 opacity-50"} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-gray-500">
+                                        <div className="text-center">
+                                            <MessageSquare size={48} className="mx-auto text-gray-300 mb-4" />
+                                            <p>Select a chat to start messaging</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ) : activeSection === "friends" ? (
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-bold" style={{ fontFamily: fonts.heading }}>
+                                    AI Artists
+                                </h2>
+
+                                <div className="flex">
+                                    <button
+                                        onClick={() => setActiveFriendsFilter("friends")}
+                                        className={`cursor-pointer mr-6 transition-colors duration-200 hover:text-black ${
+                                            activeFriendsFilter === "friends" ? "text-black font-semibold" : "text-gray-500"
+                                        }`}
+                                    >
+                                        Following
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveFriendsFilter("suggestions")}
+                                        className={`cursor-pointer transition-colors duration-200 hover:text-black ${
+                                            activeFriendsFilter === "suggestions" ? "text-black font-semibold" : "text-gray-500"
+                                        }`}
+                                    >
+                                        Discover Artists
+                                    </button>
+                                </div>
+                            </div>
+
+                            {activeFriendsFilter === "friends" ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {friends.map((friend) => (
+                                        <FriendCard
+                                            key={friend.id}
+                                            friend={friend}
+                                            onRemoveFriend={handleRemoveFriend}
+                                            onMessageFriend={handleMessageFriend}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {allSuggestions.map((suggestion) => (
+                                            <div
+                                                key={suggestion.id}
+                                                className="flex flex-col items-center bg-white rounded-xl border border-gray-200 p-4"
+                                            >
+                                                <div className="relative w-20 h-20 mb-3">
+                                                    <AvatarImage
+                                                        src={suggestion.user.avatar}
+                                                        alt={suggestion.user.name}
+                                                        fill
+                                                        className="rounded-full object-cover"
+                                                    />
+                                                </div>
+                                                <h4 className="font-bold text-lg" style={{ fontFamily: fonts.heading }}>
+                                                    {suggestion.user.name}
+                                                </h4>
+                                                <p className="text-gray-500 text-sm">@{suggestion.user.username}</p>
+                                                <p className="text-gray-600 text-sm my-2 text-center">Suggested based on your interests</p>
+                                                <button
+                                                    onClick={() => handleFollowUser(suggestion.id)}
+                                                    className={`px-6 py-2 rounded-full mt-2 ${
+                                                        suggestion.followed ? "bg-blue-100 text-blue-600" : "bg-black text-white"
+                                                    }`}
+                                                >
+                                                    {suggestion.followed ? (
+                                                        <span className="flex items-center">
+                                                            <CheckCircle size={16} className="mr-1" />
+                                                            Followed
+                                                        </span>
+                                                    ) : (
+                                                        "Follow"
+                                                    )}
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button
+                                            className="text-gray-500 text-sm mt-2 cursor-pointer hover:text-black transition-colors duration-200"
+                                            onClick={() => setSuggestionsModalOpen(true)}
+                                        >
+                                            See all
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="p-6 max-w-4xl mx-auto">
+                            <h2 className="text-2xl font-bold mb-8" style={{ fontFamily: fonts.heading }}>
+                                Settings
+                            </h2>
+
+                            <div className="mb-10">
+                                <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+                                    <h3 className="text-xl font-semibold">Profile Information</h3>
+
+                                    {!editMode && (
+                                        <button
+                                            className="flex items-center text-gray-700 hover:text-black px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors duration-200 cursor-pointer"
+                                            onClick={() => setEditMode(true)}
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                className="h-4 w-4 mr-2"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={1.5}
+                                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                                />
+                                            </svg>
+                                            Edit
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="py-6">
+                                    {editMode ? (
+                                        <div className="space-y-6">
+                                            <div className="flex flex-col items-center mb-6">
+                                                <div
+                                                    className="relative w-32 h-32 mb-3 rounded-full overflow-hidden cursor-pointer border border-gray-200 group"
+                                                    onClick={() => profileImageInputRef.current?.click()}
+                                                >
+                                                    <AvatarImage
+                                                        src={profileImagePreview || currentUser.avatar}
+                                                        alt={currentUser.name}
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            className="h-8 w-8 text-white"
+                                                            fill="none"
+                                                            viewBox="0 0 24 24"
+                                                            stroke="currentColor"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={1.5}
+                                                                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                                                            />
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={1.5}
+                                                                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                                                            />
+                                                        </svg>
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm text-gray-500">Click to change profile photo</p>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                                                        value={editedName}
+                                                        onChange={(e) => setEditedName(e.target.value)}
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                                                    <div className="flex">
+                                                        <span className="inline-flex items-center px-3 bg-gray-100 text-gray-500 border border-r-0 border-gray-200 rounded-l-lg">
+                                                            @
+                                                        </span>
+                                                        <input
+                                                            type="text"
+                                                            className="flex-1 px-4 py-2 border border-gray-200 rounded-r-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                                                            value={editedUsername}
+                                                            onChange={(e) => setEditedUsername(e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Artist Bio</label>
+                                                <textarea
+                                                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                                                    rows={4}
+                                                    value={editedBio}
+                                                    onChange={(e) => setEditedBio(e.target.value)}
+                                                />
+                                                <p className="mt-2 text-xs text-gray-500">
+                                                    Briefly describe your artistic style and AI tools you use
+                                                </p>
+                                            </div>
+
+                                            <div className="flex space-x-4 pt-4">
+                                                <button
+                                                    className="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-900 transition-colors duration-200 cursor-pointer"
+                                                    onClick={handleSaveProfile}
+                                                >
+                                                    Save Changes
+                                                </button>
+                                                <button
+                                                    className="bg-white text-gray-700 border border-gray-200 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+                                                    onClick={handleCancelEdit}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-6">
+                                            <div className="flex flex-col md:flex-row md:items-center">
+                                                <div className="relative w-28 h-28 md:mr-8 mx-auto md:mx-0 mb-4 md:mb-0">
+                                                    <AvatarImage
+                                                        src={currentUser.avatar}
+                                                        alt={currentUser.name}
+                                                        fill
+                                                        className="rounded-full object-cover"
+                                                    />
+                                                </div>
+                                                <div className="text-center md:text-left">
+                                                    <h3 className="text-xl font-bold mb-1" style={{ fontFamily: fonts.heading }}>
+                                                        {currentUser.name}
+                                                    </h3>
+                                                    <p className="text-gray-500 mb-2">@{currentUser.username}</p>
+                                                    <span className="inline-block bg-[#f4f1f2] text-gray-700 px-3 py-1 rounded-full text-sm">
+                                                        AI Artist
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-[#f4f1f2] rounded-xl p-4">
+                                                <h4 className="text-sm font-medium mb-2">Artist Bio</h4>
+                                                <p className="text-gray-700">{editedBio}</p>
+                                            </div>
+
+                                            <div className="pt-4 border-t border-gray-100">
+                                                <h4 className="font-semibold mb-4">Account Information</h4>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+                                                    <div>
+                                                        <h5 className="text-sm text-gray-500 mb-1">Email</h5>
+                                                        <p className="font-medium">{currentUser.username}@example.com</p>
+                                                    </div>
+
+                                                    <div>
+                                                        <h5 className="text-sm text-gray-500 mb-1">Account Created</h5>
+                                                        <p className="font-medium">January 15, 2023</p>
+                                                    </div>
+
+                                                    <div>
+                                                        <h5 className="text-sm text-gray-500 mb-1">Last Login</h5>
+                                                        <p className="font-medium">Today</p>
+                                                    </div>
+
+                                                    <div>
+                                                        <h5 className="text-sm text-gray-500 mb-1">Account Type</h5>
+                                                        <p className="font-medium">Creator</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="mb-10">
+                                <div className="pb-4 border-b border-gray-100">
+                                    <h3 className="text-xl font-semibold">Preferences</h3>
+                                </div>
+
+                                <div className="py-6">
+                                    <div className="space-y-6">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-100">
+                                            <div className="mb-3 sm:mb-0">
+                                                <h4 className="font-medium mb-1">Email Notifications</h4>
+                                                <p className="text-sm text-gray-500">Receive email updates about your account</p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" className="sr-only peer" defaultChecked />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                                            </label>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+                                            <div className="mb-3 sm:mb-0">
+                                                <h4 className="font-medium mb-1">Show AI Model Information</h4>
+                                                <p className="text-sm text-gray-500">Display AI model information with your artworks</p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" className="sr-only peer" defaultChecked />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mb-10">
+                                <div className="pb-4 border-b border-gray-100">
+                                    <h3 className="text-xl font-semibold">Privacy & Security</h3>
+                                </div>
+
+                                <div className="py-6">
+                                    <div className="space-y-6">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-100">
+                                            <div className="mb-3 sm:mb-0">
+                                                <h4 className="font-medium mb-1">Private Account</h4>
+                                                <p className="text-sm text-gray-500">Only approved followers can see your posts</p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" className="sr-only peer" />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                                            </label>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-100">
+                                            <div className="mb-3 sm:mb-0">
+                                                <h4 className="font-medium mb-1">Two-Factor Authentication</h4>
+                                                <p className="text-sm text-gray-500">Add an extra layer of security to your account</p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" className="sr-only peer" />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                                            </label>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+                                            <div className="mb-3 sm:mb-0">
+                                                <h4 className="font-medium mb-1">Activity Status</h4>
+                                                <p className="text-sm text-gray-500">Let other artists know when you're active</p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" className="sr-only peer" defaultChecked />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-8 text-center border-t border-gray-100 pt-6">
+                                <button className="text-gray-500 hover:text-red-600 text-sm font-medium transition-colors duration-200">
+                                    Delete Account
+                                </button>
+                            </div>
+                        </div>
                     )}
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-            
-            {/* Certifications */}
-            <section className="mb-12">
-              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6 flex items-center`}>
-                <FiCode className="mr-2" /> Professional Certifications
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {portfolioData.certifications.map((cert, index) => (
-                  <motion.div 
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-4 flex items-center`}
-                  >
-                    <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 mr-4">
-                      <Image
-                        src={cert.logo}
-                        alt={`${cert.name} logo`}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div>
-                      <h3 className={`font-bold ${theme.main.text}`}>{cert.name}</h3>
-                      <div className="flex items-center">
-                        <span className={`text-sm ${theme.main.textSecondary}`}>{cert.issuer}</span>
-                        <span className={`mx-2 text-xs ${theme.main.textSecondary}`}>•</span>
-                        <span className={`text-sm ${theme.accent}`}>{cert.date}</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-            
-            {/* Speaking Engagements */}
-            <section>
-              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6 flex items-center`}>
-                <FiLayers className="mr-2" /> Speaking Engagements
-              </h2>
-              
-              <div className="space-y-6">
-                {portfolioData.speaking.map((talk, index) => (
-                  <motion.div 
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
-                  >
-                    <div className="relative h-48 w-full">
-                      <Image
-                        src={talk.image}
-                        alt={talk.event}
-                        fill
-                        className="object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-                        <div className="p-6 text-white">
-                          <div className="text-sm mb-1">{talk.date} • {talk.location}</div>
-                          <h3 className="text-xl font-bold mb-1">{talk.event}</h3>
-                          <p className="text-white/90 font-medium">{talk.topic}</p>
+                </div>
+
+                {activeSection === "newsfeed" && (
+                    <div className="hidden lg:block w-80 bg-white p-6 overflow-y-auto">
+                        <div className="mb-8">
+                            <h3 className="text-2xl font-bold mb-6" style={{ fontFamily: fonts.heading }}>
+                                Stories
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                {stories.map((story) => (
+                                    <div
+                                        key={story.id}
+                                        className="rounded-xl overflow-hidden h-40 relative group cursor-pointer"
+                                        onClick={() => handleStoryClick(story)}
+                                    >
+                                        <AvatarImage src={story.image} alt="AI artwork" fill className="object-cover" />
+                                        <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
+                                            <div className="bg-white rounded-full py-1 px-2 flex items-center">
+                                                <AvatarImage
+                                                    src={story.user.avatar}
+                                                    alt={story.user.name}
+                                                    width={24}
+                                                    height={24}
+                                                    className="rounded-full mr-2"
+                                                />
+                                                <span className="text-black text-xs font-medium truncate">{story.user.name}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                      </div>
+
+                        <div className="mb-8">
+                            <h3 className="text-2xl font-bold mb-6" style={{ fontFamily: fonts.heading }}>
+                                Artist Suggestions
+                            </h3>
+                            <div className="space-y-4">
+                                {suggestions.map((suggestion) => (
+                                    <SidebarSuggestionCard key={suggestion.id} suggestion={suggestion} onFollowUser={handleFollowUser} />
+                                ))}
+                                <button
+                                    className="text-gray-500 text-sm mt-2 cursor-pointer hover:text-black transition-colors duration-200"
+                                    onClick={() => setSuggestionsModalOpen(true)}
+                                >
+                                    See all
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 className="text-2xl font-bold mb-6" style={{ fontFamily: fonts.heading }}>
+                                Trending Topics
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                {recommendations.map((rec) => (
+                                    <div
+                                        key={rec.id}
+                                        className="bg-gray-100 rounded-xl p-4 flex flex-col items-center justify-center h-24 relative overflow-hidden cursor-pointer"
+                                    >
+                                        <div className="absolute inset-0">
+                                            <AvatarImage src={rec.icon} alt={rec.title} fill className="object-cover opacity-20" />
+                                        </div>
+                                        <span className="z-10 text-black font-medium truncate">{rec.title}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-6">
+                                <h4 className="font-semibold mb-3">Popular Hashtags</h4>
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200">
+                                        #AIArt
+                                    </span>
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200">
+                                        #MidJourney
+                                    </span>
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200">
+                                        #PromptEngineering
+                                    </span>
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200">
+                                        #AIForGood
+                                    </span>
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200">
+                                        #DeepLearning
+                                    </span>
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200">
+                                        #StableDiffusion
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-          </motion.div>
-        );
-      
-      case 'Blog Posts':
-        return (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-2xl"
-          >
-            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>Blog Posts</h1>
-            
-            {/* Search Bar */}
-            <div className="mb-8">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search blog posts..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`w-full px-4 py-2 pl-10 rounded-lg border ${theme.content.inputBorder} ${theme.content.background} ${theme.main.text} focus:outline-none focus:ring-2 ${theme.content.focusRing}`}
-                />
-                <FiSearch className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${theme.main.textSecondary} w-4 h-4`} />
-              </div>
+                )}
             </div>
-
-            {/* Blog Posts */}
-            <div className="space-y-6">
-              {filteredPosts.map((post) => (
-                <motion.article
-                  key={post.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} transition-all duration-300`}
-                >
-                  <div className={`${theme.accent} text-xs mb-2 font-medium`}>{post.date} • {post.readTime}</div>
-                  <h2 className={`text-xl font-semibold ${theme.main.text} mb-2`}>
-                    {post.title}
-                  </h2>
-                  <p className={`${theme.main.textSecondary} mb-4`}>
-                    {post.description}
-                  </p>
-                  <div className="flex justify-end">
-                    <motion.button 
-                      whileHover={{ scale: 1.05, x: 5 }}
-                      whileTap={{ scale: 0.95 }}
-                      className={`${theme.button.primary} font-medium transition-colors cursor-pointer flex items-center space-x-1`}
-                    >
-                      <span>Read more</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </motion.button>
-                  </div>
-                </motion.article>
-              ))}
-            </div>
-          </motion.div>
-        );
-      
-      default:
-        return (
-          <div className="flex items-center justify-center h-[80vh]">
-            <p className={`text-xl ${theme.main.textSecondary}`}>This section is coming soon...</p>
-          </div>
-        );
-    }
-  };
-
-  return (
-    <div className={`flex min-h-screen ${theme.main.background}`}>
-      {/* Left Sidebar */}
-      <motion.aside 
-        initial={{ x: -20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        className={`w-[240px] ${theme.sidebar.background} fixed h-screen border-r ${theme.sidebar.border} py-8`}
-      >
-        <div className="px-6 mb-8">
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="relative w-12 h-12 rounded-full overflow-hidden">
-              <Image 
-                src="https://randomuser.me/api/portraits/men/32.jpg" 
-                alt="Profile picture" 
-                fill
-                className="object-cover"
-              />
-            </div>
-            <div>
-              <h1 className={`text-xl font-bold ${theme.main.text}`}>John Smith</h1>
-              <p className={`text-sm ${theme.main.textSecondary}`}>Full Stack Developer</p>
-            </div>
-          </div>
-          <div className="flex space-x-3 mt-4">
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer"
-              className={`${theme.main.textSecondary} ${theme.main.hover} transition-colors cursor-pointer`}>
-              <FiGithub size={20} />
-            </a>
-            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"
-              className={`${theme.main.textSecondary} ${theme.main.hover} transition-colors cursor-pointer`}>
-              <FiLinkedin size={20} />
-            </a>
-          </div>
         </div>
-        <nav className="px-4">
-          {menuItems.map((item) => (
-            <motion.button
-              key={item.name}
-              whileHover={{ x: 5 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleMenuChange(item.name)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors mb-1 cursor-pointer ${
-                activeMenu === item.name
-                  ? `${theme.sidebar.activeBackground} ${theme.main.text}`
-                  : `${theme.main.textSecondary} ${theme.sidebar.hoverBackground}`
-              }`}
-            >
-              {item.icon}
-              <span className="text-sm">{item.name}</span>
-            </motion.button>
-          ))}
-        </nav>
-        <div className="absolute bottom-8 left-0 right-0 px-6">
-          <motion.button
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={toggleTheme}
-            className={`w-full flex items-center justify-center space-x-2 py-2 rounded-lg ${theme.sidebar.activeBackground} ${theme.main.textSecondary} ${theme.main.hover} transition-colors cursor-pointer`}
-          >
-            {isDarkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
-            <span className="text-sm">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
-          </motion.button>
-        </div>
-      </motion.aside>
-
-      {/* Main Content */}
-      <main className="ml-[240px] flex-1 p-8">
-        {renderContent()}
-      </main>
-    </div>
-  );
+    );
 }
