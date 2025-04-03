@@ -635,9 +635,7 @@ const generateRandomUsers = (startId: number, count: number): Suggestion[] => {
 
 const SuggestionCard = ({ suggestion, onFollowUser }: { suggestion: Suggestion; onFollowUser: (id: number) => void }) => {
     return (
-        <div
-            className={`flex items-center justify-between p-3 border rounded-lg hover:shadow-sm transition-all duration-300 ${animations.fadeIn} hover:translate-y-[-2px]`}
-        >
+        <div className={`flex items-center justify-between p-3 border rounded-lg hover:shadow-sm transition-all duration-300 ${animations.fadeIn} hover:translate-y-[-2px]`}>
             <div className="flex items-center">
                 <UserAvatar user={suggestion.user} size="md" />
                 <div className="ml-3">
@@ -649,8 +647,10 @@ const SuggestionCard = ({ suggestion, onFollowUser }: { suggestion: Suggestion; 
             </div>
             <button
                 onClick={() => onFollowUser(suggestion.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 transform active:scale-95 ${
-                    suggestion.followed ? "bg-blue-100 text-blue-600 hover:bg-blue-200" : "bg-black text-white hover:bg-gray-800"
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer ${
+                    suggestion.followed 
+                        ? "bg-blue-100 text-blue-600 hover:bg-blue-200 hover:text-blue-700" 
+                        : "bg-black text-white hover:bg-gray-800 hover:shadow-lg"
                 }`}
             >
                 {suggestion.followed ? (
@@ -714,8 +714,10 @@ const SidebarSuggestionCard = ({ suggestion, onFollowUser }: { suggestion: Sugge
             </div>
             <button
                 onClick={() => onFollowUser(suggestion.id)}
-                className={`px-3 py-1 text-xs rounded-full cursor-pointer ${
-                    suggestion.followed ? "bg-blue-100 text-blue-600" : "bg-black text-white"
+                className={`px-3 py-1 text-xs rounded-full cursor-pointer transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                    suggestion.followed 
+                        ? "bg-blue-100 text-blue-600 hover:bg-blue-200 hover:text-blue-700" 
+                        : "bg-black text-white hover:bg-gray-800 hover:shadow-lg"
                 }`}
             >
                 {suggestion.followed ? "Followed" : "Follow"}
@@ -1675,6 +1677,16 @@ export default function Home() {
         setShowPromptInput(!showPromptInput);
     };
 
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    const handleDeleteAccount = () => {
+        setShowDeleteModal(true);
+    };
+
+    const handleCloseDeleteModal = () => {
+        setShowDeleteModal(false);
+    };
+
     return (
         <div className="min-h-screen bg-white">
             <ToastContainer />
@@ -1767,13 +1779,18 @@ export default function Home() {
 
             <div className="flex h-[calc(100vh-60px)] md:h-screen">
                 <div className="hidden md:flex w-64 bg-white p-6 flex-col">
-                    <div className="flex items-center mb-10">
+                    <div className="flex items-center mb-10" onClick={() => setActiveSection("settings")}>
                         <UserAvatar user={currentUser} size="lg" showStatus={true} />
                         <div>
-                            <h3 className="font-bold" style={{ fontFamily: fonts.heading }}>
-                                {currentUser.name}
-                            </h3>
-                            <p className="text-gray-500 text-sm">@{currentUser.username}</p>
+                            <button className="group transition-all duration-300 cursor-pointer">
+                                <h3 className="font-bold relative inline-block" style={{ fontFamily: fonts.heading }}>
+                                    {currentUser.name}
+                                    <span className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-400 to-orange-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-clip-text text-transparent pointer-events-none">
+                                        {currentUser.name}
+                                    </span>
+                                </h3>
+                                <p className="text-gray-500 text-sm">@{currentUser.username}</p>
+                            </button>
                         </div>
                     </div>
 
@@ -2263,8 +2280,10 @@ export default function Home() {
                                                 <p className="text-gray-600 text-sm my-2 text-center">Suggested based on your interests</p>
                                                 <button
                                                     onClick={() => handleFollowUser(suggestion.id)}
-                                                    className={`px-6 py-2 rounded-full mt-2 ${
-                                                        suggestion.followed ? "bg-blue-100 text-blue-600" : "bg-black text-white"
+                                                    className={`px-6 py-2 rounded-full mt-2 cursor-pointer transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                                                        suggestion.followed 
+                                                            ? "bg-blue-100 text-blue-600 hover:bg-blue-200 hover:text-blue-700" 
+                                                            : "bg-black text-white hover:bg-gray-800 hover:shadow-lg"
                                                     }`}
                                                 >
                                                     {suggestion.followed ? (
@@ -2550,7 +2569,10 @@ export default function Home() {
                             </div>
 
                             <div className="mt-8 text-center border-t border-gray-100 pt-6">
-                                <button className="text-gray-500 hover:text-red-600 text-sm font-medium transition-colors duration-200">
+                                <button 
+                                    onClick={handleDeleteAccount}
+                                    className="text-gray-500 hover:text-red-600 text-sm font-medium transition-colors duration-200 cursor-pointer"
+                                >
                                     Delete Account
                                 </button>
                             </div>
@@ -2568,12 +2590,14 @@ export default function Home() {
                                 {stories.map((story) => (
                                     <div
                                         key={story.id}
-                                        className="rounded-xl overflow-hidden h-40 relative group cursor-pointer"
+                                        className="rounded-xl overflow-hidden h-40 relative group cursor-pointer transition-all duration-300 hover:shadow-lg"
                                         onClick={() => handleStoryClick(story)}
                                     >
-                                        <AvatarImage src={story.image} alt="AI artwork" fill className="object-cover" />
+                                        <div className="absolute inset-0 transition-opacity duration-300">
+                                            <AvatarImage src={story.image} alt="AI artwork" fill className="object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
+                                        </div>
                                         <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
-                                            <div className="bg-white rounded-full py-1 px-2 flex items-center">
+                                            <div className="bg-white rounded-full py-1 px-2 flex items-center transform transition-transform duration-300 group-hover:scale-105">
                                                 <AvatarImage
                                                     src={story.user.avatar}
                                                     alt={story.user.name}
@@ -2614,10 +2638,10 @@ export default function Home() {
                                 {recommendations.map((rec) => (
                                     <div
                                         key={rec.id}
-                                        className="bg-gray-100 rounded-xl p-4 flex flex-col items-center justify-center h-24 relative overflow-hidden cursor-pointer"
+                                        className="bg-gray-100 rounded-xl p-4 flex flex-col items-center justify-center h-24 relative overflow-hidden cursor-pointer group transition-all duration-300 hover:shadow-lg"
                                     >
-                                        <div className="absolute inset-0">
-                                            <AvatarImage src={rec.icon} alt={rec.title} fill className="object-cover opacity-20" />
+                                        <div className="absolute inset-0 transition-opacity duration-300">
+                                            <AvatarImage src={rec.icon} alt={rec.title} fill className="object-cover opacity-20 group-hover:opacity-40 transition-opacity duration-300" />
                                         </div>
                                         <span className="z-10 text-black font-medium truncate">{rec.title}</span>
                                     </div>
@@ -2627,22 +2651,22 @@ export default function Home() {
                             <div className="mt-6">
                                 <h4 className="font-semibold mb-3">Popular Hashtags</h4>
                                 <div className="flex flex-wrap gap-2">
-                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200">
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200 transition-all duration-300 hover:scale-105">
                                         #AIArt
                                     </span>
-                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200">
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200 transition-all duration-300 hover:scale-105">
                                         #MidJourney
                                     </span>
-                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200">
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200 transition-all duration-300 hover:scale-105">
                                         #PromptEngineering
                                     </span>
-                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200">
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200 transition-all duration-300 hover:scale-105">
                                         #AIForGood
                                     </span>
-                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200">
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200 transition-all duration-300 hover:scale-105">
                                         #DeepLearning
                                     </span>
-                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200">
+                                    <span className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200 transition-all duration-300 hover:scale-105">
                                         #StableDiffusion
                                     </span>
                                 </div>
@@ -2651,6 +2675,29 @@ export default function Home() {
                     </div>
                 )}
             </div>
+
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl w-full max-w-md p-6">
+                        <h3 className="text-xl font-bold mb-4">Delete Account</h3>
+                        <p className="text-gray-600 mb-6">Are you sure that you want to delete your account? This action is irreversible.</p>
+                        <div className="flex space-x-4">
+                            <button
+                                onClick={handleCloseDeleteModal}
+                                className="flex-1 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors duration-200 cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCloseDeleteModal}
+                                className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors duration-200 cursor-pointer"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
