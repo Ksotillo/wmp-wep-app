@@ -1,23 +1,24 @@
 import type { Metadata } from "next";
-import { Montserrat, Roboto } from "next/font/google";
+import { Plus_Jakarta_Sans, Figtree } from "next/font/google";
 import "./globals.css";
 
-const montserrat = Montserrat({
+const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-montserrat",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-plus-jakarta",
   display: "swap",
 });
 
-const roboto = Roboto({
+const figtree = Figtree({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  variable: "--font-roboto",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-figtree",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Personal Blog",
-  description: "A modern personal blog built with Next.js and TailwindCSS",
+  title: "Spotify Clone",
+  description: "A modern Spotify clone built with Next.js and TailwindCSS",
 };
 
 export default function RootLayout({
@@ -27,7 +28,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${montserrat.variable} ${roboto.variable} antialiased`}>
+      <body 
+        className={`${plusJakartaSans.variable} ${figtree.variable} font-figtree antialiased bg-black`}
+      >
         {children}
       </body>
     </html>

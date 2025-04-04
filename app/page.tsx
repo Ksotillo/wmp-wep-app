@@ -1,1710 +1,716 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FiHome, FiUser, FiCode, FiBriefcase, FiBook, FiMoon, FiSun, FiGithub, FiLinkedin, FiSearch, FiLayers, FiExternalLink } from 'react-icons/fi';
-import { SiJavascript, SiTypescript, SiReact, SiNextdotjs, SiPython, SiRust, SiGo, SiZcool, SiCplusplus, SiSharp, SiRuby, SiAmazon, SiGooglecloud, SiDocker, SiKubernetes, SiMongodb, SiPostgresql, SiTensorflow } from 'react-icons/si';
-import Image from 'next/image';
+import { Home, Search, Library, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, ListMusic, ChevronLeft, ChevronRight, Bell, Download, User2, } from "lucide-react";
+import Image from "next/image";
+import { useState, useMemo, useEffect, useRef } from "react";
 
-// Sample blog posts data
-const blogPosts = [
-  {
-    id: 1,
-    title: 'Understanding React Server Components',
-    description: 'Exploring the benefits and implementation of React Server Components in modern web applications.',
-    date: 'March 28, 2024',
-    readTime: '5 min read',
-  },
-  {
-    id: 2,
-    title: 'State Management Patterns',
-    description: 'A deep dive into different state management approaches and when to use each one.',
-    date: 'March 25, 2024',
-    readTime: '7 min read',
-  },
-  {
-    id: 3,
-    title: 'Building Accessible Web Apps',
-    description: 'Best practices and techniques for creating inclusive web applications.',
-    date: 'March 20, 2024',
-    readTime: '4 min read',
-  },
-  {
-    id: 4,
-    title: 'The Future of JavaScript: What to Expect',
-    description: 'Exploring upcoming features, trends, and the evolution of JavaScript in the web development ecosystem.',
-    date: 'March 15, 2024',
-    readTime: '6 min read',
-  },
-  {
-    id: 5,
-    title: 'Optimizing React Performance',
-    description: 'Strategies and techniques for improving the performance of your React applications through code optimization.',
-    date: 'March 10, 2024',
-    readTime: '8 min read',
-  },
-  {
-    id: 6,
-    title: 'Design Patterns in Modern Web Development',
-    description: 'Understanding and implementing effective design patterns to create maintainable and scalable web applications.',
-    date: 'March 5, 2024',
-    readTime: '7 min read',
-  },
-  {
-    id: 7,
-    title: 'The Art of Clean Code',
-    description: 'Principles and practices for writing elegant, maintainable, and efficient code in any programming language.',
-    date: 'February 28, 2024',
-    readTime: '5 min read',
-  },
-  {
-    id: 8,
-    title: 'TypeScript Best Practices in 2024',
-    description: 'Updated guidelines and recommendations for writing type-safe, reliable TypeScript code in modern projects.',
-    date: 'February 20, 2024',
-    readTime: '6 min read',
+
+const fadeInUpAnimation = `
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 1rem, 0);
   }
-];
-
-// About Me Content
-const aboutMeContent = {
-  intro: "Hi there! I'm John Smith, a passionate Full Stack Developer with over 8 years of experience building web applications that solve real-world problems.",
-  bio: "After graduating with a Computer Science degree from MIT, I've worked with startups and established companies across the globe. My journey in tech began when I built my first website at 12, and I've been hooked ever since.",
-  interests: [
-    "Building scalable web applications",
-    "Contributing to open-source projects",
-    "Exploring new technologies and frameworks",
-    "Technical writing and mentoring junior developers"
-  ],
-  personalLife: "When I'm not coding, you'll find me hiking in the mountains, experimenting with photography, or trying out new coffee shops around the city. I believe in maintaining a healthy work-life balance and finding inspiration in everyday experiences.",
-  philosophy: "I approach every project with curiosity and a commitment to excellence. My philosophy is that great software should be both powerful and intuitive to use.",
-  images: [
-    {
-      src: "https://picsum.photos/id/1025/600/400",
-      alt: "Mountain hiking trip",
-      caption: "Taking a break from coding at Mount Rainier"
-    },
-    {
-      src: "https://picsum.photos/id/96/600/400",
-      alt: "Photography hobby",
-      caption: "Exploring my passion for photography in urban landscapes"
-    },
-    {
-      src: "https://picsum.photos/id/447/600/400",
-      alt: "Speaking at a tech conference",
-      caption: "Sharing knowledge at the React Summit 2023"
-    }
-  ]
-};
-
-// Skills Content
-const skillsContent = {
-  intro: "With over 15 years of programming experience, I've had the opportunity to work with a diverse range of technologies from modern frameworks to legacy systems.",
-  mainSkills: [
-    { name: "JavaScript", icon: <SiJavascript className="text-yellow-400" size={24} />, level: 95, years: 10 },
-    { name: "TypeScript", icon: <SiTypescript className="text-blue-500" size={24} />, level: 90, years: 7 },
-    { name: "React", icon: <SiReact className="text-cyan-400" size={24} />, level: 92, years: 8 },
-    { name: "Next.js", icon: <SiNextdotjs className="text-black dark:text-white" size={24} />, level: 88, years: 5 },
-    { name: "Python", icon: <SiPython className="text-blue-600" size={24} />, level: 85, years: 9 },
-    { name: "Java", level: 80, years: 12 },
-  ],
-  backendSkills: [
-    { name: "Node.js", level: 90, years: 9 },
-    { name: "Express", level: 88, years: 8 },
-    { name: "Django", level: 82, years: 6 },
-    { name: "Spring Boot", level: 78, years: 7 },
-    { name: "GraphQL", level: 85, years: 4 },
-    { name: "REST API Design", level: 95, years: 10 },
-  ],
-  databaseSkills: [
-    { name: "MongoDB", icon: <SiMongodb className="text-green-500" size={24} />, level: 88, years: 7 },
-    { name: "PostgreSQL", icon: <SiPostgresql className="text-blue-700" size={24} />, level: 85, years: 9 },
-    { name: "MySQL", level: 90, years: 12 },
-    { name: "Redis", level: 80, years: 6 },
-    { name: "Elasticsearch", level: 75, years: 4 },
-  ],
-  cloudSkills: [
-    { name: "AWS", icon: <SiAmazon className="text-orange-400" size={24} />, level: 85, years: 7 },
-    { name: "Google Cloud", icon: <SiGooglecloud className="text-blue-500" size={24} />, level: 80, years: 5 },
-    { name: "Azure", level: 75, years: 4 },
-    { name: "Docker", icon: <SiDocker className="text-blue-400" size={24} />, level: 88, years: 6 },
-    { name: "Kubernetes", icon: <SiKubernetes className="text-blue-500" size={24} />, level: 82, years: 4 },
-  ],
-  legacyAndSpecializedSkills: [
-    { name: "COBOL", icon: <SiZcool className="text-blue-800" size={24} />, level: 70, years: 3, description: "Maintained banking systems during Y2K transition" },
-    { name: "Fortran", level: 65, years: 2, description: "Scientific computing projects at NASA" },
-    { name: "Assembly", level: 60, years: 4, description: "Low-level optimization for embedded systems" },
-    { name: "LISP", level: 72, years: 3, description: "AI research projects" },
-    { name: "Ada", level: 68, years: 2, description: "Military defense contracting" },
-  ],
-  emergingTechSkills: [
-    { name: "Rust", icon: <SiRust className="text-orange-600" size={24} />, level: 78, years: 3 },
-    { name: "Go", icon: <SiGo className="text-blue-400" size={24} />, level: 82, years: 4 },
-    { name: "TensorFlow", icon: <SiTensorflow className="text-orange-500" size={24} />, level: 75, years: 3 },
-    { name: "WebAssembly", level: 70, years: 2 },
-    { name: "Blockchain/Smart Contracts", level: 65, years: 2 },
-  ],
-  quote: "Technology is constantly evolving, and I believe in continuous learning. The more languages you know, the more approaches you have to solve complex problems."
-};
-
-// Projects data
-const projectsData = [
-  {
-    id: 1,
-    title: "NebulaVerse",
-    description: "An immersive 3D space exploration game built with Three.js and WebGL. Features procedurally generated galaxies, physics-based spacecraft controls, and multiplayer capabilities.",
-    tags: ["Three.js", "WebGL", "JavaScript", "Socket.io", "WebRTC"],
-    image: "https://picsum.photos/id/123/800/500",
-    demoUrl: "https://nebulaverse.example.com",
-    repoUrl: "https://github.com/johnsmith/nebulaverse",
-    featured: true,
-    achievements: ["100,000+ monthly active users", "Featured on Chrome Experiments", "WebGL Innovation Award 2023"]
-  },
-  {
-    id: 2,
-    title: "COBOL-X",
-    description: "An open-source modernization framework for legacy COBOL systems used by financial institutions. Provides API wrappers, security enhancements, and compatibility layers for integrating decades-old banking systems with modern web services.",
-    tags: ["COBOL", "Java", "REST APIs", "Banking", "Legacy Systems"],
-    image: "https://picsum.photos/id/180/800/500",
-    repoUrl: "https://github.com/johnsmith/cobolx",
-    featured: true,
-    achievements: ["Adopted by 5 major banks", "Reduced migration costs by 60%", "Featured in Banking Technology Magazine"]
-  },
-  {
-    id: 3,
-    title: "StreamForge",
-    description: "A low-latency streaming library for game developers, with advanced features like adaptive bitrate optimization, peer-to-peer fallback, and integration with major gaming platforms.",
-    tags: ["Rust", "WebRTC", "C++", "UDP", "Gaming"],
-    image: "https://picsum.photos/id/160/800/500",
-    demoUrl: "https://streamforge.dev",
-    repoUrl: "https://github.com/johnsmith/streamforge",
-    featured: true,
-    achievements: ["Used by 200+ indie game studios", "Sub-50ms latency achievement", "10M+ end users"]
-  },
-  {
-    id: 4,
-    title: "QuantumLab",
-    description: "An educational platform for quantum computing simulation, making quantum concepts accessible through interactive visualizations and simplified programming interfaces.",
-    tags: ["Python", "Quantum Computing", "WebAssembly", "Education"],
-    image: "https://picsum.photos/id/201/800/500",
-    demoUrl: "https://quantumlab.io",
-    repoUrl: "https://github.com/johnsmith/quantumlab"
-  },
-  {
-    id: 5,
-    title: "EcoTrack",
-    description: "IoT system for environmental monitoring that uses machine learning to predict pollution levels and analyze environmental impact. Deployed in cooperation with environmental agencies.",
-    tags: ["IoT", "TensorFlow", "Python", "Time Series Analysis"],
-    image: "https://picsum.photos/id/142/800/500",
-    demoUrl: "https://ecotrack.earth",
-    featured: true,
-    achievements: ["Monitoring 150+ urban locations", "Predicted pollution events with 92% accuracy"]
-  },
-  {
-    id: 6,
-    title: "RetroRealm",
-    description: "A virtual reality arcade featuring perfectly emulated vintage games from the 70s, 80s, and 90s. Includes a physics-based environment where players can walk around a period-accurate arcade.",
-    tags: ["Unity", "VR", "C#", "Emulation", "3D Modeling"],
-    image: "https://picsum.photos/id/96/800/500",
-    demoUrl: "https://retrorealm.io"
-  },
-  {
-    id: 7,
-    title: "MediChain",
-    description: "Blockchain-based medical records system ensuring patient data privacy while enabling secure sharing between healthcare providers. Implements zero-knowledge proofs for sensitive information.",
-    tags: ["Blockchain", "Ethereum", "Zero-knowledge Proofs", "Healthcare"],
-    image: "https://picsum.photos/id/175/800/500",
-    repoUrl: "https://github.com/johnsmith/medichain",
-    achievements: ["Pilot program with 3 hospitals", "Published security paper at IEEE"]
-  },
-  {
-    id: 8,
-    title: "LinguaGen",
-    description: "An AI-powered language learning platform using computational linguistics to generate personalized learning materials based on user's native language and learning patterns.",
-    tags: ["NLP", "Machine Learning", "React", "Python"],
-    image: "https://picsum.photos/id/20/800/500",
-    demoUrl: "https://linguagen.app"
-  },
-  {
-    id: 9,
-    title: "AutoSymphony",
-    description: "Experimental music composition AI that generates original orchestral arrangements based on emotional input and style preferences. Used in indie film scoring and game development.",
-    tags: ["TensorFlow", "Audio Processing", "MIDI", "GANs"],
-    image: "https://picsum.photos/id/187/800/500",
-    demoUrl: "https://autosymphony.io",
-    repoUrl: "https://github.com/johnsmith/autosymphony"
-  },
-  {
-    id: 10,
-    title: "Holotecture",
-    description: "Augmented reality architecture visualization tool that helps architects and clients see building designs at scale in real environments before construction begins.",
-    tags: ["AR", "Unity", "BIM Integration", "3D Rendering"],
-    image: "https://picsum.photos/id/162/800/500",
-    demoUrl: "https://holotecture.build"
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
-];
+}
 
-// Portfolio data
-const portfolioData = {
-  experience: [
-    {
-      company: "TechNova Labs",
-      position: "Principal Software Architect",
-      period: "2020 - Present",
-      description: "Leading architecture design for cloud-native applications and mentoring engineering teams. Spearheaded company-wide migration to microservices architecture, reducing deployment time by 70%.",
-      technologies: ["React", "Node.js", "AWS", "Kubernetes", "GraphQL"],
-      achievements: [
-        "Redesigned payment processing system handling $2M daily transactions",
-        "Reduced infrastructure costs by 35% through cloud optimization",
-        "Established engineering excellence program adopted by 4 departments"
-      ],
-      logo: "https://picsum.photos/id/28/100/100"
-    },
-    {
-      company: "DataSphere Systems",
-      position: "Senior Full Stack Developer",
-      period: "2017 - 2020",
-      description: "Developed enterprise data visualization platform used by Fortune 500 clients. Led team of 6 engineers and collaborated with product managers to deliver key features.",
-      technologies: ["Angular", "Python", "PostgreSQL", "Docker", "Azure"],
-      achievements: [
-        "Built real-time analytics dashboard processing 50M data points daily",
-        "Improved application performance by 60% through optimization",
-        "Awarded company's 'Innovator of the Year' for AI integration initiative"
-      ],
-      logo: "https://picsum.photos/id/42/100/100"
-    },
-    {
-      company: "LegacyTech Financial Services",
-      position: "Systems Analyst & COBOL Specialist",
-      period: "2014 - 2017",
-      description: "Maintained and modernized critical banking infrastructure during major digital transformation. Created integration layers between legacy systems and modern web services.",
-      technologies: ["COBOL", "Java", "Oracle", "RESTful APIs", "JCL"],
-      achievements: [
-        "Successfully migrated 30-year-old banking system with zero downtime",
-        "Implemented secure API gateway for legacy systems",
-        "Reduced manual processing time by 80% through automation"
-      ],
-      logo: "https://picsum.photos/id/60/100/100"
-    },
-    {
-      company: "NASA Jet Propulsion Laboratory",
-      position: "Research Software Engineer (Contract)",
-      period: "2012 - 2014",
-      description: "Contributed to mission-critical software for Mars rover operations. Worked with scientific computing teams to optimize data processing pipelines for telemetry analysis.",
-      technologies: ["C++", "Python", "FORTRAN", "CUDA", "Scientific Computing"],
-      achievements: [
-        "Developed image processing algorithms for Mars terrain analysis",
-        "Optimized computation-intensive simulations, reducing runtime by 40%",
-        "Co-authored research paper on distributed computing for space missions"
-      ],
-      logo: "https://picsum.photos/id/73/100/100"
-    }
-  ],
-  education: [
-    {
-      institution: "Massachusetts Institute of Technology",
-      degree: "Master of Science in Computer Science",
-      period: "2010 - 2012",
-      description: "Specialized in distributed systems and machine learning. Teaching assistant for Advanced Algorithms course.",
-      thesis: "Distributed Consensus Algorithms for Autonomous Vehicle Coordination",
-      logo: "https://picsum.photos/id/15/100/100"
-    },
-    {
-      institution: "Stanford University",
-      degree: "Bachelor of Science in Computer Science",
-      period: "2006 - 2010",
-      description: "Graduated with honors. Active in competitive programming and robotics club.",
-      thesis: "Efficient Path Planning Algorithms for Multi-Agent Systems",
-      logo: "https://picsum.photos/id/16/100/100"
-    }
-  ],
-  certifications: [
-    {
-      name: "AWS Solutions Architect Professional",
-      issuer: "Amazon Web Services",
-      date: "2022",
-      logo: "https://picsum.photos/id/119/100/100"
-    },
-    {
-      name: "Google Cloud Professional Architect",
-      issuer: "Google",
-      date: "2021",
-      logo: "https://picsum.photos/id/120/100/100"
-    },
-    {
-      name: "Certified Kubernetes Administrator",
-      issuer: "Cloud Native Computing Foundation",
-      date: "2020",
-      logo: "https://picsum.photos/id/121/100/100"
-    },
-    {
-      name: "Azure DevOps Expert",
-      issuer: "Microsoft",
-      date: "2019",
-      logo: "https://picsum.photos/id/122/100/100"
-    }
-  ],
-  speaking: [
-    {
-      event: "React Summit 2023",
-      topic: "Beyond Hooks: The Future of React State Management",
-      location: "Amsterdam, Netherlands",
-      date: "June 2023",
-      image: "https://picsum.photos/id/139/800/400"
-    },
-    {
-      event: "COBOL Connect Conference",
-      topic: "Bridging Decades: Integrating Legacy COBOL with Modern Microservices",
-      location: "Chicago, USA",
-      date: "March 2023",
-      image: "https://picsum.photos/id/140/800/400"
-    },
-    {
-      event: "AWS re:Invent",
-      topic: "Serverless at Scale: Lessons from the Trenches",
-      location: "Las Vegas, USA",
-      date: "November 2022",
-      image: "https://picsum.photos/id/141/800/400"
-    }
-  ]
-};
-
-// Theme configuration
-const themeConfig = {
-  light: {
-    main: {
-      background: 'bg-gradient-to-br from-white to-[#fef8f3]',
-      text: 'text-[#1c1c1c]',
-      textSecondary: 'text-[#1c1c1c]/70',
-      hover: 'hover:text-[#1c1c1c]',
-    },
-    sidebar: {
-      background: 'bg-[#fefcfb]',
-      activeBackground: 'bg-[#fceee7]',
-      hoverBackground: 'hover:bg-[#fceee7]/50',
-      border: 'border-[#e9ecef]',
-    },
-    content: {
-      background: 'bg-white',
-      inputBorder: 'border-[#e9ecef]',
-      focusRing: 'focus:ring-[#fceee7]',
-      card: '',
-      cardHover: '',
-    },
-    button: {
-      primary: 'text-[#b85c38] hover:text-[#a04b2b]',
-    },
-    accent: 'text-[#b85c38]'
-  },
-  dark: {
-    main: {
-      background: 'bg-[#1a1a1a]',
-      text: 'text-white',
-      textSecondary: 'text-[#a0a0a0]',
-      hover: 'hover:text-white',
-    },
-    sidebar: {
-      background: 'bg-[#2d2d2d]',
-      activeBackground: 'bg-[#404040]',
-      hoverBackground: 'hover:bg-[#363636]',
-      border: 'border-[#404040]',
-    },
-    content: {
-      background: 'bg-[#2d2d2d]',
-      inputBorder: 'border-[#404040]',
-      focusRing: 'focus:ring-[#404040]',
-      card: '',
-      cardHover: '',
-    },
-    button: {
-      primary: 'text-[#b85c38] hover:text-[#a04b2b]',
-    },
-    accent: 'text-[#b85c38]'
+@keyframes fadeOutDown {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 1rem, 0);
+  }
+}
+
+.group:hover .fadeInUp {
+  animation: fadeInUp 0.25s ease-out forwards;
+}
+
+.group:not(:hover) .fadeInUp {
+  animation: fadeOutDown 0.25s ease-in forwards;
+}
+`;
+
+
+type Song = {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  duration: string;
+  image: string;
 };
 
-export default function Home() {
-  const [activeMenu, setActiveMenu] = useState('Home');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [mounted, setMounted] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  
-  // Get active theme styles
-  const theme = isDarkMode ? themeConfig.dark : themeConfig.light;
+type PlaylistItem = {
+  id: string;
+  title: string;
+  description?: string;
+  image: string;
+  type?: string;
+};
 
-  // Wait until mounted to check for saved theme preference
+type Section = "home" | "search" | "library";
+
+type LibraryFilter = "Playlists" | "Albums" | "Artists";
+
+export default function SpotifyClone() {
+  const [currentTime, setCurrentTime] = useState("0:00");
+  const [duration, setDuration] = useState("3:42");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(50);
+  const [isMuted, setIsMuted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const previousVolume = useState(50)[0];
+  const [currentSection, setCurrentSection] = useState<Section>("home");
+  const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>("Playlists");
+  const [scrollY, setScrollY] = useState(0);
+  const mainContentRef = useRef<HTMLDivElement>(null);
+
+  // Update scroll event listener to use the main content's scroll position
   useEffect(() => {
-    setMounted(true);
-    // Check for saved theme preference
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      setIsDarkMode(true);
-    }
+    const mainContent = mainContentRef.current;
+    if (!mainContent) return;
+    
+    const handleScroll = () => {
+      setScrollY(mainContent.scrollTop);
+    };
+    
+    mainContent.addEventListener("scroll", handleScroll);
+    return () => {
+      mainContent.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
-  // Scroll to top when active menu changes
-  useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  }, [activeMenu]);
-
-  const toggleTheme = () => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    // Save preference
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+  // Clear search query when changing sections
+  const handleSectionChange = (section: Section) => {
+    setCurrentSection(section);
+    if (section !== "search") {
+      setSearchQuery("");
+    }
   };
 
-  // Custom handler for menu switching with scroll-to-top behavior
-  const handleMenuChange = (menuName: string) => {
-    setActiveMenu(menuName);
-  };
-
-  const menuItems = [
-    { name: 'Home', icon: <FiHome className="w-5 h-5" /> },
-    { name: 'About Me', icon: <FiUser className="w-5 h-5" /> },
-    { name: 'Skills', icon: <FiCode className="w-5 h-5" /> },
-    { name: 'Projects', icon: <FiLayers className="w-5 h-5" /> },
-    { name: 'Portfolio', icon: <FiBriefcase className="w-5 h-5" /> },
-    { name: 'Blog Posts', icon: <FiBook className="w-5 h-5" /> },
+  
+  const songs: Song[] = [
+    { id: "song-1", title: "Internet Friends", artist: "Knife Party", album: "Rage Valley", duration: "3:42", image: "https://picsum.photos/200?1" },
+    { id: "song-2", title: "Strobe", artist: "Deadmau5", album: "For Lack of a Better Name", duration: "4:56", image: "https://picsum.photos/200?2" },
+    { id: "song-3", title: "Language", artist: "Porter Robinson", album: "Language EP", duration: "3:37", image: "https://picsum.photos/200?3" },
+    { id: "song-4", title: "Ghosts n Stuff", artist: "Deadmau5", album: "For Lack of a Better Name", duration: "4:12", image: "https://picsum.photos/200?4" },
+    { id: "song-5", title: "Shelter", artist: "Porter Robinson & Madeon", album: "Shelter", duration: "3:45", image: "https://picsum.photos/200?5" },
+    { id: "song-6", title: "Sad Machine", artist: "Porter Robinson", album: "Worlds", duration: "5:10", image: "https://picsum.photos/200?6" },
   ];
 
-  const filteredPosts = blogPosts.filter(post =>
-    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  
+  const newMusicFriday: PlaylistItem[] = [
+    { id: "nmf-1", title: "New Music Friday", description: "New music from Taylor Swift, The Weeknd, Drake and more", image: "https://avatars.githubusercontent.com/u/1234" },
+    { id: "nmf-2", title: "Release Radar", description: "Catch all the latest music from artists you follow", image: "https://avatars.githubusercontent.com/u/2345" },
+    { id: "nmf-3", title: "Best of March", description: "The best tracks of March 2025. Cover: Calvin Harris", image: "https://avatars.githubusercontent.com/u/3456" },
+    { id: "nmf-4", title: "Fresh Finds", description: "The latest discoveries in indie music", image: "https://avatars.githubusercontent.com/u/4567" },
+    { id: "nmf-5", title: "All New Pop", description: "The hottest new pop releases", image: "https://avatars.githubusercontent.com/u/5678" },
+    { id: "nmf-6", title: "New Alternative", description: "Fresh alternative and indie rock releases", image: "https://avatars.githubusercontent.com/u/6789" }
+  ];
 
-  // Skill bar component with proper types
-  type SkillBarProps = {
-    name: string;
-    level: number;
-    years: number;
-    icon?: React.ReactNode;
-    description?: string;
+  const dailyMixes: PlaylistItem[] = [
+    { id: "dm-1", title: "Daily Mix 1", description: "Porter Robinson, Madeon, ODESZA and more", image: "https://randomuser.me/api/portraits/men/1.jpg" },
+    { id: "dm-2", title: "Daily Mix 2", description: "Deadmau5, Daft Punk, The Chemical Brothers", image: "https://randomuser.me/api/portraits/men/2.jpg" },
+    { id: "dm-3", title: "Daily Mix 3", description: "Flume, Disclosure, Rüfüs Du Sol", image: "https://randomuser.me/api/portraits/men/3.jpg" },
+    { id: "dm-4", title: "Daily Mix 4", description: "Tycho, Bonobo, Four Tet and more", image: "https://randomuser.me/api/portraits/men/4.jpg" },
+    { id: "dm-5", title: "Daily Mix 5", description: "Justice, SebastiAn, Kavinsky and more", image: "https://randomuser.me/api/portraits/men/5.jpg" },
+    { id: "dm-6", title: "Daily Mix 6", description: "Aphex Twin, Boards of Canada, Autechre", image: "https://randomuser.me/api/portraits/men/6.jpg" }
+  ];
+
+  const recentlyPlayed: PlaylistItem[] = [
+    { id: "rp-1", title: "Daily Mix 1", type: "Mix", description: "Your daily music mix", image: "https://picsum.photos/200?1" },
+    { id: "rp-2", title: "Electronic Essentials", type: "Playlist", description: "The best electronic tracks", image: "https://picsum.photos/200?2" },
+    { id: "rp-3", title: "This Is Porter Robinson", type: "Playlist", description: "All the essential Porter Robinson tracks", image: "https://picsum.photos/200?3" },
+    { id: "rp-4", title: "Liked Songs", type: "Playlist", description: "Your favorite tracks", image: "https://picsum.photos/200?4" },
+    { id: "rp-5", title: "Porter Robinson", type: "Artist", description: "Artist", image: "https://picsum.photos/200?5" },
+    { id: "rp-6", title: "Deadmau5", type: "Artist", description: "Artist", image: "https://picsum.photos/200?6" },
+    { id: "rp-7", title: "Daft Punk", type: "Artist", description: "Artist", image: "https://picsum.photos/200?7" }
+  ];
+
+  
+  const browseCategories = [
+    { id: "cat-music", title: "Music", color: "bg-pink-600", image: "https://picsum.photos/200?1" },
+    { id: "cat-podcasts", title: "Podcasts", color: "bg-emerald-700", image: "https://picsum.photos/200?2" },
+    { id: "cat-audiobooks", title: "Audiobooks", color: "bg-blue-800", image: "https://picsum.photos/200?3" },
+    { id: "cat-live", title: "Live Events", color: "bg-purple-600", image: "https://picsum.photos/200?4" },
+    { id: "cat-made-for-you", title: "Made For You", color: "bg-blue-900", image: "https://picsum.photos/200?5" },
+    { id: "cat-new-releases", title: "New Releases", color: "bg-orange-700", image: "https://picsum.photos/200?6" },
+    { id: "cat-hip-hop", title: "Hip-Hop", color: "bg-slate-600", image: "https://picsum.photos/200?7" },
+    { id: "cat-pop", title: "Pop", color: "bg-slate-500", image: "https://picsum.photos/200?8" },
+    { id: "cat-country", title: "Country", color: "bg-orange-600", image: "https://picsum.photos/200?9" },
+    { id: "cat-latin", title: "Latin", color: "bg-blue-600", image: "https://picsum.photos/200?10" },
+    { id: "cat-podcast-charts", title: "Podcast Charts", color: "bg-blue-500", image: "https://picsum.photos/200?11" },
+    { id: "cat-podcast-new", title: "Podcast New Releases", color: "bg-emerald-600", image: "https://picsum.photos/200?12" }
+  ];
+
+  
+  const searchResults = useMemo(() => {
+    if (!searchQuery) return null;
+    
+    const query = searchQuery.toLowerCase();
+    const matchedSongs = songs.filter(song => 
+      song.title.toLowerCase().includes(query) || 
+      song.artist.toLowerCase().includes(query) ||
+      song.album.toLowerCase().includes(query)
+    );
+    
+    const matchedPlaylists = [...newMusicFriday, ...dailyMixes].filter(playlist =>
+      playlist.title.toLowerCase().includes(query) ||
+      playlist.description?.toLowerCase().includes(query)
+    );
+
+    return {
+      songs: matchedSongs,
+      playlists: matchedPlaylists
+    };
+  }, [searchQuery]);
+
+  
+  const libraryItems = [
+    { id: "lib-1", title: "Liked Songs", type: "Playlist", image: "https://picsum.photos/200?lib1", gradient: "from-purple-400 to-purple-600" },
+    { id: "lib-2", title: "DJ", type: "Playlist", image: "https://picsum.photos/200?lib2", isSpotify: true, beta: true },
+    { id: "lib-3", title: "This Is League of Legends", type: "Playlist", image: "https://picsum.photos/200?lib3", isSpotify: true },
+    { id: "lib-4", title: "Porter Robinson", type: "Artist", image: "https://picsum.photos/200?lib4", isSpotify: true },
+    { id: "lib-5", title: "Daily Mix 1", type: "Mix", image: "https://picsum.photos/200?lib5", isSpotify: true },
+    { id: "lib-6", title: "Your Top Songs 2023", type: "Playlist", image: "https://picsum.photos/200?lib6", isSpotify: true },
+  ];
+
+  const handlePlayPause = () => {
+    setIsPlaying(!isPlaying);
   };
 
-  const SkillBar = ({ name, level, years, icon, description }: SkillBarProps) => (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="mb-4"
-    >
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center space-x-2">
-          {icon && <span>{icon}</span>}
-          <span className={`font-medium ${theme.main.text}`}>{name}</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span className={`text-sm ${theme.accent}`}>{years} {years === 1 ? 'year' : 'years'}</span>
-          <motion.span 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className={`text-sm ${theme.main.textSecondary}`}
-          >
-            {level}%
-          </motion.span>
-        </div>
-      </div>
-      <div className={`w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden`}>
-        <motion.div 
-          initial={{ width: 0 }}
-          animate={{ width: `${level}%` }}
-          transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
-          className="h-full bg-gradient-to-r from-[#b85c38] to-[#e8956c] rounded-full"
-        ></motion.div>
-      </div>
-      {description && (
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
-          className={`text-xs ${theme.main.textSecondary} mt-1 italic`}
-        >
-          {description}
-        </motion.p>
-      )}
-    </motion.div>
-  );
-
-  // Animation variants for staggered animations
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseInt(e.target.value);
+    setVolume(newVolume);
+    if (newVolume > 0) {
+      setIsMuted(false);
     }
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut"
-      }
+  const handleMuteToggle = () => {
+    if (isMuted) {
+      setVolume(previousVolume);
+    } else {
+      setVolume(0);
+    }
+    setIsMuted(!isMuted);
+  };
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    
+    // If we're not already in search section, navigate there for top navbar searches
+    if (query.trim() !== '' && currentSection !== "search") {
+      setCurrentSection("search");
     }
   };
 
-  // Avoid rendering until client-side to prevent hydration mismatch
-  if (!mounted) {
-    return <div className="min-h-screen bg-[#fefcfb]"></div>;
-  }
+  // Handle search for dedicated search section
+  const handleSearchSectionInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
 
-  // Render content based on active menu
-  const renderContent = () => {
-    switch (activeMenu) {
-      case 'Home':
+  const renderMainContent = () => {
+    switch (currentSection) {
+      case "search":
         return (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-6xl"
-          >
-            {/* Hero Section */}
-            <motion.section 
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="mb-16"
-            >
-              <div className="flex flex-col md:flex-row gap-8 items-center">
-                <motion.div 
-                  initial={{ opacity: 0, x: -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="md:w-1/2"
-                >
-                  <h1 className={`text-4xl font-bold ${theme.main.text} mb-4`}>
-                    John Smith
-                  </h1>
-                  <h2 className={`text-2xl ${theme.accent} mb-6`}>
-                    Full Stack Developer & <span className="line-through">Problem Solver</span> Problem Creator
-                  </h2>
-                  <p className={`${theme.main.textSecondary} text-lg mb-6`}>
-                    {aboutMeContent.intro}
-                  </p>
-                  <div className="flex space-x-4">
-                    <motion.button 
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleMenuChange('Projects')}
-                      className={`px-6 py-3 rounded-lg bg-[#b85c38] text-white font-medium hover:bg-[#a04b2b] transition-colors cursor-pointer`}
-                    >
-                      View Projects
-                    </motion.button>
-                    <motion.button 
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleMenuChange('Portfolio')}
-                      className={`px-6 py-3 rounded-lg border border-[#b85c38] ${theme.accent} font-medium hover:bg-[#fceee7]/50 transition-colors cursor-pointer`}
-                    >
-                      My Experience
-                    </motion.button>
-                  </div>
-                </motion.div>
-                <motion.div 
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="md:w-1/2"
-                >
-                  <div className="relative">
-                    <div className="relative h-[400px] w-full rounded-2xl overflow-hidden">
-                      <Image
-                        src="https://picsum.photos/id/1025/800/800"
-                        alt="John Smith"
-                        fill
-                        className="object-cover"
-                        priority
-                      />
-                    </div>
-                    <motion.div 
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.6 }}
-                      className={`absolute -bottom-6 -left-6 p-4 ${theme.content.background} rounded-xl shadow-lg`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <FiCode className={`w-6 h-6 ${theme.accent}`} />
-                        <span className={`font-bold ${theme.main.text}`}>15+ Years Coding</span>
-                      </div>
-                    </motion.div>
-                    <motion.div 
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.6 }}
-                      className={`absolute -top-6 -right-6 p-4 ${theme.content.background} rounded-xl shadow-lg`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <FiBriefcase className={`w-6 h-6 ${theme.accent}`} />
-                        <span className={`font-bold ${theme.main.text}`}>10+ Projects</span>
-                      </div>
-                    </motion.div>
-                  </div>
-                </motion.div>
-              </div>
-            </motion.section>
-
-            {/* Stats Section */}
-            <motion.section 
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="mb-16"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {[
-                  { value: "15+", label: "Years of Experience" },
-                  { value: "50+", label: "Completed Projects" },
-                  { value: "24/7", label: "Development Support" },
-                  { value: "99%", label: "Client Satisfaction" }
-                ].map((stat, index) => (
-                  <motion.div 
-                    key={index}
-                    variants={itemVariants}
-                    whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6 flex flex-col items-center justify-center`}
-                  >
-                    <span className={`text-4xl font-bold ${theme.accent} mb-2`}>{stat.value}</span>
-                    <span className={`${theme.main.textSecondary} text-center`}>{stat.label}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.section>
-
-            {/* About & Services Section */}
-            <motion.section 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="mb-16"
-            >
-              <div className="mb-8">
-                <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>About Me</h2>
-                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-8">
-                <motion.div 
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="md:w-1/2"
-                >
-                  <p className={`${theme.main.textSecondary} mb-4`}>
-                    {aboutMeContent.bio}
-                  </p>
-                  <p className={`${theme.main.textSecondary} mb-6`}>
-                    {aboutMeContent.personalLife}
-                  </p>
-                  <motion.button 
-                    whileHover={{ scale: 1.05, x: 5 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleMenuChange('About Me')}
-                    className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium flex items-center cursor-pointer`}
-                  >
-                    <span>Learn More</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </motion.button>
-                </motion.div>
-
-                <motion.div 
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="md:w-1/2"
-                >
-                  <div className="grid grid-cols-2 gap-4">
-                    {[
-                      { icon: <FiCode className={`w-8 h-8 ${theme.accent} mb-3`} />, title: "Web Development", desc: "Crafting responsive and performant web applications using modern frameworks." },
-                      { icon: <FiLayers className={`w-8 h-8 ${theme.accent} mb-3`} />, title: "Legacy System Integration", desc: "Bridging old and new technologies with secure, efficient solutions." },
-                      { icon: <FiSearch className={`w-8 h-8 ${theme.accent} mb-3`} />, title: "Technical Consulting", desc: "Expert guidance on architecture, technology selection, and best practices." },
-                      { icon: <FiUser className={`w-8 h-8 ${theme.accent} mb-3`} />, title: "Developer Training", desc: "Mentorship and technical training for teams transitioning to new technologies." }
-                    ].map((service, index) => (
-                      <motion.div 
-                        key={index}
-                        variants={itemVariants}
-                        whileHover={{ y: -5, boxShadow: "0 10px 15px -5px rgba(0, 0, 0, 0.1)" }}
-                        className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}
-                      >
-                        {service.icon}
-                        <h3 className={`text-lg font-semibold ${theme.main.text} mb-2`}>{service.title}</h3>
-                        <p className={`${theme.main.textSecondary} text-sm`}>{service.desc}</p>
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-              </div>
-            </motion.section>
-
-            {/* Skills Overview */}
-            <section className="mb-16">
-              <div className="mb-8">
-                <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>Skills Overview</h2>
-                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
-              </div>
-
-              <div className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-8`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {skillsContent.mainSkills.slice(0, 3).map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                  {skillsContent.backendSkills.slice(0, 1).map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                  {skillsContent.cloudSkills.slice(0, 1).map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                  {skillsContent.legacyAndSpecializedSkills.slice(0, 1).map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-                
-                <div className="mt-8 text-center">
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleMenuChange('Skills')}
-                    className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
-                  >
-                    <span>View All Skills</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </motion.button>
-                </div>
-              </div>
-            </section>
-
-            {/* Featured Projects */}
-            <section className="mb-16">
-              <div className="mb-8">
-                <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>Featured Projects</h2>
-                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {projectsData.filter(p => p.featured).slice(0, 2).map((project) => (
-                  <div 
-                    key={project.id}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden group`}
-                  >
-                    <div className="relative h-64">
-                      <Image
-                        src={project.image}
-                        alt={project.title}
-                        fill
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-                        <div className="p-6">
-                          <h3 className="text-xl font-bold text-white mb-2">{project.title}</h3>
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            {project.tags.slice(0, 3).map((tag, idx) => (
-                              <span key={idx} className="text-xs px-2 py-1 bg-white/20 text-white rounded-full">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 text-center">
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleMenuChange('Projects')}
-                  className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
-                >
-                  <span>View All Projects</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </motion.button>
-              </div>
-            </section>
-
-            {/* Recent Blog Posts */}
-            <section>
-              <div className="mb-8">
-                <h2 className={`text-2xl font-bold ${theme.main.text} mb-2`}>Recent Blog Posts</h2>
-                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {blogPosts.slice(0, 2).map((post) => (
-                  <div 
-                    key={post.id}
-                    className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder}`}
-                  >
-                    <div className={`${theme.accent} text-xs mb-2 font-medium`}>{post.date} • {post.readTime}</div>
-                    <h3 className={`text-xl font-semibold ${theme.main.text} mb-2`}>
-                      {post.title}
-                    </h3>
-                    <p className={`${theme.main.textSecondary} mb-4`}>
-                      {post.description}
-                    </p>
-                    <div className="flex justify-end">
-                      <motion.button 
-                        whileHover={{ scale: 1.05, x: 5 }}
-                        whileTap={{ scale: 0.95 }}
-                        className={`${theme.button.primary} font-medium transition-colors flex items-center space-x-1 cursor-pointer`}
-                      >
-                        <span>Read more</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                      </motion.button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 text-center">
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleMenuChange('Blog Posts')}
-                  className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
-                >
-                  <span>View All Posts</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </motion.button>
-              </div>
-            </section>
-          </motion.div>
-        );
-      
-      case 'About Me':
-        return (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-3xl"
-          >
-            <motion.h1 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`text-3xl font-bold ${theme.main.text} mb-6`}
-            >
-              About Me
-            </motion.h1>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} mb-8`}
-            >
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className={`${theme.main.text} mb-4 text-lg`}
-              >
-                {aboutMeContent.intro}
-              </motion.p>
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className={`${theme.main.textSecondary} mb-6`}
-              >
-                {aboutMeContent.bio}
-              </motion.p>
-
-              <motion.div 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
-              >
-                {aboutMeContent.images.map((image, index) => (
-                  <motion.div 
-                    key={index}
-                    variants={itemVariants}
-                    whileHover={{ y: -5, scale: 1.03 }}
-                    className="flex flex-col space-y-2"
-                  >
-                    <div className="relative h-48 rounded-lg overflow-hidden">
-                      <Image
-                        src={image.src}
-                        alt={image.alt}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <p className={`text-sm ${theme.main.textSecondary} italic`}>{image.caption}</p>
-                  </motion.div>
-                ))}
-              </motion.div>
-
-              <motion.h2 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-                className={`text-xl font-semibold ${theme.main.text} mb-3`}
-              >
-                What I'm interested in
-              </motion.h2>
-              <motion.ul 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="list-disc pl-5 mb-6"
-              >
-                {aboutMeContent.interests.map((interest, index) => (
-                  <motion.li 
-                    key={index} 
-                    variants={itemVariants}
-                    className={`${theme.main.textSecondary} mb-1`}
-                  >
-                    {interest}
-                  </motion.li>
-                ))}
-              </motion.ul>
-
-              <motion.h2 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
-                className={`text-xl font-semibold ${theme.main.text} mb-3`}
-              >
-                Outside of work
-              </motion.h2>
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className={`${theme.main.textSecondary} mb-4`}
-              >
-                {aboutMeContent.personalLife}
-              </motion.p>
-              
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.7, duration: 0.5 }}
-                className="border-t border-b py-4 my-6 border-opacity-10 border-current"
-              >
-                <p className={`${theme.main.text} text-center italic`}>"{aboutMeContent.philosophy}"</p>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8, duration: 0.7 }}
-                className="flex justify-center"
-              >
-                <div className="relative h-60 w-full rounded-lg overflow-hidden">
-                  <Image
-                    src="https://picsum.photos/id/239/1200/400"
-                    alt="Panorama shot of my workspace"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              </motion.div>
-            </motion.div>
-          </motion.div>
-        );
-      
-      case 'Skills':
-        return (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-3xl"
-          >
-            <motion.h1 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`text-3xl font-bold ${theme.main.text} mb-6`}
-            >
-              Technical Skills
-            </motion.h1>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} mb-8`}
-            >
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className={`${theme.main.text} mb-6 text-lg`}
-              >
-                {skillsContent.intro}
-              </motion.p>
-              
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="mb-8"
-              >
-                <motion.h2 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className={`text-xl font-semibold ${theme.main.text} mb-4 flex items-center`}
-                >
-                  <motion.div
-                    initial={{ rotate: -90 }}
-                    animate={{ rotate: 0 }}
-                    transition={{ delay: 0.4, duration: 0.5 }}
-                  >
-                    <FiCode className="mr-2" />
-                  </motion.div>
-                  Primary Languages & Frameworks
-                </motion.h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                  {skillsContent.mainSkills.map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="mb-8"
-              >
-                <motion.h2 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className={`text-xl font-semibold ${theme.main.text} mb-4`}
-                >
-                  Backend Development
-                </motion.h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                  {skillsContent.backendSkills.map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                className="mb-8"
-              >
-                <motion.h2 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className={`text-xl font-semibold ${theme.main.text} mb-4`}
-                >
-                  Database Technologies
-                </motion.h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                  {skillsContent.databaseSkills.map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="mb-8"
-              >
-                <motion.h2 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className={`text-xl font-semibold ${theme.main.text} mb-4`}
-                >
-                  Cloud & DevOps
-                </motion.h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                  {skillsContent.cloudSkills.map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
-                className="mb-8"
-              >
-                <motion.h2 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.6 }}
-                  className={`text-xl font-semibold ${theme.main.text} mb-4 flex items-center`}
-                >
-                  <motion.span 
-                    initial={{ scale: 0.7 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.7, duration: 0.5, type: "spring" }}
-                    className={theme.accent}
-                  >
-                    Legacy & Specialized Systems
-                  </motion.span>
-                </motion.h2>
-                <div className="grid grid-cols-1 gap-x-8">
-                  {skillsContent.legacyAndSpecializedSkills.map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
-                className="mb-8"
-              >
-                <motion.h2 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.7 }}
-                  className={`text-xl font-semibold ${theme.main.text} mb-4`}
-                >
-                  Emerging Technologies
-                </motion.h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                  {skillsContent.emergingTechSkills.map((skill, index) => (
-                    <SkillBar key={index} {...skill} />
-                  ))}
-                </div>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9, duration: 0.5 }}
-                className="border-t border-b py-4 my-6 border-opacity-10 border-current"
-              >
-                <p className={`${theme.main.text} text-center italic`}>"{skillsContent.quote}"</p>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1, duration: 0.7 }}
-                whileHover={{ scale: 1.02 }}
-                className="relative h-60 w-full rounded-lg overflow-hidden"
-              >
-                <Image
-                  src="https://picsum.photos/id/119/1200/400"
-                  alt="Workstation with multiple screens"
-                  fill
-                  className="object-cover"
-                />
-              </motion.div>
-            </motion.div>
-          </motion.div>
-        );
-      
-      case 'Projects':
-        return (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-5xl"
-          >
-            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>Projects</h1>
-            
-            <div className="mb-8">
-              <p className={`${theme.main.text} text-lg max-w-3xl`}>
-                A collection of my most significant projects spanning from game development and legacy systems to cutting-edge AI and blockchain applications.
-              </p>
-            </div>
-            
-            {/* Featured Projects */}
-            <div className="mb-12">
-              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6`}>Featured Projects</h2>
-              <div className="grid grid-cols-1 gap-8">
-                {projectsData.filter(p => p.featured).map((project) => (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
-                  >
-                    <div className="md:flex">
-                      <div className="md:w-2/5 relative h-64 md:h-auto">
-                        <Image
-                          src={project.image}
-                          alt={project.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="p-6 md:w-3/5">
-                        <h3 className={`text-xl font-bold ${theme.main.text} mb-2`}>{project.title}</h3>
-                        <p className={`${theme.main.textSecondary} mb-4`}>{project.description}</p>
-                        
-                        {project.achievements && (
-                          <div className="mb-4">
-                            <h4 className={`text-sm font-semibold ${theme.accent} mb-2`}>Achievements:</h4>
-                            <ul className={`list-disc list-inside ${theme.main.textSecondary} text-sm`}>
-                              {project.achievements.map((achievement, idx) => (
-                                <li key={idx}>{achievement}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {project.tags.map((tag, idx) => (
-                            <span key={idx} className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}>
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                        
-                        <div className="flex space-x-4 mt-4">
-                          {project.demoUrl && (
-                            <a 
-                              href={project.demoUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className={`${theme.button.primary} text-sm font-medium flex items-center`}
-                            >
-                              <span>Live Demo</span>
-                              <FiExternalLink className="ml-1 w-4 h-4" />
-                            </a>
-                          )}
-                          {project.repoUrl && (
-                            <a 
-                              href={project.repoUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className={`${theme.main.textSecondary} hover:${theme.main.text} text-sm font-medium flex items-center`}
-                            >
-                              <FiGithub className="mr-1 w-4 h-4" />
-                              <span>Source Code</span>
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Other Projects */}
-            <div>
-              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6`}>Other Notable Projects</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {projectsData.filter(p => !p.featured).map((project) => (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
-                  >
-                    <div className="relative h-48">
-                      <Image
-                        src={project.image}
-                        alt={project.title}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="p-5">
-                      <h3 className={`text-lg font-bold ${theme.main.text} mb-2`}>{project.title}</h3>
-                      <p className={`${theme.main.textSecondary} text-sm mb-3`}>{project.description}</p>
-                      
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {project.tags.slice(0, 3).map((tag, idx) => (
-                          <span key={idx} className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}>
-                            {tag}
-                          </span>
-                        ))}
-                        {project.tags.length > 3 && (
-                          <span className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.textSecondary}`}>
-                            +{project.tags.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="flex space-x-3 mt-3">
-                        {project.demoUrl && (
-                          <a 
-                            href={project.demoUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className={`${theme.button.primary} text-xs font-medium flex items-center`}
-                          >
-                            <span>Live Demo</span>
-                            <FiExternalLink className="ml-1 w-3 h-3" />
-                          </a>
-                        )}
-                        {project.repoUrl && (
-                          <a 
-                            href={project.repoUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className={`${theme.main.textSecondary} hover:${theme.main.text} text-xs font-medium flex items-center`}
-                          >
-                            <FiGithub className="mr-1 w-3 h-3" />
-                            <span>Source Code</span>
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        );
-      
-      case 'Portfolio':
-        return (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-4xl"
-          >
-            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>Professional Portfolio</h1>
-            
-            {/* Work Experience */}
-            <section className="mb-12">
-              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6 flex items-center`}>
-                <FiBriefcase className="mr-2" /> Work Experience
-              </h2>
-              
-              <div className="space-y-8">
-                {portfolioData.experience.map((job, index) => (
-                  <motion.div 
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
-                  >
-                    <div className="md:flex">
-                      <div className="p-6 md:w-full">
-                        <div className="flex flex-col md:flex-row md:items-center mb-4">
-                          <div className="flex items-center mb-3 md:mb-0">
-                            <div className="mr-4 relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                              <Image
-                                src={job.logo}
-                                alt={`${job.company} logo`}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                            <div>
-                              <h3 className={`text-xl font-bold ${theme.main.text}`}>{job.position}</h3>
-                              <div className="flex items-center">
-                                <span className={`font-medium ${theme.accent}`}>{job.company}</span>
-                                <span className={`mx-2 text-xs ${theme.main.textSecondary}`}>•</span>
-                                <span className={`text-sm ${theme.main.textSecondary}`}>{job.period}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <p className={`${theme.main.textSecondary} mb-4`}>{job.description}</p>
-                        
-                        <div className="mb-4">
-                          <h4 className={`text-sm font-semibold ${theme.accent} mb-2`}>Key Achievements:</h4>
-                          <ul className={`list-disc list-inside ${theme.main.textSecondary}`}>
-                            {job.achievements.map((achievement, idx) => (
-                              <li key={idx} className="mb-1">{achievement}</li>
-                            ))}
-                          </ul>
-                        </div>
-                        
-                        <div>
-                          <h4 className={`text-sm font-semibold ${theme.main.text} mb-2`}>Technologies:</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {job.technologies.map((tech, idx) => (
-                              <span key={idx} className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}>
-                                {tech}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-            
-            {/* Education */}
-            <section className="mb-12">
-              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6 flex items-center`}>
-                <FiUser className="mr-2" /> Education
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {portfolioData.education.map((edu, index) => (
-                  <motion.div 
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}
-                  >
-                    <div className="flex items-center mb-3">
-                      <div className="mr-3 relative w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                        <Image
-                          src={edu.logo}
-                          alt={`${edu.institution} logo`}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div>
-                        <h3 className={`text-lg font-bold ${theme.main.text}`}>{edu.institution}</h3>
-                        <span className={`text-sm ${theme.main.textSecondary}`}>{edu.period}</span>
-                      </div>
-                    </div>
-                    
-                    <div className={`font-medium ${theme.accent} mb-2`}>{edu.degree}</div>
-                    <p className={`${theme.main.textSecondary} text-sm mb-3`}>{edu.description}</p>
-                    
-                    {edu.thesis && (
-                      <div className="mt-2">
-                        <span className={`text-sm font-medium ${theme.main.text}`}>Thesis: </span>
-                        <span className={`text-sm italic ${theme.main.textSecondary}`}>{edu.thesis}</span>
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-            
-            {/* Certifications */}
-            <section className="mb-12">
-              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6 flex items-center`}>
-                <FiCode className="mr-2" /> Professional Certifications
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {portfolioData.certifications.map((cert, index) => (
-                  <motion.div 
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-4 flex items-center`}
-                  >
-                    <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 mr-4">
-                      <Image
-                        src={cert.logo}
-                        alt={`${cert.name} logo`}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div>
-                      <h3 className={`font-bold ${theme.main.text}`}>{cert.name}</h3>
-                      <div className="flex items-center">
-                        <span className={`text-sm ${theme.main.textSecondary}`}>{cert.issuer}</span>
-                        <span className={`mx-2 text-xs ${theme.main.textSecondary}`}>•</span>
-                        <span className={`text-sm ${theme.accent}`}>{cert.date}</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-            
-            {/* Speaking Engagements */}
-            <section>
-              <h2 className={`text-2xl font-semibold ${theme.main.text} mb-6 flex items-center`}>
-                <FiLayers className="mr-2" /> Speaking Engagements
-              </h2>
-              
-              <div className="space-y-6">
-                {portfolioData.speaking.map((talk, index) => (
-                  <motion.div 
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
-                  >
-                    <div className="relative h-48 w-full">
-                      <Image
-                        src={talk.image}
-                        alt={talk.event}
-                        fill
-                        className="object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-                        <div className="p-6 text-white">
-                          <div className="text-sm mb-1">{talk.date} • {talk.location}</div>
-                          <h3 className="text-xl font-bold mb-1">{talk.event}</h3>
-                          <p className="text-white/90 font-medium">{talk.topic}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-          </motion.div>
-        );
-      
-      case 'Blog Posts':
-        return (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-2xl"
-          >
-            <h1 className={`text-3xl font-bold ${theme.main.text} mb-6`}>Blog Posts</h1>
-            
-            {/* Search Bar */}
-            <div className="mb-8">
+          <>
+            <div className="sticky top-20 z-10 pb-4 bg-gradient-to-b from-zinc-900 to-transparent">
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search blog posts..."
+                  placeholder="What do you want to listen to?"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`w-full px-4 py-2 pl-10 rounded-lg border ${theme.content.inputBorder} ${theme.content.background} ${theme.main.text} focus:outline-none focus:ring-2 ${theme.content.focusRing}`}
+                  onChange={handleSearchSectionInput}
+                  className="w-full bg-zinc-800 text-white rounded-full py-3 pl-12 pr-4 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
+                  autoFocus
                 />
-                <FiSearch className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${theme.main.textSecondary} w-4 h-4`} />
+                <Search className="absolute left-4 top-3.5 h-6 w-6 text-gray-400" />
               </div>
             </div>
 
-            {/* Blog Posts */}
-            <div className="space-y-6">
-              {filteredPosts.map((post) => (
-                <motion.article
-                  key={post.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} transition-all duration-300`}
-                >
-                  <div className={`${theme.accent} text-xs mb-2 font-medium`}>{post.date} • {post.readTime}</div>
-                  <h2 className={`text-xl font-semibold ${theme.main.text} mb-2`}>
-                    {post.title}
-                  </h2>
-                  <p className={`${theme.main.textSecondary} mb-4`}>
-                    {post.description}
-                  </p>
-                  <div className="flex justify-end">
-                    <motion.button 
-                      whileHover={{ scale: 1.05, x: 5 }}
-                      whileTap={{ scale: 0.95 }}
-                      className={`${theme.button.primary} font-medium transition-colors cursor-pointer flex items-center space-x-1`}
-                    >
-                      <span>Read more</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </motion.button>
+            {searchQuery ? (
+              
+              <div className="space-y-8">
+                {searchResults?.songs && searchResults.songs.length > 0 && (
+                  <section>
+                    <h2 className="text-2xl font-plus-jakarta font-bold text-white mb-4">Songs</h2>
+                    <div className="bg-zinc-800/30 rounded-md">
+                      {searchResults.songs.map((song) => (
+                        <div 
+                          key={`search-song-${song.id}`}
+                          className="flex items-center gap-4 p-4 hover:bg-zinc-800/50 transition-colors duration-75 cursor-pointer group"
+                        >
+                          <div className="relative h-12 w-12 flex-shrink-0">
+                            <Image
+                              src={song.image}
+                              alt={song.title}
+                              fill
+                              className="object-cover rounded-md"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-white font-plus-jakarta font-semibold">{song.title}</h3>
+                            <p className="text-sm text-gray-400 font-figtree">{song.artist}</p>
+                          </div>
+                          <span className="text-sm text-gray-400 font-figtree">{song.duration}</span>
+                          <button className="opacity-0 bg-green-500 rounded-full p-2 text-black hover:scale-105 shadow-lg cursor-pointer fadeInUp">
+                            <Play fill="black" size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {searchResults?.playlists && searchResults.playlists.length > 0 && (
+                  <section>
+                    <h2 className="text-2xl font-plus-jakarta font-bold text-white mb-4">Playlists</h2>
+                    <div className="grid grid-cols-5 gap-6">
+                      {searchResults.playlists.map((playlist) => (
+                        <div key={`search-playlist-${playlist.id}`} className="bg-zinc-800/30 p-4 rounded-md hover:bg-zinc-800/50 transition-colors duration-75 cursor-pointer group">
+                          <div className="relative aspect-square mb-4">
+                            <Image
+                              src={playlist.image}
+                              alt={playlist.title}
+                              fill
+                              className="object-cover rounded-md"
+                            />
+                            <button className="absolute bottom-2 right-2 opacity-0 bg-green-500 rounded-full p-3 text-black hover:scale-105 shadow-lg cursor-pointer fadeInUp">
+                              <Play fill="black" size={20} />
+                            </button>
+                          </div>
+                          <h3 className="text-white font-plus-jakarta font-bold truncate">{playlist.title}</h3>
+                          <p className="text-sm text-gray-400 font-figtree mt-1 line-clamp-2">{playlist.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {(!searchResults?.songs?.length && !searchResults?.playlists?.length) && (
+                  <div className="text-center py-12">
+                    <h2 className="text-2xl font-plus-jakarta font-bold text-white mb-2">No results found for "{searchQuery}"</h2>
+                    <p className="text-gray-400 font-figtree">Try searching for something else</p>
                   </div>
-                </motion.article>
+                )}
+              </div>
+            ) : (
+              <>
+                <h2 className="text-2xl font-plus-jakarta font-bold text-white mb-6">Browse all</h2>
+                <div className="grid grid-cols-4 gap-6">
+                  {browseCategories.map((category) => (
+                    <div
+                      key={`category-${category.id}`}
+                      className={`${category.color} rounded-lg aspect-[2/1] relative overflow-hidden cursor-pointer hover:brightness-110 transition-all duration-75`}
+                    >
+                      <h3 className="text-2xl font-plus-jakarta font-bold text-white p-4 relative z-10">
+                        {category.title}
+                      </h3>
+                      <div className="absolute right-0 bottom-0 w-24 h-24 transform rotate-[25deg] translate-x-4 translate-y-4">
+                        <Image
+                          src={category.image}
+                          alt={category.title}
+                          fill
+                          className="object-cover rounded-lg shadow-xl"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        );
+      case "library":
+        return (
+          <div className="space-y-6">
+            
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-plus-jakarta font-bold text-white">Your Library</h2>
+            </div>
+
+            
+            <div className="flex gap-x-2">
+              {(["Playlists", "Albums", "Artists"] as const).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setLibraryFilter(filter)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-semibold cursor-pointer ${
+                    libraryFilter === filter
+                      ? "bg-zinc-700 text-white"
+                      : "text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  {filter}
+                </button>
               ))}
             </div>
-          </motion.div>
+
+            
+            <div className="grid grid-cols-5 gap-6">
+              {libraryItems
+                .filter(item => {
+                  switch (libraryFilter) {
+                    case "Playlists":
+                      return item.type === "Playlist" || item.type === "Mix";
+                    case "Albums":
+                      return item.type === "Album";
+                    case "Artists":
+                      return item.type === "Artist";
+                    default:
+                      return true;
+                  }
+                })
+                .map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-zinc-800/30 p-4 rounded-lg hover:bg-zinc-800/50 transition-colors duration-75 cursor-pointer group"
+                >
+                  <div className={`relative aspect-square mb-4 ${
+                    item.title === "Liked Songs" 
+                      ? `bg-gradient-to-br ${item.gradient} rounded-md`
+                      : ""
+                  }`}>
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      fill
+                      className={`object-cover rounded-md ${item.title === "Liked Songs" ? "opacity-0" : ""}`}
+                    />
+                    {item.title === "Liked Songs" && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="white">
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                        </svg>
+                      </div>
+                    )}
+                    <button className="absolute bottom-2 right-2 opacity-0 bg-green-500 rounded-full p-3 text-black hover:scale-105 shadow-lg cursor-pointer fadeInUp">
+                      <Play fill="black" size={20} />
+                    </button>
+                  </div>
+                  <h3 className="text-white font-plus-jakarta font-bold truncate">{item.title}</h3>
+                  <div className="flex items-center gap-x-2 mt-1">
+                    {item.isSpotify && (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#1DB954">
+                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+                      </svg>
+                    )}
+                    <span className="text-sm text-gray-400">{item.type}</span>
+                    {item.beta && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500 text-white rounded">
+                        BETA
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         );
-      
       default:
         return (
-          <div className="flex items-center justify-center h-[80vh]">
-            <p className={`text-xl ${theme.main.textSecondary}`}>This section is coming soon...</p>
-          </div>
+          <>
+            
+            {searchQuery ? (
+              
+              <div className="space-y-8">
+                
+              </div>
+            ) : (
+              
+              <>
+                
+                <section>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-plus-jakarta font-bold text-white">It's New Music Friday!</h2>
+                    <button className="text-gray-400 hover:text-white hover:underline transition-all duration-75 text-sm font-semibold cursor-pointer">
+                      Show all
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-6 gap-6">
+                    {newMusicFriday.map((item) => (
+                      <div key={`new-music-${item.id}`} className="bg-zinc-800/30 p-4 rounded-md hover:bg-zinc-800/50 transition-colors duration-75 cursor-pointer group">
+                        <div className="relative aspect-square mb-4">
+                          <Image
+                            src={item.image}
+                            alt={item.title}
+                            fill
+                            className="object-cover rounded-md"
+                          />
+                          <button className="absolute bottom-2 right-2 opacity-0 bg-green-500 rounded-full p-3 text-black hover:scale-105 shadow-lg cursor-pointer fadeInUp">
+                            <Play fill="black" size={20} />
+                          </button>
+                        </div>
+                        <h3 className="text-white font-plus-jakarta font-bold truncate">{item.title}</h3>
+                        <p className="text-sm text-gray-400 font-figtree mt-1 line-clamp-2">{item.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                
+                <section>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-plus-jakarta font-bold text-white">Made For You</h2>
+                    <button className="text-gray-400 hover:text-white hover:underline transition-all duration-75 text-sm font-semibold cursor-pointer">
+                      Show all
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-6 gap-6">
+                    {dailyMixes.map((mix) => (
+                      <div key={`daily-mix-${mix.id}`} className="bg-zinc-800/30 p-4 rounded-md hover:bg-zinc-800/50 transition-colors duration-75 cursor-pointer group">
+                        <div className="relative aspect-square mb-4">
+                          <Image
+                            src={mix.image}
+                            alt={mix.title}
+                            fill
+                            className="object-cover rounded-md"
+                          />
+                          <button className="absolute bottom-2 right-2 opacity-0 bg-green-500 rounded-full p-3 text-black hover:scale-105 shadow-lg cursor-pointer fadeInUp">
+                            <Play fill="black" size={20} />
+                          </button>
+                        </div>
+                        <h3 className="text-white font-plus-jakarta font-bold truncate">{mix.title}</h3>
+                        <p className="text-sm text-gray-400 font-figtree mt-1 line-clamp-2">{mix.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                
+                <section>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-plus-jakarta font-bold text-white">Recently played</h2>
+                    <button className="text-gray-400 hover:text-white hover:underline transition-all duration-75 text-sm font-semibold cursor-pointer">
+                      Show all
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-6">
+                    {recentlyPlayed.map((item) => (
+                      <div key={`recently-played-${item.id}`} className="bg-zinc-800/30 p-4 rounded-md hover:bg-zinc-800/50 transition-colors duration-75 cursor-pointer group">
+                        <div className="relative aspect-square mb-4">
+                          <Image
+                            src={item.image}
+                            alt={item.title}
+                            fill
+                            className="object-cover rounded-md"
+                          />
+                          <button className="absolute bottom-2 right-2 opacity-0 bg-green-500 rounded-full p-3 text-black hover:scale-105 shadow-lg cursor-pointer fadeInUp">
+                            <Play fill="black" size={20} />
+                          </button>
+                        </div>
+                        <h3 className="text-white font-plus-jakarta font-bold truncate">{item.title}</h3>
+                        <p className="text-sm text-gray-400 font-figtree mt-1">{item.type}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
+          </>
         );
     }
   };
 
   return (
-    <div className={`flex min-h-screen ${theme.main.background}`}>
-      {/* Left Sidebar */}
-      <motion.aside 
-        initial={{ x: -20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        className={`w-[240px] ${theme.sidebar.background} fixed h-screen border-r ${theme.sidebar.border} py-8`}
-      >
-        <div className="px-6 mb-8">
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="relative w-12 h-12 rounded-full overflow-hidden">
-              <Image 
-                src="https://randomuser.me/api/portraits/men/32.jpg" 
-                alt="Profile picture" 
-                fill
-                className="object-cover"
-              />
+    <>
+      <style jsx global>{fadeInUpAnimation}</style>
+      <div className="flex flex-col h-screen bg-black">
+        <div className="flex flex-1 overflow-hidden">
+          
+          <nav className="w-64 bg-black p-6 flex flex-col gap-y-6">
+            
+            <div className="space-y-4">
+              <div 
+                className={`flex items-center gap-x-4 group cursor-pointer ${
+                  currentSection === "home" 
+                    ? "text-green-500" 
+                    : "text-gray-400 hover:text-green-500"
+                }`}
+                onClick={() => handleSectionChange("home")}
+              >
+                <Home className="h-6 w-6 transition-colors duration-75" />
+                <span className="font-plus-jakarta font-semibold transition-colors duration-75">Home</span>
+              </div>
+              <div 
+                className={`flex items-center gap-x-4 group cursor-pointer ${
+                  currentSection === "search" 
+                    ? "text-green-500" 
+                    : "text-gray-400 hover:text-green-500"
+                }`}
+                onClick={() => handleSectionChange("search")}
+              >
+                <Search className="h-6 w-6 transition-colors duration-75" />
+                <span className="font-plus-jakarta font-semibold transition-colors duration-75">Search</span>
+              </div>
+              <div 
+                className={`flex items-center gap-x-4 group cursor-pointer ${
+                  currentSection === "library" 
+                    ? "text-green-500" 
+                    : "text-gray-400 hover:text-green-500"
+                }`}
+                onClick={() => handleSectionChange("library")}
+              >
+                <Library className="h-6 w-6 transition-colors duration-75" />
+                <span className="font-plus-jakarta font-semibold transition-colors duration-75">Your Library</span>
+              </div>
             </div>
-            <div>
-              <h1 className={`text-xl font-bold ${theme.main.text}`}>John Smith</h1>
-              <p className={`text-sm ${theme.main.textSecondary}`}>Full Stack Developer</p>
-            </div>
-          </div>
-          <div className="flex space-x-3 mt-4">
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer"
-              className={`${theme.main.textSecondary} ${theme.main.hover} transition-colors cursor-pointer`}>
-              <FiGithub size={20} />
-            </a>
-            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"
-              className={`${theme.main.textSecondary} ${theme.main.hover} transition-colors cursor-pointer`}>
-              <FiLinkedin size={20} />
-            </a>
-          </div>
-        </div>
-        <nav className="px-4">
-          {menuItems.map((item) => (
-            <motion.button
-              key={item.name}
-              whileHover={{ x: 5 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleMenuChange(item.name)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors mb-1 cursor-pointer ${
-                activeMenu === item.name
-                  ? `${theme.sidebar.activeBackground} ${theme.main.text}`
-                  : `${theme.main.textSecondary} ${theme.sidebar.hoverBackground}`
-              }`}
-            >
-              {item.icon}
-              <span className="text-sm">{item.name}</span>
-            </motion.button>
-          ))}
-        </nav>
-        <div className="absolute bottom-8 left-0 right-0 px-6">
-          <motion.button
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={toggleTheme}
-            className={`w-full flex items-center justify-center space-x-2 py-2 rounded-lg ${theme.sidebar.activeBackground} ${theme.main.textSecondary} ${theme.main.hover} transition-colors cursor-pointer`}
-          >
-            {isDarkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
-            <span className="text-sm">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
-          </motion.button>
-        </div>
-      </motion.aside>
 
-      {/* Main Content */}
-      <main className="ml-[240px] flex-1 p-8">
-        {renderContent()}
-      </main>
-    </div>
+            
+            <div className="mt-8">
+              <div className="bg-zinc-900 rounded-lg p-4 space-y-4">
+                <h2 className="text-white font-plus-jakarta font-bold">Create your first playlist</h2>
+                <p className="text-sm text-gray-400 font-figtree">It's easy, we'll help you</p>
+                <button className="bg-white text-black rounded-full px-4 py-2 font-figtree font-semibold text-sm hover:scale-105 transition-transform duration-75 cursor-pointer">
+                  Create playlist
+                </button>
+              </div>
+            </div>
+          </nav>
+
+          
+          <main ref={mainContentRef} className="flex-1 bg-gradient-to-b from-zinc-900 to-black p-6 overflow-y-auto">
+            <div className={`sticky top-0 z-40 flex items-center justify-between w-full mb-6 py-3 transition-all duration-200 ${
+              scrollY > 10 
+                ? 'bg-zinc-900/80 backdrop-blur-lg border-b border-zinc-800/50 px-1 rounded-lg shadow-md' 
+                : ''
+            }`}>
+              <div className="flex items-center gap-4">
+                <div className="flex gap-2">
+                  <button className="bg-black/70 rounded-full p-2 cursor-pointer hover:bg-black/90 transition-colors duration-75">
+                    <ChevronLeft className="h-6 w-6 text-white" />
+                  </button>
+                  <button className="bg-black/70 rounded-full p-2 cursor-pointer hover:bg-black/90 transition-colors duration-75">
+                    <ChevronRight className="h-6 w-6 text-white" />
+                  </button>
+                </div>
+                {currentSection !== "search" && (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="What do you want to listen to?"
+                      value={searchQuery}
+                      onChange={handleSearch}
+                      className="bg-zinc-800 text-white rounded-full py-2 pl-10 pr-4 w-80 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
+                    />
+                    <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-4">
+                <button className="text-white hover:scale-105 transition-transform duration-75 cursor-pointer">
+                  <Bell className="h-6 w-6" />
+                </button>
+                <button className="text-white hover:scale-105 transition-transform duration-75 cursor-pointer">
+                  <Download className="h-6 w-6" />
+                </button>
+                <button className="bg-black/70 rounded-full p-1 cursor-pointer hover:bg-black/90 transition-colors duration-75">
+                  <User2 className="h-6 w-6 text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto space-y-8">
+              {renderMainContent()}
+            </div>
+          </main>
+        </div>
+
+        
+        <div className="h-24 bg-zinc-900 border-t border-zinc-800 px-4">
+          <div className="flex items-center justify-between h-full">
+            
+            <div className="flex items-center gap-x-4 w-1/3">
+              <div className="relative h-14 w-14">
+                <Image
+                  src="https://picsum.photos/200?random=current"
+                  alt="Now playing"
+                  fill
+                  className="object-cover rounded-md"
+                />
+              </div>
+              <div>
+                <h4 className="text-white font-plus-jakarta font-semibold text-sm hover:text-green-500 transition-colors duration-75 cursor-pointer">Internet Friends</h4>
+                <p className="text-gray-400 text-xs font-figtree hover:text-green-500 transition-colors duration-75 cursor-pointer">Knife Party</p>
+              </div>
+            </div>
+
+            
+            <div className="flex flex-col items-center w-1/3">
+              <div className="flex items-center gap-x-6">
+                <button className="text-gray-400 hover:text-white transition-colors duration-75 cursor-pointer">
+                  <SkipBack size={20} />
+                </button>
+                <button 
+                  className="bg-white rounded-full p-2 text-black hover:scale-105 transition-transform duration-75 cursor-pointer"
+                  onClick={handlePlayPause}
+                >
+                  {isPlaying ? <Pause fill="black" size={20} /> : <Play fill="black" size={20} />}
+                </button>
+                <button className="text-gray-400 hover:text-white transition-colors duration-75 cursor-pointer">
+                  <SkipForward size={20} />
+                </button>
+              </div>
+              <div className="flex items-center gap-x-2 mt-2 w-full">
+                <span className="text-xs text-gray-400 font-figtree w-10 text-right">{currentTime}</span>
+                <div className="h-1 flex-1 bg-gray-600 rounded-full">
+                  <div className="h-1 w-1/3 bg-green-500 rounded-full relative">
+                    <div className="absolute -right-2 -top-2 h-4 w-4 bg-white rounded-full opacity-0 group-hover:opacity-100" />
+                  </div>
+                </div>
+                <span className="text-xs text-gray-400 font-figtree w-10">{duration}</span>
+              </div>
+            </div>
+
+            
+            <div className="flex items-center gap-x-4 w-1/3 justify-end">
+              <button className="text-gray-400 hover:text-white transition-colors duration-75 cursor-pointer">
+                <ListMusic size={20} />
+              </button>
+              <button 
+                className="text-gray-400 hover:text-white transition-colors duration-75 cursor-pointer"
+                onClick={handleMuteToggle}
+              >
+                {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              </button>
+              <div className="w-24 group relative flex items-center">
+                <div className="w-full h-1 bg-gray-600 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-green-500 rounded-full" 
+                    style={{ width: `${volume}%` }}
+                  ></div>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={volume}
+                  onChange={handleVolumeChange}
+                  className="w-full h-1 appearance-none absolute inset-0 cursor-pointer opacity-0 z-10 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                />
+                <div 
+                  className="absolute h-3 w-3 rounded-full bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-75 pointer-events-none"
+                  style={{ left: `calc(${volume}% - 6px)` }}
+                ></div>
+              </div>
+              <button className="text-gray-400 hover:text-white transition-colors duration-75 cursor-pointer">
+                <Maximize2 size={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
+
+

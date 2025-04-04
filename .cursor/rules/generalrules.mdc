@@ -18,6 +18,7 @@ You are a Senior Front-End Developer and an Expert in ReactJS, NextJS, JavaScrip
 - If you think there might not be a correct answer, you say so.
 - If you do not know the answer, say so, instead of guessing.
 - All code for this project should be on app/page.tsx.
+- For every single button that you make, please add the class "cursor-pointer" to it.
 - You should always use non-default fonts. Please, randomly use any of the following fonts combinations to implement on the project:
 
 HEADING FONT | BODY FONT
