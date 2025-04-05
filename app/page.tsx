@@ -1,2817 +1,2337 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
-import {
-    Heart,
-    Mic,
-    Play,
-    Pause,
-    Volume2,
-    MoreHorizontal,
-    Share2,
-    X,
-    Home,
-    TrendingUp,
-    Hash,
-    Search,
-    User,
-    Headphones,
-    Bell,
-    Music,
-    BookOpen,
-    Activity,
-    Globe,
-    Bookmark,
-    MapPin,
-    Instagram,
-    Twitter,
-    Info,
-    Send,
-    Check,
-    AlertCircle,
-} from "lucide-react";
+
+import type React from "react";
+
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+    FiHome,
+    FiUser,
+    FiCode,
+    FiBriefcase,
+    FiBook,
+    FiGithub,
+    FiLinkedin,
+    FiSearch,
+    FiLayers,
+    FiExternalLink,
+    FiTwitter,
+    FiFacebook,
+    FiCopy,
+    FiCheck,
+} from "react-icons/fi";
+import {
+    SiJavascript,
+    SiTypescript,
+    SiReact,
+    SiNextdotjs,
+    SiPython,
+    SiRust,
+    SiGo,
+    SiZcool,
+    SiAmazon,
+    SiGooglecloud,
+    SiDocker,
+    SiKubernetes,
+    SiMongodb,
+    SiPostgresql,
+    SiTensorflow,
+    SiNodedotjs,
+    SiExpress,
+    SiDjango,
+    SiSpring,
+    SiGraphql,
+    SiMysql,
+    SiRedis,
+    SiElasticsearch,
+    SiWebassembly,
+    SiEthereum,
+    SiFortran,
+} from "react-icons/si";
+import { FaJava, FaMicrosoft } from "react-icons/fa";
+import { FiServer, FiCpu, FiHardDrive, FiCode as FiCodeIcon } from "react-icons/fi";
+import Image from "next/image";
 
 
-interface User {
-    id?: string;
-    name: string;
-    avatar: string;
-    username: string;
-    bio: string;
-    location: string;
-    followers: number;
-    following: number;
-    memberSince: string;
-    stories?: number;
-    social: {
-        twitter: string;
-        instagram: string;
-    };
-    category?: string;
-}
+import { Playfair_Display, Montserrat, Raleway, Cormorant_Garamond } from "next/font/google";
 
-interface Story {
-    id: string;
-    user: User;
-    audioUrl: string;
-    title: string;
-    description: string;
-    duration: string;
-    likes: number;
-    plays: number;
-    shares: number;
-    timestamp: string;
-    likedBy: string[];
-    tags: string[];
-    category: string;
-}
 
-interface RecordingData {
-    audioUrl: string;
-    title: string;
-    description?: string;
-    tags?: string[];
-    category?: string;
-    audioBlob?: Blob;
-    duration?: number;
-}
+const playfair = Playfair_Display({
+    subsets: ["latin"],
+    variable: "--font-playfair",
+    display: "swap",
+});
 
-interface AlertConfig {
-    isOpen: boolean;
-    message: string;
-    type: string;
-}
+const montserrat = Montserrat({
+    subsets: ["latin"],
+    variable: "--font-montserrat",
+    display: "swap",
+});
 
-interface TrendingTopic {
-    id: string | number;
-    name: string;
-    count: number;
-    category: string;
-}
+const raleway = Raleway({
+    subsets: ["latin"],
+    variable: "--font-raleway",
+    display: "swap",
+});
 
-interface Activity {
-    id: string;
-    user: string;
-    avatar: string;
-    action: string;
-    story?: string;
-    time: string;
-    category: string;
-    read: boolean;
-}
+const cormorant = Cormorant_Garamond({
+    subsets: ["latin"],
+    variable: "--font-cormorant",
+    weight: ["300", "400", "500", "600", "700"],
+    display: "swap",
+});
 
-interface AudioElementWithContext extends HTMLAudioElement {
-    context?: AudioContext;
-    analyser?: AnalyserNode;
-    source?: MediaElementAudioSourceNode;
-}
+const blogPosts = [
+    {
+        id: 1,
+        title: "Understanding React Server Components",
+        description: "Exploring the benefits and implementation of React Server Components in modern web applications.",
+        date: "March 28, 2024",
+        readTime: "5 min read",
+    },
+    {
+        id: 2,
+        title: "State Management Patterns",
+        description: "A deep dive into different state management approaches and when to use each one.",
+        date: "March 25, 2024",
+        readTime: "7 min read",
+    },
+    {
+        id: 3,
+        title: "Building Accessible Web Apps",
+        description: "Best practices and techniques for creating inclusive web applications.",
+        date: "March 20, 2024",
+        readTime: "4 min read",
+    },
+    {
+        id: 4,
+        title: "The Future of JavaScript: What to Expect",
+        description: "Exploring upcoming features, trends, and the evolution of JavaScript in the web development ecosystem.",
+        date: "March 15, 2024",
+        readTime: "6 min read",
+    },
+    {
+        id: 5,
+        title: "Optimizing React Performance",
+        description: "Strategies and techniques for improving the performance of your React applications through code optimization.",
+        date: "March 10, 2024",
+        readTime: "8 min read",
+    },
+    {
+        id: 6,
+        title: "Design Patterns in Modern Web Development",
+        description: "Understanding and implementing effective design patterns to create maintainable and scalable web applications.",
+        date: "March 5, 2024",
+        readTime: "7 min read",
+    },
+    {
+        id: 7,
+        title: "The Art of Clean Code",
+        description: "Principles and practices for writing elegant, maintainable, and efficient code in any programming language.",
+        date: "February 28, 2024",
+        readTime: "5 min read",
+    },
+    {
+        id: 8,
+        title: "TypeScript Best Practices in 2024",
+        description: "Updated guidelines and recommendations for writing type-safe, reliable TypeScript code in modern projects.",
+        date: "February 20, 2024",
+        readTime: "6 min read",
+    },
+];
 
-interface Message {
-    text: string;
-    sender: string;
-    time: string;
-}
-
-const colors = {
-    primary: "#6D1A36",
-    secondary: "#A0ACAD",
-    accent: "#FF6666",
-    background: "#0B2027",
-    surface: "#0B2027",
-    card: "#A0ACAD",
-    cardHover: "#DBFE87",
-    text: "#A0ACAD",
-    textSecondary: "#DBFE87",
-    border: "#6D1A36",
-    success: "#DBFE87",
-    error: "#FF6666",
+const aboutMeContent = {
+    intro: "Hi there! I'm John Smith, a passionate Full Stack Developer with over 8 years of experience building web applications that solve real-world problems.",
+    bio: "After graduating with a Computer Science degree from MIT, I've worked with startups and established companies across the globe. My journey in tech began when I built my first website at 12, and I've been hooked ever since.",
+    interests: [
+        "Building scalable web applications",
+        "Contributing to open-source projects",
+        "Exploring new technologies and frameworks",
+        "Technical writing and mentoring junior developers",
+    ],
+    personalLife:
+        "When I'm not coding, you'll find me hiking in the mountains, experimenting with photography, or trying out new coffee shops around the city. I believe in maintaining a healthy work-life balance and finding inspiration in everyday experiences.",
+    philosophy:
+        "I approach every project with curiosity and a commitment to excellence. My philosophy is that great software should be both powerful and intuitive to use.",
+    images: [
+        {
+            src: "https://picsum.photos/id/0/600/400",
+            alt: "Coding setup",
+            caption: "My workspace where the magic happens",
+        },
+        {
+            src: "https://picsum.photos/id/48/600/400",
+            alt: "Tech conference",
+            caption: "Speaking at the React Summit 2023",
+        },
+        {
+            src: "https://picsum.photos/id/2/600/400",
+            alt: "Laptop with code",
+            caption: "Late night coding sessions",
+        },
+    ],
 };
 
-const categories = [
-    { id: "all", name: "All", icon: <Globe size={18} /> },
-    { id: "music", name: "Music", icon: <Music size={18} /> },
-    { id: "podcast", name: "Podcasts", icon: <BookOpen size={18} /> },
-    { id: "asmr", name: "ASMR", icon: <Activity size={18} /> },
-    { id: "story", name: "Stories", icon: <User size={18} /> },
+const skillsContent = {
+    intro: "With over 15 years of programming experience, I've had the opportunity to work with a diverse range of technologies from modern frameworks to legacy systems.",
+    mainSkills: [
+        {
+            name: "JavaScript",
+            icon: <SiJavascript className="text-yellow-400" size={24} />,
+            level: 95,
+            years: 10,
+        },
+        {
+            name: "TypeScript",
+            icon: <SiTypescript className="text-blue-500" size={24} />,
+            level: 90,
+            years: 7,
+        },
+        {
+            name: "React",
+            icon: <SiReact className="text-cyan-400" size={24} />,
+            level: 92,
+            years: 8,
+        },
+        {
+            name: "Next.js",
+            icon: <SiNextdotjs className="text-black dark:text-white" size={24} />,
+            level: 88,
+            years: 5,
+        },
+        {
+            name: "Python",
+            icon: <SiPython className="text-blue-600" size={24} />,
+            level: 85,
+            years: 9,
+        },
+        {
+            name: "Java",
+            icon: <FaJava className="text-red-500" size={24} />,
+            level: 80,
+            years: 12,
+        },
+    ],
+    backendSkills: [
+        {
+            name: "Node.js",
+            icon: <SiNodedotjs className="text-green-600" size={24} />,
+            level: 90,
+            years: 9,
+        },
+        {
+            name: "Express",
+            icon: <SiExpress className="text-gray-600 dark:text-gray-400" size={24} />,
+            level: 88,
+            years: 8,
+        },
+        {
+            name: "Django",
+            icon: <SiDjango className="text-green-800" size={24} />,
+            level: 82,
+            years: 6,
+        },
+        {
+            name: "Spring Boot",
+            icon: <SiSpring className="text-green-500" size={24} />,
+            level: 78,
+            years: 7,
+        },
+        {
+            name: "GraphQL",
+            icon: <SiGraphql className="text-pink-600" size={24} />,
+            level: 85,
+            years: 4,
+        },
+        {
+            name: "REST API Design",
+            icon: <FiServer className="text-blue-500" size={24} />,
+            level: 95,
+            years: 10,
+        },
+    ],
+    databaseSkills: [
+        {
+            name: "MongoDB",
+            icon: <SiMongodb className="text-green-500" size={24} />,
+            level: 88,
+            years: 7,
+        },
+        {
+            name: "PostgreSQL",
+            icon: <SiPostgresql className="text-blue-700" size={24} />,
+            level: 85,
+            years: 9,
+        },
+        {
+            name: "MySQL",
+            icon: <SiMysql className="text-blue-500" size={24} />,
+            level: 90,
+            years: 12,
+        },
+        {
+            name: "Redis",
+            icon: <SiRedis className="text-red-600" size={24} />,
+            level: 80,
+            years: 6,
+        },
+        {
+            name: "Elasticsearch",
+            icon: <SiElasticsearch className="text-teal-500" size={24} />,
+            level: 75,
+            years: 4,
+        },
+    ],
+    cloudSkills: [
+        {
+            name: "AWS",
+            icon: <SiAmazon className="text-orange-400" size={24} />,
+            level: 85,
+            years: 7,
+        },
+        {
+            name: "Google Cloud",
+            icon: <SiGooglecloud className="text-blue-500" size={24} />,
+            level: 80,
+            years: 5,
+        },
+        {
+            name: "Azure",
+            icon: <FaMicrosoft className="text-blue-600" size={24} />,
+            level: 75,
+            years: 4,
+        },
+        {
+            name: "Docker",
+            icon: <SiDocker className="text-blue-400" size={24} />,
+            level: 88,
+            years: 6,
+        },
+        {
+            name: "Kubernetes",
+            icon: <SiKubernetes className="text-blue-500" size={24} />,
+            level: 82,
+            years: 4,
+        },
+    ],
+    legacyAndSpecializedSkills: [
+        {
+            name: "COBOL",
+            icon: <SiZcool className="text-blue-800" size={24} />,
+            level: 70,
+            years: 3,
+            description: "Maintained banking systems during Y2K transition",
+        },
+        {
+            name: "Fortran",
+            icon: <SiFortran className="text-purple-600" size={24} />,
+            level: 65,
+            years: 2,
+            description: "Scientific computing projects at NASA",
+        },
+        {
+            name: "Assembly",
+            icon: <FiCpu className="text-gray-700" size={24} />,
+            level: 60,
+            years: 4,
+            description: "Low-level optimization for embedded systems",
+        },
+        {
+            name: "LISP",
+            icon: <FiHardDrive className="text-green-700" size={24} />,
+            level: 72,
+            years: 3,
+            description: "AI research projects",
+        },
+        {
+            name: "Ada",
+            icon: <FiCodeIcon className="text-blue-700" size={24} />,
+            level: 68,
+            years: 2,
+            description: "Military defense contracting",
+        },
+    ],
+    emergingTechSkills: [
+        {
+            name: "Rust",
+            icon: <SiRust className="text-orange-600" size={24} />,
+            level: 78,
+            years: 3,
+        },
+        {
+            name: "Go",
+            icon: <SiGo className="text-blue-400" size={24} />,
+            level: 82,
+            years: 4,
+        },
+        {
+            name: "TensorFlow",
+            icon: <SiTensorflow className="text-orange-500" size={24} />,
+            level: 75,
+            years: 3,
+        },
+        {
+            name: "WebAssembly",
+            icon: <SiWebassembly className="text-purple-500" size={24} />,
+            level: 70,
+            years: 2,
+        },
+        {
+            name: "Blockchain/Smart Contracts",
+            icon: <SiEthereum className="text-blue-500" size={24} />,
+            level: 65,
+            years: 2,
+        },
+    ],
+    quote: "Technology is constantly evolving, and I believe in continuous learning. The more languages you know, the more approaches you have to solve complex problems.",
+};
+
+const projectsData = [
+    {
+        id: 1,
+        title: "NebulaVerse",
+        description:
+            "An immersive 3D space exploration game built with Three.js and WebGL. Features procedurally generated galaxies, physics-based spacecraft controls, and multiplayer capabilities.",
+        tags: ["Three.js", "WebGL", "JavaScript", "Socket.io", "WebRTC"],
+        image: "https://picsum.photos/id/0/800/500",
+        demoUrl: "https://nebulaverse.example.com",
+        repoUrl: "https://github.com/johnsmith/nebulaverse",
+        featured: true,
+        achievements: ["100,000+ monthly active users", "Featured on Chrome Experiments", "WebGL Innovation Award 2023"],
+    },
+    {
+        id: 2,
+        title: "COBOL-X",
+        description:
+            "An open-source modernization framework for legacy COBOL systems used by financial institutions. Provides API wrappers, security enhancements, and compatibility layers for integrating decades-old banking systems with modern web services.",
+        tags: ["COBOL", "Java", "REST APIs", "Banking", "Legacy Systems"],
+        image: "https://picsum.photos/id/2/800/500",
+        repoUrl: "https://github.com/johnsmith/cobolx",
+        featured: true,
+        achievements: ["Adopted by 5 major banks", "Reduced migration costs by 60%", "Featured in Banking Technology Magazine"],
+    },
+    {
+        id: 3,
+        title: "StreamForge",
+        description:
+            "A low-latency streaming library for game developers, with advanced features like adaptive bitrate optimization, peer-to-peer fallback, and integration with major gaming platforms.",
+        tags: ["Rust", "WebRTC", "C++", "UDP", "Gaming"],
+        image: "https://picsum.photos/id/4/800/500",
+        demoUrl: "https://streamforge.dev",
+        repoUrl: "https://github.com/johnsmith/streamforge",
+        featured: true,
+        achievements: ["Used by 200+ indie game studios", "Sub-50ms latency achievement", "10M+ end users"],
+    },
+    {
+        id: 4,
+        title: "QuantumLab",
+        description:
+            "An educational platform for quantum computing simulation, making quantum concepts accessible through interactive visualizations and simplified programming interfaces.",
+        tags: ["Python", "Quantum Computing", "WebAssembly", "Education"],
+        image: "https://picsum.photos/id/8/800/500",
+        demoUrl: "https://quantumlab.io",
+        repoUrl: "https://github.com/johnsmith/quantumlab",
+    },
+    {
+        id: 5,
+        title: "EcoTrack",
+        description:
+            "IoT system for environmental monitoring that uses machine learning to predict pollution levels and analyze environmental impact. Deployed in cooperation with environmental agencies.",
+        tags: ["IoT", "TensorFlow", "Python", "Time Series Analysis"],
+        image: "https://picsum.photos/id/9/800/500",
+        demoUrl: "https://ecotrack.earth",
+        featured: true,
+        achievements: ["Monitoring 150+ urban locations", "Predicted pollution events with 92% accuracy"],
+    },
+    {
+        id: 6,
+        title: "RetroRealm",
+        description:
+            "A virtual reality arcade featuring perfectly emulated vintage games from the 70s, 80s, and 90s. Includes a physics-based environment where players can walk around a period-accurate arcade.",
+        tags: ["Unity", "VR", "C#", "Emulation", "3D Modeling"],
+        image: "https://picsum.photos/id/3/800/500",
+        demoUrl: "https://retrorealm.io",
+    },
+    {
+        id: 7,
+        title: "MediChain",
+        description:
+            "Blockchain-based medical records system ensuring patient data privacy while enabling secure sharing between healthcare providers. Implements zero-knowledge proofs for sensitive information.",
+        tags: ["Blockchain", "Ethereum", "Zero-knowledge Proofs", "Healthcare"],
+        image: "https://picsum.photos/id/6/800/500",
+        repoUrl: "https://github.com/johnsmith/medichain",
+        achievements: ["Pilot program with 3 hospitals", "Published security paper at IEEE"],
+    },
+    {
+        id: 8,
+        title: "LinguaGen",
+        description:
+            "An AI-powered language learning platform using computational linguistics to generate personalized learning materials based on user's native language and learning patterns.",
+        tags: ["NLP", "Machine Learning", "React", "Python"],
+        image: "https://picsum.photos/id/7/800/500",
+        demoUrl: "https://linguagen.app",
+    },
+    {
+        id: 9,
+        title: "AutoSymphony",
+        description:
+            "Experimental music composition AI that generates original orchestral arrangements based on emotional input and style preferences. Used in indie film scoring and game development.",
+        tags: ["TensorFlow", "Audio Processing", "MIDI", "GANs"],
+        image: "https://picsum.photos/id/5/800/500",
+        demoUrl: "https://autosymphony.io",
+        repoUrl: "https://github.com/johnsmith/autosymphony",
+    },
+    {
+        id: 10,
+        title: "Holotecture",
+        description:
+            "Augmented reality architecture visualization tool that helps architects and clients see building designs at scale in real environments before construction begins.",
+        tags: ["AR", "Unity", "BIM Integration", "3D Rendering"],
+        image: "https://picsum.photos/id/1/800/500",
+        demoUrl: "https://holotecture.build",
+    },
 ];
 
-
-const initialStories: Story[] = [
-    {
-        id: "1",
-        user: {
-            name: "Zaara Zabeen",
-            avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aHVtYW4lMjBwb3J0cmFpdHxlbnwwfHwwfHx8MA%3D%3D",
-            username: "@zaara_zabeen",
-            bio: "UX Designer & Design Advocate. I share insights about design systems and user experiences.",
-            location: "Dhaka, Bangladesh",
-            followers: 12650,
-            following: 425,
-            memberSince: "March 2022",
-            social: {
-                twitter: "zaara_zabeen",
-                instagram: "zaara.zabeen",
-            },
+const portfolioData = {
+    experience: [
+        {
+            company: "TechNova Labs",
+            position: "Principal Software Architect",
+            period: "2020 - Present",
+            description:
+                "Leading architecture design for cloud-native applications and mentoring engineering teams. Spearheaded company-wide migration to microservices architecture, reducing deployment time by 70%.",
+            technologies: ["React", "Node.js", "AWS", "Kubernetes", "GraphQL"],
+            achievements: [
+                "Redesigned payment processing system handling $2M daily transactions",
+                "Reduced infrastructure costs by 35% through cloud optimization",
+                "Established engineering excellence program adopted by 4 departments",
+            ],
+            logo: "https://picsum.photos/id/28/100/100",
         },
-        audioUrl: "https://raw.githubusercontent.com/Ksotillo/wmp-wep-app/main/public/audio/track1.mp3",
-        title: "Late Night Thoughts About Design",
-        description: "Reflecting on what makes great user experiences in modern apps",
-        duration: "1:42",
-        likes: 248,
-        plays: 3427,
-        shares: 42,
-        timestamp: "2 hours ago",
-        likedBy: [],
-        tags: ["design", "ux", "creativity"],
-        category: "podcast",
-    },
-    {
-        id: "2",
-        user: {
-            name: "Alex Rodriguez",
-            avatar: "https://plus.unsplash.com/premium_photo-1675129779554-dc86569708c8?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8aHVtYW4lMjBwb3J0cmFpdHxlbnwwfHwwfHx8MA%3D%3D",
-            username: "@alex_design",
-            bio: "Product designer with a focus on enterprise solutions. I create systems that solve complex problems.",
-            location: "Boston, MA",
-            followers: 8920,
-            following: 356,
-            memberSince: "January 2021",
-            social: {
-                twitter: "alexdesigns",
-                instagram: "alex.product",
-            },
+        {
+            company: "DataSphere Systems",
+            position: "Senior Full Stack Developer",
+            period: "2017 - 2020",
+            description:
+                "Developed enterprise data visualization platform used by Fortune 500 clients. Led team of 6 engineers and collaborated with product managers to deliver key features.",
+            technologies: ["Angular", "Python", "PostgreSQL", "Docker", "Azure"],
+            achievements: [
+                "Built real-time analytics dashboard processing 50M data points daily",
+                "Improved application performance by 60% through optimization",
+                "Awarded company's 'Innovator of the Year' for AI integration initiative",
+            ],
+            logo: "https://picsum.photos/id/42/100/100",
         },
-        audioUrl: "https://raw.githubusercontent.com/Ksotillo/wmp-wep-app/main/public/audio/track2.mp3",
-        title: "Product Design Process Explained",
-        description: "My approach to solving complex UX problems in enterprise software",
-        duration: "2:15",
-        likes: 156,
-        plays: 2048,
-        shares: 27,
-        timestamp: "5 hours ago",
-        likedBy: [],
-        tags: ["product", "process", "enterprise"],
-        category: "podcast",
-    },
-    {
-        id: "3",
-        user: {
-            name: "Jamie Lee",
-            avatar: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8aHVtYW4lMjBwb3J0cmFpdHxlbnwwfHwwfHx8MA%3D%3D",
-            username: "@jamielee",
-            bio: "Creative director and workflow specialist. I help teams optimize their creative processes.",
-            location: "Portland, OR",
-            followers: 6750,
-            following: 512,
-            memberSince: "August 2022",
-            social: {
-                twitter: "jamieleecreates",
-                instagram: "jamie.creates",
-            },
+        {
+            company: "LegacyTech Financial Services",
+            position: "Systems Analyst & COBOL Specialist",
+            period: "2014 - 2017",
+            description:
+                "Maintained and modernized critical banking infrastructure during major digital transformation. Created integration layers between legacy systems and modern web services.",
+            technologies: ["COBOL", "Java", "Oracle", "RESTful APIs", "JCL"],
+            achievements: [
+                "Successfully migrated 30-year-old banking system with zero downtime",
+                "Implemented secure API gateway for legacy systems",
+                "Reduced manual processing time by 80% through automation",
+            ],
+            logo: "https://picsum.photos/id/60/100/100",
         },
-        audioUrl: "https://raw.githubusercontent.com/Ksotillo/wmp-wep-app/main/public/audio/track3.mp3",
-        title: "Creative Workflow Tips for Designers",
-        description: "How I organize my day for maximum creative output",
-        duration: "3:07",
-        likes: 189,
-        plays: 1954,
-        shares: 18,
-        timestamp: "Yesterday",
-        likedBy: [],
-        tags: ["workflow", "productivity", "design"],
-        category: "podcast",
-    },
-    {
-        id: "4",
-        user: {
-            name: "Michael Chen",
-            avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-            username: "@michael_music",
-            bio: "Composer and sound designer. Creating immersive soundscapes for relaxation and focus.",
-            location: "Seattle, WA",
-            followers: 14200,
-            following: 187,
-            memberSince: "May 2020",
-            social: {
-                twitter: "michaelsounds",
-                instagram: "michael.ambient",
-            },
+        {
+            company: "NASA Jet Propulsion Laboratory",
+            position: "Research Software Engineer (Contract)",
+            period: "2012 - 2014",
+            description:
+                "Contributed to mission-critical software for Mars rover operations. Worked with scientific computing teams to optimize data processing pipelines for telemetry analysis.",
+            technologies: ["C++", "Python", "FORTRAN", "CUDA", "Scientific Computing"],
+            achievements: [
+                "Developed image processing algorithms for Mars terrain analysis",
+                "Optimized computation-intensive simulations, reducing runtime by 40%",
+                "Co-authored research paper on distributed computing for space missions",
+            ],
+            logo: "https://picsum.photos/id/73/100/100",
         },
-        audioUrl: "https://raw.githubusercontent.com/Ksotillo/wmp-wep-app/main/public/audio/track4.mp3",
-        title: "Ambient Soundscape for Focus",
-        description: "A carefully crafted soundscape to enhance your concentration during work sessions",
-        duration: "5:22",
-        likes: 432,
-        plays: 8735,
-        shares: 67,
-        timestamp: "2 days ago",
-        likedBy: [],
-        tags: ["ambient", "focus", "productivity"],
-        category: "music",
-    },
-    {
-        id: "5",
-        user: {
-            name: "Sophia Kim",
-            avatar: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-            username: "@sophia_asmr",
-            bio: "ASMR creator specializing in soft-spoken role plays and ambient sounds for sleep and relaxation.",
-            location: "Chicago, IL",
-            followers: 28500,
-            following: 215,
-            memberSince: "November 2019",
-            social: {
-                twitter: "sophia_asmr",
-                instagram: "sophia.sounds",
-            },
+    ],
+    education: [
+        {
+            institution: "Massachusetts Institute of Technology",
+            degree: "Master of Science in Computer Science",
+            period: "2010 - 2012",
+            description: "Specialized in distributed systems and machine learning. Teaching assistant for Advanced Algorithms course.",
+            thesis: "Distributed Consensus Algorithms for Autonomous Vehicle Coordination",
+            logo: "https://picsum.photos/id/15/100/100",
         },
-        audioUrl: "https://raw.githubusercontent.com/Ksotillo/wmp-wep-app/main/public/audio/track1.mp3",
-        title: "Gentle Rain ASMR",
-        description: "Calming rain sounds with gentle tapping to help you relax and fall asleep",
-        duration: "8:15",
-        likes: 857,
-        plays: 15642,
-        shares: 124,
-        timestamp: "3 days ago",
-        likedBy: [],
-        tags: ["sleep", "relaxation", "rain"],
-        category: "asmr",
-    },
-    {
-        id: "6",
-        user: {
-            name: "David Mitchell",
-            avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-            username: "@david_stories",
-            bio: "Storyteller and narrative designer. I create short audio stories that transport you to different worlds.",
-            location: "Austin, TX",
-            followers: 9720,
-            following: 341,
-            memberSince: "February 2021",
-            social: {
-                twitter: "davidstories",
-                instagram: "david.tales",
-            },
+        {
+            institution: "Stanford University",
+            degree: "Bachelor of Science in Computer Science",
+            period: "2006 - 2010",
+            description: "Graduated with honors. Active in competitive programming and robotics club.",
+            thesis: "Efficient Path Planning Algorithms for Multi-Agent Systems",
+            logo: "https://picsum.photos/id/16/100/100",
         },
-        audioUrl: "https://assets.mixkit.co/music/preview/mixkit-mystery-chime-01-606.mp3",
-        title: "The Lost Library",
-        description: "A short story about a mysterious library that appears only at midnight",
-        duration: "4:36",
-        likes: 312,
-        plays: 4231,
-        shares: 87,
-        timestamp: "4 days ago",
-        likedBy: [],
-        tags: ["fiction", "mystery", "storytelling"],
-        category: "story",
-    },
-];
+    ],
+    certifications: [
+        {
+            name: "AWS Solutions Architect Professional",
+            issuer: "Amazon Web Services",
+            date: "2022",
+            logo: "https://picsum.photos/id/119/100/100",
+        },
+        {
+            name: "Google Cloud Professional Architect",
+            issuer: "Google",
+            date: "2021",
+            logo: "https://picsum.photos/id/120/100/100",
+        },
+        {
+            name: "Certified Kubernetes Administrator",
+            issuer: "Cloud Native Computing Foundation",
+            date: "2020",
+            logo: "https://picsum.photos/id/121/100/100",
+        },
+        {
+            name: "Azure DevOps Expert",
+            issuer: "Microsoft",
+            date: "2019",
+            logo: "https://picsum.photos/id/122/100/100",
+        },
+    ],
+    speaking: [
+        {
+            event: "React Summit 2023",
+            topic: "Beyond Hooks: The Future of React State Management",
+            location: "Amsterdam, Netherlands",
+            date: "June 2023",
+            image: "https://picsum.photos/id/139/800/400",
+        },
+        {
+            event: "COBOL Connect Conference",
+            topic: "Bridging Decades: Integrating Legacy COBOL with Modern Microservices",
+            location: "Chicago, USA",
+            date: "March 2023",
+            image: "https://picsum.photos/id/140/800/400",
+        },
+        {
+            event: "AWS re:Invent",
+            topic: "Serverless at Scale: Lessons from the Trenches",
+            location: "Las Vegas, USA",
+            date: "November 2022",
+            image: "https://picsum.photos/id/141/800/400",
+        },
+    ],
+};
 
-const trendingTopics: TrendingTopic[] = [
-    { id: 1, name: "Sound Design", count: 4218, category: "music" },
-    { id: 2, name: "Podcast Tips", count: 3856, category: "podcast" },
-    { id: 3, name: "Music Production", count: 2945, category: "music" },
-    { id: 4, name: "Voice Acting", count: 2674, category: "story" },
-    { id: 5, name: "ASMR", count: 2103, category: "asmr" },
-];
 
-const suggestedUsers = [
-    {
-        id: "u1",
-        name: "Sarah Johnson",
-        username: "@sarahj_audio",
-        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-        stories: 24,
-        followers: 12400,
-        category: "podcast",
-        bio: "Podcast host and audio enthusiast. I cover tech, culture, and everything in between.",
-        location: "New York, NY",
-        following: 342,
-        memberSince: "Jan 2022",
-        social: {
-            twitter: "sarahj_audio",
-            instagram: "sarahj.podcasts"
-        }
+const themeConfig = {
+    light: {
+        main: {
+            background: "bg-gradient-to-br from-white to-[#fef8f3]",
+            text: "text-[#1a1a1a]",
+            textSecondary: "text-[#444444]",
+            hover: "hover:text-[#1a1a1a]",
+        },
+        sidebar: {
+            background: "bg-[#fefcfb]",
+            activeBackground: "bg-[#fceee7]",
+            hoverBackground: "hover:bg-[#fceee7]/50",
+            border: "border-[#e0d5cc]",
+        },
+        content: {
+            background: "bg-white",
+            inputBorder: "border-[#e0d5cc]",
+            focusRing: "focus:ring-[#fceee7]",
+            card: "bg-white shadow-md border-[#e0d5cc]",
+            cardHover: "hover:shadow-lg",
+        },
+        button: {
+            primary: "text-[#b85c38] hover:text-[#a04b2b]",
+        },
+        accent: "text-[#b85c38]",
+        heading: "font-playfair",
+        subheading: "font-cormorant",
+        body: "font-montserrat",
+        accent_font: "font-raleway",
     },
-    {
-        id: "u2",
-        name: "David Chen",
-        username: "@david_speaks",
-        avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-        stories: 47,
-        followers: 8700,
-        category: "story",
-        bio: "Voice actor and storyteller. I narrate audiobooks and create immersive stories.",
-        location: "Los Angeles, CA",
-        following: 253,
-        memberSince: "Mar 2022",
-        social: {
-            twitter: "david_speaks",
-            instagram: "david.stories"
-        }
+    dark: {
+        main: {
+            background: "bg-[#1a1a1a]",
+            text: "text-[#f5f5f5]",
+            textSecondary: "text-[#c0c0c0]",
+            hover: "hover:text-white",
+        },
+        sidebar: {
+            background: "bg-[#252525]",
+            activeBackground: "bg-[#3a3a3a]",
+            hoverBackground: "hover:bg-[#333333]",
+            border: "border-[#3d3d3d]",
+        },
+        content: {
+            background: "bg-[#2a2a2a]",
+            inputBorder: "border-[#3d3d3d]",
+            focusRing: "focus:ring-[#4a4a4a]",
+            card: "bg-[#2d2d2d] shadow-lg border-[#3d3d3d]",
+            cardHover: "hover:shadow-xl",
+        },
+        button: {
+            primary: "text-[#e07a56] hover:text-[#f08c68]",
+        },
+        accent: "text-[#e07a56]",
+        heading: "font-playfair",
+        subheading: "font-cormorant",
+        body: "font-montserrat",
+        accent_font: "font-raleway",
     },
-    {
-        id: "u3",
-        name: "Maya Patel",
-        username: "@maya_sounds",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-        stories: 18,
-        followers: 5200,
-        category: "asmr",
-        bio: "ASMR artist specializing in nature sounds and calming triggers.",
-        location: "Seattle, WA",
-        following: 187,
-        memberSince: "May 2022",
-        social: {
-            twitter: "maya_sounds",
-            instagram: "maya.asmr"
-        }
-    }
-];
+};
 
-const initialActivity: Activity[] = [
-    {
-        id: "1",
-        user: "Zaara Zabeen",
-        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aHVtYW4lMjBwb3J0cmFpdHxlbnwwfHwwfHx8MA%3D%3D",
-        action: "liked your story",
-        story: "Late Night Thoughts",
-        time: "5m ago",
-        category: "like",
-        read: false,
-    },
-    {
-        id: "a2",
-        user: "Lisa Whitley",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-        action: "followed you",
-        time: "18m ago",
-        category: "podcast",
-        read: false,
-    },
-    {
-        id: "a3",
-        user: "Mark Zhang",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-        action: "shared your story",
-        story: "Late Night Thoughts About Design",
-        time: "1h ago",
-        category: "podcast",
-        read: false,
-    },
-];
 
-const additionalNotifications = [
-    {
-        id: "a4",
-        user: "Rachel Brooks",
-        avatar: "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-        action: "mentioned you in a comment",
-        time: "Yesterday",
-        category: "asmr",
-        read: false,
-    },
-    {
-        id: "a5",
-        user: "Thomas Garcia",
-        avatar: "https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-        action: "replied to your comment",
-        story: "Ambient Soundscape for Focus",
-        time: "2 days ago",
-        category: "music",
-        read: true,
-    },
-    {
-        id: "a6",
-        user: "Emily Tanaka",
-        avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-        action: "started following you",
-        time: "3 days ago",
-        category: "podcast",
-        read: true,
-    },
-];
+export default function Home() {
+    const [activeMenu, setActiveMenu] = useState("Home");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [mounted, setMounted] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [selectedPost, setSelectedPost] = useState<(typeof blogPosts)[0] | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [showNotification, setShowNotification] = useState(false);
+    const [notificationMessage, setNotificationMessage] = useState("");
 
-interface AudioElementWithContext extends HTMLAudioElement {
-    context?: AudioContext;
-    analyser?: AnalyserNode;
-    source?: MediaElementAudioSourceNode;
-}
+    const theme = isDarkMode ? themeConfig.dark : themeConfig.light;
 
-const CustomAlert = ({ isOpen, message, type = "info", onClose }: AlertConfig & { onClose?: () => void }) => {
     useEffect(() => {
-        if (isOpen && onClose) {
-            const timer = setTimeout(() => {
-                onClose();
-            }, 2500);
-            
-            return () => clearTimeout(timer);
+        setMounted(true);
+
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+            setIsDarkMode(true);
         }
-    }, [isOpen, onClose]);
+    }, []);
 
-    if (!isOpen) return null;
+    useEffect(() => {
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+        });
+    }, [activeMenu]);
 
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.5 }}
-            className="fixed top-0 left-0 right-0 z-[100] flex justify-center p-4"
-        >
-            <div
-                className={`flex items-center space-x-3 px-4 py-3 rounded-lg shadow-lg ${
-                    type === "success"
-                        ? "bg-green-800/90"
-                        : type === "error"
-                        ? "bg-red-800/90"
-                        : type === "warning"
-                        ? "bg-yellow-800/90"
-                        : "bg-slate-800/90"
-                }`}
-            >
-                {type === "success" ? (
-                    <Check size={18} className="text-green-300" />
-                ) : type === "error" ? (
-                    <AlertCircle size={18} className="text-red-300" />
-                ) : type === "warning" ? (
-                    <Info size={18} className="text-yellow-300" />
-                ) : (
-                    <Info size={18} className="text-blue-300" />
-                )}
-                <p className="text-white text-sm">{message}</p>
-                {onClose && (
-                    <button className="text-gray-400 hover:text-white transition-colors" onClick={onClose}>
-                        <X size={16} />
-                    </button>
-                )}
-            </div>
-        </motion.div>
+    const toggleTheme = () => {
+        const newTheme = !isDarkMode;
+        setIsDarkMode(newTheme);
+
+        localStorage.setItem("theme", newTheme ? "dark" : "light");
+    };
+
+    const handleMenuChange = (menuName: string) => {
+        setActiveMenu(menuName);
+    };
+
+    const menuItems = [
+        { name: "Home", icon: <FiHome className="w-5 h-5" /> },
+        { name: "About Me", icon: <FiUser className="w-5 h-5" /> },
+        { name: "Skills", icon: <FiCode className="w-5 h-5" /> },
+        { name: "Projects", icon: <FiLayers className="w-5 h-5" /> },
+        { name: "Portfolio", icon: <FiBriefcase className="w-5 h-5" /> },
+        { name: "Blog Posts", icon: <FiBook className="w-5 h-5" /> },
+    ];
+
+    const filteredPosts = blogPosts.filter(
+        (post) =>
+            post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            post.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
-};
 
-interface ChatBoxProps {
-    user: User;
-    isOpen: boolean;
-    onClose: () => void;
-}
-
-const ChatBox = ({ user, isOpen, onClose }: ChatBoxProps) => {
-    const [message, setMessage] = useState("");
-    const [messages, setMessages] = useState<Message[]>([]);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    type SkillBarProps = {
+        name: string;
+        level: number;
+        years: number;
+        icon?: React.ReactNode;
+        description?: string;
     };
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
-
-    const sendMessage = () => {
-        if (message.trim()) {
-            setMessages([...messages, { text: message, sender: "you", time: "Just now" }]);
-            setMessage("");
-
-            setTimeout(() => {
-                setMessages((prev) => [
-                    ...prev,
-                    {
-                        text: `Thanks for reaching out! This is a demo message from ${user.name}.`,
-                        sender: user.name,
-                        time: "Just now",
-                    },
-                ]);
-            }, 1500);
-        }
-    };
-
-    if (!isOpen) return null;
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.4 }}
-            className="fixed bottom-4 right-4 z-50 bg-slate-800 border border-slate-700 rounded-lg shadow-lg w-80 h-96 flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-        >
-            <div className="flex items-center justify-between p-3 border-b border-slate-700 bg-slate-900">
+    const SkillBar = ({ name, level, years, icon, description }: SkillBarProps) => (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
+            <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center space-x-2">
-                    <div className="h-8 w-8 rounded-full overflow-hidden">
-                        <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-medium text-white">{user.name}</h3>
-                        <p className="text-xs text-gray-400">{user.username}</p>
-                    </div>
+                    {icon && <span>{icon}</span>}
+                    <span className={`font-medium ${theme.main.text} ${theme.body}`}>{name}</span>
                 </div>
-                <button className="text-gray-400 hover:text-white transition-colors cursor-pointer" onClick={(e) => { e.stopPropagation(); onClose(); }}>
-                    <X size={16} />
-                </button>
-            </div>
-
-            <div className="flex-grow p-3 overflow-y-auto space-y-3">
-                {messages.length === 0 ? (
-                    <div className="text-center text-sm text-gray-400 mt-10">
-                        <p>Start a conversation with {user.name}</p>
-                    </div>
-                ) : (
-                    messages.map((msg, idx) => (
-                        <div key={idx} className={`flex ${msg.sender === "you" ? "justify-end" : "justify-start"}`}>
-                            <div
-                                className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                                    msg.sender === "you" ? "bg-indigo-600 text-white" : "bg-slate-700 text-gray-200"
-                                }`}
-                            >
-                                <p>{msg.text}</p>
-                                <p className="text-xs opacity-70 mt-1">{msg.time}</p>
-                            </div>
-                        </div>
-                    ))
-                )}
-                <div ref={messagesEndRef} />
-            </div>
-
-            <div className="p-3 border-t border-slate-700">
-                <div className="flex space-x-2">
-                    <input
-                        type="text"
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Type a message..."
-                        className="flex-grow px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                        onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                    />
-                    <button
-                        onClick={sendMessage}
-                        className="p-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
-                        disabled={!message.trim()}
+                <div className="flex items-center space-x-2">
+                    <span className={`text-sm ${theme.accent} ${theme.body}`}>
+                        {years} {years === 1 ? "year" : "years"}
+                    </span>
+                    <motion.span
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.6 }}
+                        className={`text-sm ${theme.main.textSecondary} ${theme.body}`}
                     >
-                        <Send size={18} className="text-white" />
-                    </button>
+                        {level}%
+                    </motion.span>
                 </div>
             </div>
-        </motion.div>
-    );
-};
-
-interface AudioVisualizerProps {
-    audioElement: AudioElementWithContext | null;
-    isPlaying: boolean;
-    color?: string;
-    accentColor?: string;
-    height?: number;
-    isRecording?: boolean;
-}
-
-const AudioVisualizer = ({
-    audioElement,
-    isPlaying,
-    color = colors.primary,
-    accentColor = colors.secondary,
-    height = 80,
-    isRecording = false,
-}: AudioVisualizerProps) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const animationFrameRef = useRef<number | undefined>(undefined);
-    const [isInitialized, setIsInitialized] = useState(false);
-    const contextSetupAttempted = useRef<Set<string>>(new Set());
-
-    
-    useEffect(() => {
-        console.log("AudioVisualizer state:", { isPlaying, isRecording, hasAudioElement: !!audioElement });
-        if (audioElement) {
-            console.log("Audio element details:", {
-                readyState: audioElement.readyState,
-                src: audioElement.src,
-                hasContext: !!audioElement.context,
-                contextState: audioElement.context?.state,
-            });
-        }
-    }, [audioElement, isPlaying, isRecording]);
-
-    useEffect(() => {
-        if (!audioElement && !isRecording) return;
-
-        const setupAudio = async () => {
-            try {
-                if (audioElement) {
-                    
-                    const audioId = audioElement.src || 'unknown-audio';
-                    
-                    
-                    if (!contextSetupAttempted.current.has(audioId) && !audioElement.context) {
-                        console.log("Setting up new audio context for:", audioId);
-                        contextSetupAttempted.current.add(audioId);
-                        
-                        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                        audioElement.context = new AudioContext();
-                        audioElement.analyser = audioElement.context.createAnalyser();
-                        audioElement.analyser.fftSize = 512;
-                        audioElement.analyser.smoothingTimeConstant = 0.85;
-                        
-                        try {
-                            
-                            audioElement.crossOrigin = "anonymous";
-                            audioElement.source = audioElement.context.createMediaElementSource(audioElement);
-                            audioElement.source.connect(audioElement.analyser);
-                            audioElement.analyser.connect(audioElement.context.destination);
-                            console.log("Audio context setup successful for:", audioId);
-                            setIsInitialized(true);
-                        } catch (sourceError) {
-                            console.error("Error creating media source:", sourceError);
-                            
-                            audioElement.context = undefined;
-                            audioElement.analyser = undefined;
-                            audioElement.source = undefined;
-                        }
-                    } else if (audioElement.context && audioElement.context.state === "suspended") {
-                        console.log("Resuming suspended audio context");
-                        await audioElement.context.resume();
-                    }
-                }
-            } catch (error) {
-                console.error("Error setting up audio context:", error);
-            }
-        };
-
-        setupAudio();
-
-        return () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
-
-            
-            
-            const canvas = canvasRef.current;
-            if (canvas) {
-                const ctx = canvas.getContext("2d");
-                if (ctx) {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                }
-            }
-        };
-    }, [audioElement, isRecording]);
-
-    
-    useEffect(() => {
-        if ((!isPlaying && !isRecording) || 
-            (!audioElement?.analyser && !isRecording) || 
-            !canvasRef.current) {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-
-                const canvas = canvasRef.current;
-                if (canvas) {
-                    const ctx = canvas.getContext("2d");
-                    if (ctx) {
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    }
-                }
-            }
-            return;
-        }
-
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-
-        const resizeCanvas = () => {
-            const width = canvas.offsetWidth;
-            canvas.width = width * window.devicePixelRatio;
-            canvas.height = height * window.devicePixelRatio;
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-        };
-
-        resizeCanvas();
-        window.addEventListener("resize", resizeCanvas);
-
-        let recordingOffset = 0;
-        const generateRecordingData = () => {
-            const data = new Uint8Array(64);
-            for (let i = 0; i < 64; i++) {
-                const wave = Math.sin((i + recordingOffset) * 0.2) * 0.5 + 0.5;
-                data[i] = Math.floor((wave * 0.7 + Math.random() * 0.3) * 255);
-            }
-            recordingOffset += 0.2;
-            return data;
-        };
-
-        
-        const bufferLength = isRecording || !audioElement?.analyser ? 64 : (audioElement.analyser.frequencyBinCount || 0);
-        const dataArray = new Uint8Array(bufferLength);
-
-        const draw = () => {
-            animationFrameRef.current = requestAnimationFrame(draw);
-
-            if (isRecording) {
-                dataArray.set(generateRecordingData());
-            } else if (audioElement?.analyser) {
-                try {
-                    audioElement.analyser.getByteFrequencyData(dataArray);
-                } catch (e) {
-                    console.error("Error getting audio data:", e);
-                    
-                    dataArray.set(generateRecordingData());
-                }
-            } else {
-                
-                dataArray.set(generateRecordingData());
-            }
-
-            const width = canvas.offsetWidth;
-            ctx.clearRect(0, 0, width, height);
-
-            const barSpacing = 1.5;
-            const barCount = Math.min(bufferLength / 2, 60);
-            const barWidth = width / barCount - barSpacing;
-
-            const centerY = height / 2;
-            const maxBarHeight = height / 2 - 4;
-
-            
-            const createBarColor = () => {
-                return isRecording ? colors.accent : color;
-            };
-
-            
-            ctx.beginPath();
-            ctx.strokeStyle = isRecording ? `${colors.accent}50` : `${color}50`;
-            ctx.lineWidth = 1;
-            ctx.moveTo(0, centerY);
-            ctx.lineTo(width, centerY);
-            ctx.stroke();
-
-            for (let i = 0; i < barCount; i++) {
-                const value = dataArray[i * 2];
-                const percent = value / 255;
-
-                const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t);
-                const smoothedPercent = easeInOut(percent);
-
-                const barHeight = Math.max(3, smoothedPercent * maxBarHeight);
-
-                const barX = i * (barWidth + barSpacing);
-                
-                
-                const topY = centerY - barHeight;
-                ctx.beginPath();
-                ctx.roundRect(barX, topY, barWidth, barHeight, [barWidth / 2, barWidth / 2, 0, 0]);
-                ctx.fillStyle = createBarColor();
-                ctx.fill();
-
-                if (percent > 0.5) {
-                    ctx.shadowColor = isRecording ? colors.accent : color;
-                    ctx.shadowBlur = 10;
-                    ctx.fillRect(barX, topY, barWidth, 2);
-                    ctx.shadowBlur = 0;
-                }
-
-                
-                ctx.beginPath();
-                ctx.roundRect(barX, centerY, barWidth, barHeight, [0, 0, barWidth / 2, barWidth / 2]);
-                ctx.fillStyle = createBarColor();
-                ctx.fill();
-
-                if (percent > 0.5) {
-                    ctx.shadowColor = isRecording ? colors.accent : color;
-                    ctx.shadowBlur = 10;
-                    ctx.fillRect(barX, centerY + barHeight - 2, barWidth, 2);
-                    ctx.shadowBlur = 0;
-                }
-            }
-        };
-
-        draw();
-
-        return () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
-            window.removeEventListener("resize", resizeCanvas);
-        };
-    }, [audioElement, isPlaying, isRecording, color, accentColor, height]);
-
-    return (
-        <canvas
-            ref={canvasRef}
-            className="w-full h-full"
-            style={{ height: `${height}px` }}
-        />
-    );
-};
-
-interface VolumeControlProps {
-    audioElement: HTMLAudioElement | null;
-}
-
-const VolumeControl = ({ audioElement }: VolumeControlProps) => {
-    const [volume, setVolume] = useState(1);
-    const [showVolume, setShowVolume] = useState(false);
-
-    const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newVolume = parseFloat(e.target.value);
-        setVolume(newVolume);
-        if (audioElement) {
-            audioElement.volume = newVolume;
-        }
-    };
-
-    return (
-        <div className="relative">
-            <button className="p-2 text-gray-400 hover:text-white transition-colors" onClick={() => setShowVolume(!showVolume)}>
-                <Volume2 size={18} />
-            </button>
-
-            {showVolume && (
+            <div className={`w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden`}>
                 <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 5 }}
-                    transition={{ duration: 0.4 }}
-                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-800 p-2 rounded-lg shadow-lg z-20"
-                >
-                    <div className="h-16 flex flex-col justify-center items-center">
-                        <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            value={volume}
-                            onChange={handleVolumeChange}
-                            className="h-16 w-6 accent-blue-500"
-                            style={{
-                                WebkitAppearance: "slider-vertical"
-                            }}
-                        />
-                    </div>
-                </motion.div>
-            )}
-        </div>
-    );
-};
-
-interface ProgressBarProps {
-    audioElement: HTMLAudioElement | null;
-    duration: number;
-    isPlaying: boolean;
-}
-
-const ProgressBar = ({ audioElement, duration, isPlaying }: ProgressBarProps) => {
-    const [progress, setProgress] = useState(0);
-    const progressRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!audioElement) return;
-
-        const updateProgress = () => {
-            if (audioElement.duration) {
-                setProgress(audioElement.currentTime / audioElement.duration);
-            }
-        };
-
-        audioElement.addEventListener("timeupdate", updateProgress);
-        return () => {
-            audioElement.removeEventListener("timeupdate", updateProgress);
-        };
-    }, [audioElement]);
-
-    const handleSeek = (e: React.MouseEvent) => {
-        if (!audioElement || !progressRef.current) return;
-
-        const rect = progressRef.current.getBoundingClientRect();
-        const pos = (e.clientX - rect.left) / rect.width;
-        const seekTime = pos * audioElement.duration;
-
-        if (!isNaN(seekTime)) {
-            audioElement.currentTime = seekTime;
-            setProgress(pos);
-        }
-    };
-
-    const formatTime = (seconds: number) => {
-        if (!seconds || isNaN(seconds)) return "0:00";
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, "0")}`;
-    };
-
-    return (
-        <div className="w-full space-y-1">
-            <div ref={progressRef} className="h-1.5 bg-gray-700 rounded-full cursor-pointer overflow-hidden" onClick={handleSeek}>
-                <motion.div
-                    className="h-full rounded-full"
-                    style={{
-                        width: `${progress * 100}%`,
-                        backgroundColor: isPlaying ? colors.primary : colors.secondary,
-                    }}
-                    animate={{
-                        boxShadow: isPlaying ? "0 0 8px rgba(99, 102, 241, 0.6)" : "none",
-                    }}
-                    transition={{ duration: 0.5 }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${level}%` }}
+                    transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
+                    className="h-full bg-gradient-to-r from-[#b85c38] to-[#e8956c] rounded-full"
                 ></motion.div>
             </div>
-
-            <div className="flex justify-between text-xs text-gray-400">
-                <span>{audioElement ? formatTime(audioElement.currentTime) : "0:00"}</span>
-                <span>{audioElement && audioElement.duration ? formatTime(audioElement.duration) : duration || "0:00"}</span>
-            </div>
-        </div>
-    );
-};
-
-interface ProfileModalProps {
-    user: User;
-    isOpen: boolean;
-    onClose: () => void;
-    onFollow: (userId: string) => void;
-    followedUsers: string[];
-}
-
-const ProfileModal = ({ user, isOpen, onClose, onFollow, followedUsers }: ProfileModalProps) => {
-    const [chatOpen, setChatOpen] = useState(false);
-
-    if (!isOpen || !user) return null;
-
-    const isFollowing = followedUsers?.includes(user.id || "");
-    const isCurrentUser = user.id === "current_user";
-
-    return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={onClose}
-        >
-            <motion.div
-                initial={{ scale: 0.95, y: 10 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.95, y: 10 }}
-                transition={{ duration: 0.4 }}
-                className="w-full max-w-lg bg-slate-800 rounded-xl shadow-2xl overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="relative flex justify-between items-center p-4 border-b border-gray-700">
-                    <h3 className="text-lg font-medium text-white">Profile</h3>
-                    <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-700/50 transition-colors">
-                        <X size={20} className="text-gray-300" />
-                    </button>
-                </div>
-
-                <div className="p-6">
-                    <div className="flex items-start gap-5">
-                        <div className="w-24 h-24 rounded-full bg-slate-700 overflow-hidden border-2 border-indigo-500/30">
-                            <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                        </div>
-
-                        <div className="flex-1">
-                            <h2 className="text-xl font-bold text-white">{user.name}</h2>
-                            <p className="text-indigo-300">{user.username}</p>
-
-                            {user.bio && <p className="mt-2 text-gray-300 text-sm">{user.bio}</p>}
-
-                            <div className="flex items-center mt-2 text-sm text-gray-400">
-                                <MapPin size={14} className="mr-1" />
-                                <span>{user.location || "Unknown location"}</span>
-                            </div>
-
-                            <div className="flex gap-4 mt-4">
-                                <div className="text-center">
-                                    <div className="text-white font-bold">
-                                        {formatFollowerCount(user.followers)} followers
-                                    </div>
-                                    <div className="text-xs text-gray-400">Followers</div>
-                                </div>
-                                <div className="text-center">
-                                    <div className="text-white font-bold">
-                                        {typeof user.following === "number" ? user.following.toLocaleString() : user.following || "0"}
-                                    </div>
-                                    <div className="text-xs text-gray-400">Following</div>
-                                </div>
-                                <div className="text-center">
-                                    <div className="text-white font-bold">{user.stories || "0"}</div>
-                                    <div className="text-xs text-gray-400">Stories</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {user.social && (
-                        <div className="mt-6 p-4 bg-slate-700/50 rounded-lg">
-                            <h4 className="text-sm font-medium text-gray-300 mb-3">Connect with {user.name.split(" ")[0]}</h4>
-                            <div className="flex gap-3">
-                                {user.social.twitter && (
-                                    <a
-                                        href={`https://twitter.com/${user.social.twitter}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-1.5 text-sm text-indigo-300 hover:text-indigo-200 transition-colors"
-                                    >
-                                        <Twitter size={16} />
-                                        <span>@{user.social.twitter}</span>
-                                    </a>
-                                )}
-                                {user.social.instagram && (
-                                    <a
-                                        href={`https://instagram.com/${user.social.instagram}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-1.5 text-sm text-indigo-300 hover:text-indigo-200 transition-colors"
-                                    >
-                                        <Instagram size={16} />
-                                        <span>@{user.social.instagram}</span>
-                                    </a>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {user.memberSince && (
-                        <div className="mt-6 text-sm text-gray-400">
-                            <span>Member since {user.memberSince}</span>
-                        </div>
-                    )}
-
-                    {!isCurrentUser && (
-                        <div className="mt-6 flex gap-3">
-                            <button
-                                className={`flex-1 py-2.5 px-4 ${
-                                    isFollowing ? "bg-slate-700 hover:bg-slate-600" : "bg-indigo-600 hover:bg-indigo-700"
-                                } text-white font-medium rounded-lg transition-colors duration-300 cursor-pointer`}
-                                onClick={() => onFollow && onFollow(user.id || "")}
-                            >
-                                {isFollowing ? "Unfollow" : "Follow"}
-                            </button>
-                            <button
-                                className="py-2.5 px-4 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors duration-300 cursor-pointer"
-                                onClick={() => setChatOpen(true)}
-                            >
-                                Message
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </motion.div>
-
-            <AnimatePresence>{chatOpen && <ChatBox user={user} isOpen={chatOpen} onClose={() => setChatOpen(false)} />}</AnimatePresence>
+            {description && (
+                <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.7 }}
+                    className={`text-xs ${theme.main.textSecondary} ${theme.body} mt-1 italic`}
+                >
+                    {description}
+                </motion.p>
+            )}
         </motion.div>
     );
-};
 
-interface RecordingModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (recordingData: RecordingData) => void;
-}
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+            },
+        },
+    };
 
-const RecordingModal = ({ isOpen, onClose, onSave }: RecordingModalProps) => {
-    const [isRecording, setIsRecording] = useState(false);
-    const [recordingTime, setRecordingTime] = useState(0);
-    const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-    const [audioUrl, setAudioUrl] = useState<string | null>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-    const [selectedTags, setSelectedTags] = useState<string[]>([]);
-    const [selectedCategory, setSelectedCategory] = useState("podcast");
-    const [modalAlertConfig, setModalAlertConfig] = useState<AlertConfig>({
-        isOpen: false,
-        message: "",
-        type: "info"
-    });
-    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-    const chunksRef = useRef<BlobPart[]>([]);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.5,
+                ease: "easeOut",
+            },
+        },
+    };
 
-    const availableTags = ["music", "podcast", "interview", "story", "tutorial", "thoughts", "ambient", "discussion"];
+    const copyToClipboard = (postId: number) => {
+        
+        const baseUrl = window.location.origin;
+        const shareUrl = `${baseUrl}/blog/${postId}`;
+        
+        
+        navigator.clipboard.writeText(shareUrl)
+            .then(() => {
+                setNotificationMessage("Link copied to clipboard!");
+                setShowNotification(true);
+                
+                
+                setTimeout(() => {
+                    setShowNotification(false);
+                }, 3000);
+            })
+            .catch(() => {
+                setNotificationMessage("Failed to copy link");
+                setShowNotification(true);
+                
+                
+                setTimeout(() => {
+                    setShowNotification(false);
+                }, 3000);
+            });
+    };
+
+    if (!mounted) {
+        return <div className="min-h-screen bg-[#fefcfb]"></div>;
+    }
 
     
-    const closeModalAlert = () => {
-        setModalAlertConfig({
-            ...modalAlertConfig,
-            isOpen: false
-        });
-    };
+    
+    const renderContent = () => {
+        switch (activeMenu) {
+            case "Home":
+                return (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-6xl pt-6">
+                        
 
-    useEffect(() => {
-        if (isRecording) {
-            timerRef.current = setInterval(() => {
-                setRecordingTime((prev) => prev + 1);
-            }, 1000);
-        } else if (timerRef.current) {
-            clearInterval(timerRef.current);
-        }
-
-        return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
-        };
-    }, [isRecording]);
-
-    const startRecording = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const options = { mimeType: "audio/webm" };
-            mediaRecorderRef.current = new MediaRecorder(stream, options);
-
-            mediaRecorderRef.current.addEventListener("dataavailable", (e) => {
-                chunksRef.current.push(e.data);
-            });
-
-            mediaRecorderRef.current.addEventListener("stop", () => {
-                const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-                setAudioBlob(blob);
-                setAudioUrl(URL.createObjectURL(blob));
-                chunksRef.current = [];
-            });
-
-            mediaRecorderRef.current.start();
-            setIsRecording(true);
-            setRecordingTime(0);
-        } catch (err) {
-            console.error("Error accessing microphone:", err);
-        }
-    };
-
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-
-            if (mediaRecorderRef.current.stream) {
-                mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
-            }
-        }
-    };
-
-
-    const togglePlayback = () => {
-        if (audioRef.current) {
-            if (isPlaying) {
-                audioRef.current.pause();
-            } else {
-                audioRef.current.play();
-            }
-            setIsPlaying(!isPlaying);
-        }
-    };
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, "0")}`;
-    };
-
-    const toggleTag = (tag: string) => {
-        if (selectedTags.includes(tag)) {
-            setSelectedTags(selectedTags.filter((t) => t !== tag));
-        } else if (selectedTags.length < 3) {
-            setSelectedTags([...selectedTags, tag]);
-        }
-    };
-
-    const handleSubmit = () => {
-        if (audioBlob && title) {
-            onSave({
-                title,
-                description: description || '',
-                audioBlob,
-                audioUrl: audioUrl || '',
-                tags: selectedTags,
-                category: selectedCategory,
-                duration: 0,
-            });
-
-            setAudioBlob(null);
-            setAudioUrl(null);
-            setTitle("");
-            setDescription("");
-            setSelectedTags([]);
-            setSelectedCategory("podcast");
-            setRecordingTime(0);
-            onClose();
-        }
-    };
-
-    const handleClose = () => {
-        if (audioUrl) {
-            URL.revokeObjectURL(audioUrl);
-        }
-        setAudioBlob(null);
-        setAudioUrl(null);
-        setTitle("");
-        setDescription("");
-        setSelectedTags([]);
-        setSelectedCategory("podcast");
-        setRecordingTime(0);
-        setIsPlaying(false);
-        onClose();
-    };
-
-    if (!isOpen) return null;
-
-    return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={handleClose}
-        >
-            <AnimatePresence>
-                {modalAlertConfig.isOpen && (
-                    <CustomAlert 
-                        isOpen={modalAlertConfig.isOpen} 
-                        message={modalAlertConfig.message} 
-                        type={modalAlertConfig.type} 
-                        onClose={closeModalAlert} 
-                    />
-                )}
-            </AnimatePresence>
-            
-            <motion.div
-                initial={{ scale: 0.95, y: 10 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.95, y: 10 }}
-                transition={{ duration: 0.4 }}
-                className="w-full max-w-xl bg-slate-800 rounded-xl shadow-2xl border border-slate-700/50"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="border-b border-slate-700 px-5 py-4 flex items-center justify-between">
-                    <h3 className="text-xl font-medium text-white">Share Your Story</h3>
-                    <button onClick={handleClose} className="p-1.5 rounded-full hover:bg-gray-700/50 transition-colors">
-                        <X size={18} className="text-gray-300" />
-                    </button>
-                </div>
-
-                <div className="p-6">
-                    <div className="flex gap-5">
-                        <div className="w-1/3 flex flex-col items-center">
-                            <div
-                                className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-500 ${
-                                    isRecording
-                                        ? "bg-red-500/10 border-2 border-red-500/50"
-                                        : audioBlob
-                                        ? "bg-indigo-500/10 border-2 border-indigo-500/50"
-                                        : "bg-gray-800"
-                                }`}
-                            >
-                                {audioBlob ? (
-                                    <div className="text-center">
-                                        <div className="text-xl font-semibold text-white">{formatTime(recordingTime)}</div>
+                        <motion.section
+                            initial={{ opacity: 0, y: 50 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6 }}
+                            className="mb-16"
+                        >
+                            <div className="flex flex-col md:flex-row gap-8 items-center">
+                                <motion.div
+                                    initial={{ opacity: 0, x: -50 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.6, delay: 0.2 }}
+                                    className="md:w-1/2"
+                                >
+                                    <motion.h1 
+                                        className={`text-4xl font-bold ${theme.main.text} ${theme.heading} mb-4 relative`}
+                                        whileHover={{ 
+                                            scale: 1.03,
+                                            transition: { duration: 0.2 }
+                                        }}
+                                    >
+                                        <span className="hover:bg-gradient-to-r from-[#b85c38] to-[#e8956c] hover:text-transparent hover:bg-clip-text transition-all duration-300">
+                                            John Smith
+                                        </span>
+                                    </motion.h1>
+                                    <h2 className={`text-2xl ${theme.accent} mb-6 ${theme.subheading} font-semibold`}>
+                                        Full Stack Developer & <span className="line-through">Problem Solver</span> Problem Creator
+                                    </h2>
+                                    <p className={`${theme.main.textSecondary} ${theme.body} text-lg mb-6`}>{aboutMeContent.intro}</p>
+                                    <div className="flex space-x-4">
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => handleMenuChange("Projects")}
+                                            className={`px-6 py-3 rounded-lg bg-[#b85c38] text-white font-medium hover:bg-[#a04b2b] transition-colors cursor-pointer ${theme.accent_font}`}
+                                        >
+                                            View Projects
+                                        </motion.button>
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => handleMenuChange("Portfolio")}
+                                            className={`px-6 py-3 rounded-lg border border-[#b85c38] ${theme.accent} font-medium hover:bg-[#fceee7]/50 transition-colors cursor-pointer ${theme.accent_font}`}
+                                        >
+                                            My Experience
+                                        </motion.button>
                                     </div>
-                                ) : (
-                                    <div className="text-center">
-                                        {isRecording ? (
-                                            <>
-                                                <div
-                                                    className="w-3 h-3 rounded-full bg-red-500 mx-auto mb-1"
-                                                    style={{
-                                                        animation: "pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-                                                    }}
-                                                ></div>
-                                                <div className="text-lg font-semibold text-white">{formatTime(recordingTime)}</div>
-                                            </>
-                                        ) : (
-                                            <Mic size={32} className="text-indigo-300 opacity-80" />
-                                        )}
+                                </motion.div>
+                                <motion.div
+                                    initial={{ opacity: 0, x: 50 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.6, delay: 0.2 }}
+                                    className="md:w-1/2"
+                                >
+                                    <div className="relative">
+                                        <div className="relative h-[400px] w-full rounded-2xl overflow-hidden">
+                                            <Image
+                                                src="https://picsum.photos/id/1/800/800"
+                                                alt="John Smith"
+                                                fill
+                                                className="object-cover"
+                                                priority
+                                            />
+                                        </div>
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.6 }}
+                                            className={`absolute -bottom-6 -left-6 p-4 ${theme.content.background} rounded-xl shadow-lg`}
+                                        >
+                                            <div className="flex items-center space-x-2">
+                                                <FiCode className={`w-6 h-6 ${theme.accent}`} />
+                                                <span className={`font-bold ${theme.main.text} ${theme.subheading}`}>15+ Years Coding</span>
+                                            </div>
+                                        </motion.div>
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.6 }}
+                                            className={`absolute -top-6 -right-6 p-4 ${theme.content.background} rounded-xl shadow-lg`}
+                                        >
+                                            <div className="flex items-center space-x-2">
+                                                <FiBriefcase className={`w-6 h-6 ${theme.accent}`} />
+                                                <span className={`font-bold ${theme.main.text} ${theme.subheading}`}>10+ Projects</span>
+                                            </div>
+                                        </motion.div>
                                     </div>
-                                )}
+                                </motion.div>
+                            </div>
+                        </motion.section>
+
+                        <motion.section variants={containerVariants} initial="hidden" animate="visible" className="mb-16">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                {[
+                                    { value: "15+", label: "Years of Experience" },
+                                    { value: "50+", label: "Completed Projects" },
+                                    { value: "24/7", label: "Development Support" },
+                                    { value: "99%", label: "Client Satisfaction" },
+                                ].map((stat, index) => (
+                                    <motion.div
+                                        key={index}
+                                        variants={itemVariants}
+                                        whileHover={{ y: -5 }}
+                                        className={`${theme.content.card} border rounded-lg p-6 flex flex-col items-center justify-center transition-all duration-300`}
+                                    >
+                                        <span className={`text-4xl font-bold ${theme.accent} ${theme.heading} mb-2`}>{stat.value}</span>
+                                        <span className={`${theme.main.textSecondary} ${theme.body} text-center`}>{stat.label}</span>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </motion.section>
+
+                        <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="mb-16">
+                            
+                            <div className="mb-8">
+                                <h2 className={`text-2xl font-bold ${theme.main.text} ${theme.heading} mb-2`}>About Me</h2>
+                                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
                             </div>
 
-                            {audioUrl && (
-                                <div className="mt-3">
+                            <div className="flex flex-col md:flex-row gap-8">
+                                <motion.div
+                                    initial={{ opacity: 0, y: 30 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.4 }}
+                                    className="md:w-1/2"
+                                >
+                                    <p className={`${theme.main.textSecondary} ${theme.body} mb-4`}>{aboutMeContent.bio}</p>
+                                    <p className={`${theme.main.textSecondary} ${theme.body} mb-6`}>{aboutMeContent.personalLife}</p>
                                     <motion.button
-                                        whileHover={{ scale: 1.03 }}
-                                        whileTap={{ scale: 0.97 }}
-                                        onClick={togglePlayback}
-                                        className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg bg-indigo-600"
-                                        transition={{ duration: 0.4 }}
+                                        whileHover={{ scale: 1.05, x: 5 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => handleMenuChange("About Me")}
+                                        className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium flex items-center cursor-pointer`}
                                     >
-                                        {isPlaying ? (
-                                            <Pause size={16} color="white" />
-                                        ) : (
-                                            <Play size={16} color="white" className="ml-0.5" />
-                                        )}
+                                        <span>Learn More</span>
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="h-4 w-4 ml-2"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M14 5l7 7m0 0l-7 7m7-7H3"
+                                            />
+                                        </svg>
                                     </motion.button>
-                                    <audio ref={audioRef} src={audioUrl} onEnded={() => setIsPlaying(false)} className="hidden" />
-                                </div>
-                            )}
+                                </motion.div>
 
-                            <div className="mt-3">
-                                {!isRecording && !audioBlob ? (
+                                <motion.div variants={containerVariants} initial="hidden" animate="visible" className="md:w-1/2">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {[
+                                            {
+                                                icon: <FiCode className={`w-8 h-8 ${theme.accent} mb-3`} />,
+                                                title: "Web Development",
+                                                desc: "Crafting responsive and performant web applications using modern frameworks.",
+                                            },
+                                            {
+                                                icon: <FiLayers className={`w-8 h-8 ${theme.accent} mb-3`} />,
+                                                title: "Legacy System Integration",
+                                                desc: "Bridging old and new technologies with secure, efficient solutions.",
+                                            },
+                                            {
+                                                icon: <FiSearch className={`w-8 h-8 ${theme.accent} mb-3`} />,
+                                                title: "Technical Consulting",
+                                                desc: "Expert guidance on architecture, technology selection, and best practices.",
+                                            },
+                                            {
+                                                icon: <FiUser className={`w-8 h-8 ${theme.accent} mb-3`} />,
+                                                title: "Developer Training",
+                                                desc: "Mentorship and technical training for teams transitioning to new technologies.",
+                                            },
+                                        ].map((service, index) => (
+                                            <motion.div
+                                                key={index}
+                                                variants={itemVariants}
+                                                whileHover={{ y: -5 }}
+                                                className={`${theme.content.card} border rounded-lg p-6 transition-all duration-300`}
+                                            >
+                                                {service.icon}
+                                                
+                                                <h3 className={`text-lg font-semibold ${theme.main.text} ${theme.subheading} mb-2`}>
+                                                    {service.title}
+                                                </h3>
+                                                <p className={`${theme.main.textSecondary} ${theme.body} text-sm`}>{service.desc}</p>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            </div>
+                        </motion.section>
+
+                        
+
+                        <section className="mb-16">
+                            
+                            <div className="mb-8">
+                                <h2 className={`text-2xl font-bold ${theme.main.text} ${theme.heading} mb-2`}>Skills Overview</h2>
+                                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
+                            </div>
+
+                            <div
+                                className={`${theme.content.card} border rounded-lg p-8 ${theme.content.cardHover} transition-all duration-300`}
+                            >
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {skillsContent.mainSkills.slice(0, 3).map((skill, index) => (
+                                        <SkillBar key={index} {...skill} />
+                                    ))}
+                                    {skillsContent.backendSkills.slice(0, 1).map((skill, index) => (
+                                        <SkillBar key={index} {...skill} />
+                                    ))}
+                                    {skillsContent.cloudSkills.slice(0, 1).map((skill, index) => (
+                                        <SkillBar key={index} {...skill} />
+                                    ))}
+                                    {skillsContent.legacyAndSpecializedSkills.slice(0, 1).map((skill, index) => (
+                                        <SkillBar key={index} {...skill} />
+                                    ))}
+                                </div>
+
+                                <div className="mt-8 text-center">
                                     <motion.button
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        onClick={startRecording}
-                                        className="px-3 py-2 text-white rounded-lg shadow-lg flex items-center space-x-1 bg-indigo-600 text-sm"
-                                        transition={{ duration: 0.4 }}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => handleMenuChange("Skills")}
+                                        className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
                                     >
-                                        <Mic size={14} />
-                                        <span>Record</span>
+                                        <span>View All Skills</span>
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="h-4 w-4 ml-2"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M14 5l7 7m0 0l-7 7m7-7H3"
+                                            />
+                                        </svg>
                                     </motion.button>
-                                ) : isRecording ? (
-                                    <motion.button
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        onClick={stopRecording}
-                                        className="px-3 py-2 text-white rounded-lg shadow-lg flex items-center space-x-1 bg-red-600 text-sm"
-                                        transition={{ duration: 0.4 }}
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="mb-16">
+                            
+                            <div className="mb-8">
+                                <h2 className={`text-2xl font-bold ${theme.main.text} ${theme.heading} mb-2`}>Featured Projects</h2>
+                                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {projectsData
+                                    .filter((p) => p.featured)
+                                    .slice(0, 2)
+                                    .map((project) => (
+                                        <motion.div
+                                            key={project.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            whileHover={{
+                                                scale: 1.02,
+                                                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                                                transition: { duration: 0.2 },
+                                            }}
+                                            className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden group`}
+                                        >
+                                            <div className="relative h-64">
+                                                <Image
+                                                    src={project.image || "/placeholder.svg"}
+                                                    alt={project.title}
+                                                    fill
+                                                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+                                                    <div className="p-6">
+                                                        <h3 className="text-xl font-bold text-white mb-2">{project.title}</h3>
+                                                        <div className="flex flex-wrap gap-2 mb-3">
+                                                            {project.tags.slice(0, 3).map((tag, idx) => (
+                                                                <span
+                                                                    key={idx}
+                                                                    className="text-xs px-2 py-1 bg-white/20 text-white rounded-full"
+                                                                >
+                                                                    {tag}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                            </div>
+
+                            <div className="mt-8 text-center">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleMenuChange("Projects")}
+                                    className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
+                                >
+                                    <span>View All Projects</span>
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-4 w-4 ml-2"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
                                     >
-                                        <span className="h-2 w-2 bg-white rounded"></span>
-                                        <span>Stop</span>
-                                    </motion.button>
-                                ) : (
-                                    <motion.button
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        onClick={() => {
-                                            setAudioBlob(null);
-                                            setAudioUrl(null);
-                                            startRecording();
-                                        }}
-                                        className="px-3 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-600 transition-colors duration-300"
-                                        transition={{ duration: 0.4 }}
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                    </svg>
+                                </motion.button>
+                            </div>
+                        </section>
+
+                        <section>
+                            
+                            <div className="mb-8">
+                                <h2 className={`text-2xl font-bold ${theme.main.text} ${theme.heading} mb-2`}>Recent Blog Posts</h2>
+                                <div className="w-20 h-1 bg-[#b85c38] mb-6"></div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {blogPosts.slice(0, 2).map((post) => (
+                                    <div
+                                        key={post.id}
+                                        className={`${theme.content.card} border rounded-lg p-6 ${theme.content.cardHover} transition-all duration-300`}
                                     >
-                                        Record Again
-                                    </motion.button>
-                                )}
+                                        
+                                        <div className={`${theme.accent} text-xs mb-2 font-medium ${theme.accent_font}`}>
+                                            {post.date} • {post.readTime}
+                                        </div>
+                                        <h3 className={`text-xl font-semibold ${theme.main.text} ${theme.heading} mb-2`}>{post.title}</h3>
+                                        <p className={`${theme.main.textSecondary} ${theme.body} mb-4`}>{post.description}</p>
+                                        <div className="flex justify-end">
+                                            <motion.button
+                                                whileHover={{ scale: 1.05, x: 5 }}
+                                                whileTap={{ scale: 0.95 }}
+                                                onClick={() => {
+                                                    setSelectedPost(post);
+                                                    setIsModalOpen(true);
+                                                }}
+                                                className={`${theme.button.primary} font-medium transition-colors flex items-center space-x-1 cursor-pointer`}
+                                            >
+                                                <span>Read more</span>
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    className="h-4 w-4 ml-1"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M14 5l7 7m0 0l-7 7m7-7H3"
+                                                    />
+                                                </svg>
+                                            </motion.button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-8 text-center">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleMenuChange("Blog Posts")}
+                                    className={`px-4 py-2 rounded-lg ${theme.button.primary} font-medium inline-flex items-center cursor-pointer`}
+                                >
+                                    <span>View All Posts</span>
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-4 w-4 ml-2"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                    </svg>
+                                </motion.button>
+                            </div>
+                        </section>
+                    </motion.div>
+                );
+
+            case "About Me":
+                return (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl">
+                        <motion.h1
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={`text-3xl font-bold ${theme.main.text} ${theme.heading} mb-6`}
+                        >
+                            About Me
+                        </motion.h1>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6 }}
+                            className={`${theme.content.card} border rounded-lg p-6 mb-8 ${theme.content.cardHover} transition-all duration-300`}
+                        >
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                                className={`${theme.main.text} ${theme.body} mb-4 text-lg`}
+                            >
+                                {aboutMeContent.intro}
+                            </motion.p>
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.3 }}
+                                className={`${theme.main.textSecondary} ${theme.body} mb-6`}
+                            >
+                                {aboutMeContent.bio}
+                            </motion.p>
+
+                            <motion.div
+                                variants={containerVariants}
+                                initial="hidden"
+                                animate="visible"
+                                className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+                            >
+                                {aboutMeContent.images.map((image, index) => (
+                                    <motion.div
+                                        key={index}
+                                        variants={itemVariants}
+                                        whileHover={{ y: -5, scale: 1.03 }}
+                                        className="flex flex-col space-y-2"
+                                    >
+                                        <div className="relative h-48 rounded-lg overflow-hidden">
+                                            <Image
+                                                src={image.src || "/placeholder.svg"}
+                                                alt={image.alt}
+                                                fill
+                                                className="object-cover transition-transform duration-300 hover:scale-110"
+                                            />
+                                        </div>
+                                        <p className={`text-sm ${theme.main.textSecondary} ${theme.body} italic`}>{image.caption}</p>
+                                    </motion.div>
+                                ))}
+                            </motion.div>
+
+                            <motion.h2
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.4 }}
+                                className={`text-xl font-semibold ${theme.main.text} ${theme.heading} mb-3`}
+                            >
+                                What I'm interested in
+                            </motion.h2>
+                            <motion.ul variants={containerVariants} initial="hidden" animate="visible" className="list-disc pl-5 mb-6">
+                                {aboutMeContent.interests.map((interest, index) => (
+                                    <motion.li
+                                        key={index}
+                                        variants={itemVariants}
+                                        className={`${theme.main.textSecondary} ${theme.body} mb-1`}
+                                    >
+                                        {interest}
+                                    </motion.li>
+                                ))}
+                            </motion.ul>
+
+                            <motion.h2
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.5 }}
+                                className={`text-xl font-semibold ${theme.main.text} ${theme.heading} mb-3`}
+                            >
+                                Outside of work
+                            </motion.h2>
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.6 }}
+                                className={`${theme.main.textSecondary} ${theme.body} mb-4`}
+                            >
+                                {aboutMeContent.personalLife}
+                            </motion.p>
+
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.7, duration: 0.5 }}
+                                className="border-t border-b py-4 my-6 border-opacity-10 border-current"
+                            >
+                                <p className={`${theme.main.text} ${theme.body} text-center italic`}>"{aboutMeContent.philosophy}"</p>
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 50 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.8, duration: 0.7 }}
+                                className="flex justify-center"
+                            >
+                                <div className="relative h-60 w-full rounded-lg overflow-hidden">
+                                    <Image
+                                        src="https://picsum.photos/id/0/1200/400"
+                                        alt="Panorama shot of my workspace"
+                                        fill
+                                        className="object-cover"
+                                    />
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    </motion.div>
+                );
+
+            case "Skills":
+                return (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl">
+                        <motion.h1
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={`text-3xl font-bold ${theme.main.text} ${theme.heading} mb-6`}
+                        >
+                            Technical Skills
+                        </motion.h1>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6 }}
+                            className={`${theme.content.background} p-6 rounded-lg border ${theme.content.inputBorder} mb-8`}
+                        >
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                                className={`${theme.main.text} ${theme.body} mb-6 text-lg`}
+                            >
+                                {skillsContent.intro}
+                            </motion.p>
+
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="mb-8">
+                                <motion.h2
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.2 }}
+                                    className={`text-xl font-semibold ${theme.main.text} ${theme.heading} mb-4 flex items-center`}
+                                >
+                                    <motion.div
+                                        initial={{ rotate: -90 }}
+                                        animate={{ rotate: 0 }}
+                                        transition={{ delay: 0.4, duration: 0.5 }}
+                                    >
+                                        <FiCode className="mr-2" />
+                                    </motion.div>
+                                    Primary Languages & Frameworks
+                                </motion.h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                                    {skillsContent.mainSkills.map((skill, index) => (
+                                        <SkillBar key={index} {...skill} />
+                                    ))}
+                                </div>
+                            </motion.div>
+
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="mb-8">
+                                <motion.h2
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.3 }}
+                                    className={`text-xl font-semibold ${theme.main.text} ${theme.heading} mb-4`}
+                                >
+                                    Backend Development
+                                </motion.h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                                    {skillsContent.backendSkills.map((skill, index) => (
+                                        <SkillBar key={index} {...skill} />
+                                    ))}
+                                </div>
+                            </motion.div>
+
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="mb-8">
+                                <motion.h2
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.4 }}
+                                    className={`text-xl font-semibold ${theme.main.text} ${theme.heading} mb-4`}
+                                >
+                                    Database Technologies
+                                </motion.h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                                    {skillsContent.databaseSkills.map((skill, index) => (
+                                        <SkillBar key={index} {...skill} />
+                                    ))}
+                                </div>
+                            </motion.div>
+
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mb-8">
+                                <motion.h2
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.5 }}
+                                    className={`text-xl font-semibold ${theme.main.text} ${theme.heading} mb-4`}
+                                >
+                                    Cloud & DevOps
+                                </motion.h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                                    {skillsContent.cloudSkills.map((skill, index) => (
+                                        <SkillBar key={index} {...skill} />
+                                    ))}
+                                </div>
+                            </motion.div>
+
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="mb-8">
+                                <motion.h2
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.6 }}
+                                    className={`text-xl font-semibold ${theme.main.text} ${theme.heading} mb-4 flex items-center`}
+                                >
+                                    <motion.span
+                                        initial={{ scale: 0.7 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ delay: 0.7, duration: 0.5, type: "spring" }}
+                                        className={theme.accent}
+                                    >
+                                        Legacy & Specialized Systems
+                                    </motion.span>
+                                </motion.h2>
+                                <div className="grid grid-cols-1 gap-x-8">
+                                    {skillsContent.legacyAndSpecializedSkills.map((skill, index) => (
+                                        <SkillBar key={index} {...skill} />
+                                    ))}
+                                </div>
+                            </motion.div>
+
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mb-8">
+                                <motion.h2
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.7 }}
+                                    className={`text-xl font-semibold ${theme.main.text} ${theme.heading} mb-4`}
+                                >
+                                    Emerging Technologies
+                                </motion.h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                                    {skillsContent.emergingTechSkills.map((skill, index) => (
+                                        <SkillBar key={index} {...skill} />
+                                    ))}
+                                </div>
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.9, duration: 0.5 }}
+                                className="border-t border-b py-4 my-6 border-opacity-10 border-current"
+                            >
+                                <p className={`${theme.main.text} ${theme.body} text-center italic`}>"{skillsContent.quote}"</p>
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 50 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 1, duration: 0.7 }}
+                                whileHover={{ scale: 1.02 }}
+                                className="relative h-60 w-full rounded-lg overflow-hidden"
+                            >
+                                <Image
+                                    src="https://picsum.photos/id/2/1200/400"
+                                    alt="Workstation with multiple screens"
+                                    fill
+                                    className="object-cover"
+                                />
+                            </motion.div>
+                        </motion.div>
+                    </motion.div>
+                );
+
+            case "Projects":
+                return (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-5xl">
+                        <h1 className={`text-3xl font-bold ${theme.main.text} ${theme.heading} mb-6`}>Projects</h1>
+
+                        <div className="mb-8">
+                            <p className={`${theme.main.text} ${theme.body} text-lg max-w-3xl`}>
+                                A collection of my most significant projects spanning from game development and legacy systems to
+                                cutting-edge AI and blockchain applications.
+                            </p>
+                        </div>
+
+                        <div className="mb-12">
+                            <h2 className={`text-2xl font-semibold ${theme.main.text} ${theme.heading} mb-6`}>Featured Projects</h2>
+                            <div className="grid grid-cols-1 gap-8">
+                                {projectsData
+                                    .filter((p) => p.featured)
+                                    .map((project) => (
+                                        <motion.div
+                                            key={project.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            whileHover={{
+                                                scale: 1.02,
+                                                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                                                transition: { duration: 0.2 },
+                                            }}
+                                            className={`${theme.content.card} border rounded-lg overflow-hidden ${theme.content.cardHover} transition-all duration-300`}
+                                        >
+                                            <div className="md:flex">
+                                                <div className="md:w-2/5 relative h-64 md:h-auto">
+                                                    <Image
+                                                        src={project.image || "/placeholder.svg"}
+                                                        alt={project.title}
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                </div>
+                                                <div className="p-6 md:w-3/5">
+                                                    <h3 className={`text-xl font-bold ${theme.main.text} ${theme.heading} mb-2`}>
+                                                        {project.title}
+                                                    </h3>
+                                                    <p className={`${theme.main.textSecondary} ${theme.body} mb-4`}>
+                                                        {project.description}
+                                                    </p>
+
+                                                    {project.achievements && (
+                                                        <div className="mb-4">
+                                                            <h4 className={`text-sm font-semibold ${theme.accent} ${theme.heading} mb-2`}>
+                                                                Achievements:
+                                                            </h4>
+                                                            <ul
+                                                                className={`list-disc list-inside ${theme.main.textSecondary} ${theme.body}`}
+                                                            >
+                                                                {project.achievements.map((achievement, idx) => (
+                                                                    <li key={idx}>{achievement}</li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="flex flex-wrap gap-2 mb-4">
+                                                        {project.tags.map((tag, idx) => (
+                                                            <span
+                                                                key={idx}
+                                                                className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}
+                                                            >
+                                                                {tag}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="flexex space-x-4 mt-4">
+                                                        {project.demoUrl && (
+                                                            <a
+                                                                href={project.demoUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className={`${theme.button.primary} text-sm font-medium flex items-center`}
+                                                            >
+                                                                <span>Live Demo</span>
+                                                                <FiExternalLink className="ml-1 w-4 h-4" />
+                                                            </a>
+                                                        )}
+                                                        {project.repoUrl && (
+                                                            <a
+                                                                href={project.repoUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className={`${theme.main.textSecondary} hover:${theme.main.text} text-sm font-medium flex items-center`}
+                                                            >
+                                                                <FiGithub className="mr-1 w-4 h-4" />
+                                                                <span>Source Code</span>
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
                             </div>
                         </div>
 
-                        <div className="w-2/3">
-                            <div className="h-12 mb-3 rounded-lg overflow-hidden bg-slate-900/60 border border-slate-700/30">
-                                <AudioVisualizer
-                                    audioElement={audioRef.current}
-                                    isPlaying={isPlaying}
-                                    isRecording={isRecording}
-                                    color={colors.primary}
-                                    accentColor={colors.secondary}
-                                    height={48}
-                                />
-                            </div>
+                        <div>
+                            <h2 className={`text-2xl font-semibold ${theme.main.text} ${theme.heading} mb-6`}>Other Notable Projects</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {projectsData
+                                    .filter((p) => !p.featured)
+                                    .map((project, index) => (
+                                        <motion.div
+                                            key={project.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            whileHover={{
+                                                y: -10,
+                                                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                                            }}
+                                            className="transform transition-all duration-300 your-card-class"
+                                        >
+                                            <div className="relative overflow-hidden">
+                                                <motion.div whileHover={{ scale: 1.1 }} transition={{ duration: 0.6 }}>
+                                                    <Image
+                                                        src={project.image || "/placeholder.svg"}
+                                                        alt={project.title}
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                </motion.div>
 
-                            {audioBlob ? (
-                                <div className="space-y-2">
-                                    <div className="flex gap-3">
-                                        <div className="flex-1">
-                                            <label className="block text-xs font-medium mb-1 text-gray-300">Title</label>
-                                            <input
-                                                type="text"
-                                                value={title}
-                                                onChange={(e) => setTitle(e.target.value)}
-                                                className="w-full px-3 py-1.5 rounded-lg text-white bg-slate-900 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 text-sm"
-                                                placeholder="Story title"
-                                            />
-                                        </div>
-
-                                        <div className="w-2/5 relative">
-                                            <label className="block text-xs font-medium mb-1 text-gray-300">Category</label>
-                                            <div className="relative">
-                                                <select
-                                                    value={selectedCategory}
-                                                    onChange={(e) => setSelectedCategory(e.target.value)}
-                                                    className="w-full px-3 py-1.5 rounded-lg text-white bg-slate-900 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 text-sm appearance-none pr-8"
+                                                
+                                                <motion.div
+                                                    initial={{ opacity: 0 }}
+                                                    whileHover={{ opacity: 1 }}
+                                                    className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"
                                                 >
-                                                    {categories
-                                                        .filter((c) => c.id !== "all")
-                                                        .map((category) => (
-                                                            <option key={category.id} value={category.id}>
-                                                                {category.name}
-                                                            </option>
+                                                    <div className="flex items-center justify-center h-full opacity-0 hover:opacity-100 transition-opacity duration-300">
+                                                        <div className="flex space-x-3">
+                                                            <motion.a
+                                                                href={project.demoUrl}
+                                                                whileHover={{ scale: 1.1 }}
+                                                                whileTap={{ scale: 0.95 }}
+                                                                className="bg-white/90 text-black px-3 py-2 rounded-lg font-medium text-sm flex items-center"
+                                                            >
+                                                                <span>Live Demo</span>
+                                                                <FiExternalLink className="ml-1 w-4 h-4" />
+                                                            </motion.a>
+                                                            {project.repoUrl && (
+                                                                <a
+                                                                    href={project.repoUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className={`${theme.main.textSecondary} hover:${theme.main.text} text-sm font-medium flex items-center`}
+                                                                >
+                                                                    <FiGithub className="mr-1 w-4 h-4" />
+                                                                    <span>Source Code</span>
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            </div>
+                                            <div className="p-5">
+                                                <h3 className={`text-lg font-bold ${theme.main.text} ${theme.heading} mb-2`}>
+                                                    {project.title}
+                                                </h3>
+                                                <p className={`${theme.main.textSecondary} ${theme.body} text-sm mb-3`}>
+                                                    {project.description}
+                                                </p>
+
+                                                <div className="flex flex-wrap gap-2 mb-3">
+                                                    {project.tags.slice(0, 3).map((tag, idx) => (
+                                                        <span
+                                                            key={idx}
+                                                            className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}
+                                                        >
+                                                            {tag}
+                                                        </span>
+                                                    ))}
+                                                    {project.tags.length > 3 && (
+                                                        <span
+                                                            className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.textSecondary}`}
+                                                        >
+                                                            +{project.tags.length - 3} more
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                            </div>
+                        </div>
+                    </motion.div>
+                );
+
+            case "Portfolio":
+                return (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl">
+                        <h1 className={`text-3xl font-bold ${theme.main.text} ${theme.heading} mb-6`}>Professional Portfolio</h1>
+
+                        <section className="mb-12">
+                            <h2 className={`text-2xl font-semibold ${theme.main.text} ${theme.heading} mb-6 flex items-center`}>
+                                <FiBriefcase className="mr-2" /> Work Experience
+                            </h2>
+
+                            <div className="space-y-8">
+                                {portfolioData.experience.map((job, index) => (
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
+                                    >
+                                        <div className="md:flex">
+                                            <div className="p-6 md:w-full">
+                                                <div className="flex flex-col md:flex-row md:items-center mb-4">
+                                                    <div className="flex items-center mb-3 md:mb-0">
+                                                        <div className="mr-4 relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                                            <Image
+                                                                src={job.logo || "/placeholder.svg"}
+                                                                alt={`${job.company} logo`}
+                                                                fill
+                                                                className="object-cover"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className={`text-xl font-bold ${theme.main.text} ${theme.heading}`}>
+                                                                {job.position}
+                                                            </h3>
+                                                            <div className="flex items-center">
+                                                                <span className={`font-medium ${theme.accent} ${theme.heading}`}>
+                                                                    {job.company}
+                                                                </span>
+                                                                <span className={`mx-2 text-xs ${theme.main.textSecondary} ${theme.body}`}>
+                                                                    •
+                                                                </span>
+                                                                <span className={`text-sm ${theme.main.textSecondary} ${theme.body}`}>
+                                                                    {job.period}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <p className={`${theme.main.textSecondary} ${theme.body} mb-4`}>{job.description}</p>
+
+                                                <div className="mb-4">
+                                                    <h4 className={`text-sm font-semibold ${theme.accent} ${theme.heading} mb-2`}>
+                                                        Key Achievements:
+                                                    </h4>
+                                                    <ul className={`list-disc list-inside ${theme.main.textSecondary} ${theme.body}`}>
+                                                        {job.achievements.map((achievement, idx) => (
+                                                            <li key={idx} className="mb-1">
+                                                                {achievement}
+                                                            </li>
                                                         ))}
-                                                </select>
-                                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                                                    <svg
-                                                        className="w-4 h-4 fill-current"
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        viewBox="0 0 20 20"
-                                                    >
-                                                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                                    </svg>
+                                                    </ul>
+                                                </div>
+
+                                                <div>
+                                                    <h4 className={`text-sm font-semibold ${theme.main.text} ${theme.heading} mb-2`}>
+                                                        Technologies:
+                                                    </h4>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {job.technologies.map((tech, idx) => (
+                                                            <span
+                                                                key={idx}
+                                                                className={`text-xs px-2 py-1 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}
+                                                            >
+                                                                {tech}
+                                                            </span>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </section>
 
-                                    <div>
-                                        <label className="block text-xs font-medium mb-1 text-gray-300">Description (Optional)</label>
-                                        <textarea
-                                            value={description}
-                                            onChange={(e) => setDescription(e.target.value)}
-                                            className="w-full px-3 py-1.5 rounded-lg text-white bg-slate-900 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 resize-none text-sm"
-                                            placeholder="Short description"
-                                            rows={1}
-                                        ></textarea>
-                                    </div>
+                        <section className="mb-12">
+                            <h2 className={`text-2xl font-semibold ${theme.main.text} ${theme.heading} mb-6 flex items-center`}>
+                                <FiUser className="mr-2" /> Education
+                            </h2>
 
-                                    <div>
-                                        <label className="block text-xs font-medium mb-1 text-gray-300">Tags (up to 3)</label>
-                                        <div className="flex gap-1.5 overflow-x-auto pb-1 max-w-full">
-                                            {availableTags.map((tag) => (
-                                                <button
-                                                    key={tag}
-                                                    onClick={() => toggleTag(tag)}
-                                                    className={`px-2 py-1 rounded-full text-xs whitespace-nowrap transition-all ${
-                                                        selectedTags.includes(tag)
-                                                            ? "bg-indigo-600 text-white font-medium"
-                                                            : "bg-slate-900 text-gray-300 hover:bg-slate-700"
-                                                    }`}
-                                                >
-                                                    #{tag}
-                                                </button>
-                                            ))}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {portfolioData.education.map((edu, index) => (
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-6`}
+                                    >
+                                        <div className="flex items-center mb-3">
+                                            <div className="mr-3 relative w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                                <Image
+                                                    src={edu.logo || "/placeholder.svg"}
+                                                    alt={`${edu.institution} logo`}
+                                                    fill
+                                                    className="object-cover"
+                                                />
+                                            </div>
+                                            <div>
+                                                <h3 className={`text-lg font-bold ${theme.main.text} ${theme.heading}`}>
+                                                    {edu.institution}
+                                                </h3>
+                                                <span className={`text-sm ${theme.main.textSecondary} ${theme.body}`}>{edu.period}</span>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <div className="mt-3 flex justify-end">
+                                        <div className={`font-medium ${theme.accent} ${theme.heading} mb-2`}>{edu.degree}</div>
+                                        <p className={`${theme.main.textSecondary} ${theme.body} text-sm mb-3`}>{edu.description}</p>
+
+                                        {edu.thesis && (
+                                            <div className="mt-2">
+                                                <span className={`text-sm font-medium ${theme.main.text} ${theme.heading}`}>Thesis: </span>
+                                                <span className={`text-sm italic ${theme.main.textSecondary} ${theme.body}`}>
+                                                    {edu.thesis}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section className="mb-12">
+                            <h2 className={`text-2xl font-semibold ${theme.main.text} ${theme.heading} mb-6 flex items-center`}>
+                                <FiCode className="mr-2" /> Professional Certifications
+                            </h2>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {portfolioData.certifications.map((cert, index) => (
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg p-4 flex items-center`}
+                                    >
+                                        <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 mr-4">
+                                            <Image
+                                                src={cert.logo || "/placeholder.svg"}
+                                                alt={`${cert.name} logo`}
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        </div>
+                                        <div>
+                                            <h3 className={`font-bold ${theme.main.text} ${theme.heading}`}>{cert.name}</h3>
+                                            <div className="flex items-center">
+                                                <span className={`text-sm ${theme.main.textSecondary} ${theme.body}`}>{cert.issuer}</span>
+                                                <span className={`mx-2 text-xs ${theme.main.textSecondary} ${theme.body}`}>•</span>
+                                                <span className={`text-sm ${theme.accent} ${theme.heading}`}>{cert.date}</span>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section>
+                            <h2 className={`text-2xl font-semibold ${theme.main.text} ${theme.heading} mb-6 flex items-center`}>
+                                <FiLayers className="mr-2" /> Speaking Engagements
+                            </h2>
+
+                            <div className="space-y-6">
+                                {portfolioData.speaking.map((talk, index) => (
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        className={`${theme.content.background} border ${theme.content.inputBorder} rounded-lg overflow-hidden`}
+                                    >
+                                        <div className="relative h-48 w-full overflow-hidden">
+                                            <Image
+                                                src={talk.image || "/placeholder.svg"}
+                                                alt={talk.event}
+                                                fill
+                                                className="object-cover transition-transform duration-300 hover:scale-110"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+                                                <div className="p-6 text-white">
+                                                    <div className="text-sm mb-1">
+                                                        {talk.date} • {talk.location}
+                                                    </div>
+                                                    <h3 className="text-xl font-bold mb-1">{talk.event}</h3>
+                                                    <p className="text-white/90 font-medium">{talk.topic}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </section>
+                    </motion.div>
+                );
+
+            case "Blog Posts":
+                return (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl">
+                        <h1 className={`text-3xl font-bold ${theme.main.text} ${theme.heading} mb-6`}>Blog Posts</h1>
+
+                        <div className="mb-8">
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search blog posts..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className={`w-full px-4 py-2 pl-10 rounded-lg border ${theme.content.inputBorder} ${theme.content.background} ${theme.main.text} ${theme.body} focus:outline-none focus:ring-2 ${theme.content.focusRing}`}
+                                />
+                                <FiSearch
+                                    className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${theme.main.textSecondary} w-4 h-4`}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            {filteredPosts.map((post) => (
+                                <motion.article
+                                    key={post.id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className={`${theme.content.card} border rounded-lg p-6 ${theme.content.cardHover} transition-all duration-300`}
+                                >
+                                    <div className={`${theme.accent} text-xs mb-2 font-medium ${theme.body}`}>
+                                        {post.date} • {post.readTime}
+                                    </div>
+                                    <h2 className={`text-xl font-semibold ${theme.main.text} ${theme.heading} mb-2`}>{post.title}</h2>
+                                    <p className={`${theme.main.textSecondary} ${theme.body} mb-4`}>{post.description}</p>
+                                    <div className="flex justify-end">
                                         <motion.button
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={handleSubmit}
-                                            disabled={!title}
-                                            className={`px-4 py-1.5 text-white rounded-lg shadow-lg ${
-                                                title ? "bg-green-600 hover:bg-green-700" : "bg-slate-600 opacity-60"
-                                            } transition-colors duration-300 text-sm`}
-                                            transition={{ duration: 0.4 }}
+                                            whileHover={{ scale: 1.05, x: 5 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => {
+                                                setSelectedPost(post);
+                                                setIsModalOpen(true);
+                                            }}
+                                            className={`${theme.button.primary} font-medium transition-colors cursor-pointer flex items-center space-x-1`}
                                         >
-                                            Share Story
+                                            <span>Read more</span>
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                className="h-4 w-4"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M14 5l7 7m0 0l-7 7m7-7H3"
+                                                />
+                                            </svg>
                                         </motion.button>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="flex items-center justify-center h-40 text-center text-gray-400 text-sm">
-                                    <div>
-                                        <p>Start recording to share your story</p>
-                                        <p className="text-xs mt-1 opacity-70">Audio stories can be up to 5 minutes long</p>
-                                    </div>
-                                </div>
-                            )}
+                                </motion.article>
+                            ))}
                         </div>
+                    </motion.div>
+                );
+
+            default:
+                return (
+                    <div className="flex items-center justify-center h-[80vh]">
+                        <p className={`text-xl ${theme.main.textSecondary} ${theme.body}`}>This section is coming soon...</p>
                     </div>
-                </div>
-            </motion.div>
-        </motion.div>
-    );
-};
-
-interface SidebarNavProps {
-    activeCategory: string;
-    setActiveCategory: (category: string) => void;
-    setActiveView: (view: string) => void;
-    activeView: string;
-}
-
-const SidebarNav = ({ activeCategory, setActiveCategory, setActiveView, activeView }: SidebarNavProps) => {
-    return (
-        <div className="w-full h-full flex flex-col py-4">
-            <div className="space-y-2 px-4 mb-8">
-                <div className="text-lg font-semibold text-gray-300 mb-4 ml-2">Menu</div>
-                <button
-                    onClick={() => setActiveView("home")}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors duration-300 ${
-                        activeView === "home" 
-                            ? "bg-indigo-500/10 text-indigo-300 font-medium" 
-                            : "text-gray-300 hover:bg-gray-800/50"
-                    }`}
-                >
-                    <Home size={18} />
-                    <span>Home</span>
-                </button>
-                <button
-                    onClick={() => setActiveView("trending")}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors duration-300 ${
-                        activeView === "trending" 
-                            ? "bg-indigo-500/10 text-indigo-300 font-medium" 
-                            : "text-gray-300 hover:bg-gray-800/50"
-                    }`}
-                >
-                    <TrendingUp size={18} />
-                    <span>Trending</span>
-                </button>
-                <button
-                    onClick={() => setActiveView("explore")}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors duration-300 ${
-                        activeView === "explore" 
-                            ? "bg-indigo-500/10 text-indigo-300 font-medium" 
-                            : "text-gray-300 hover:bg-gray-800/50"
-                    }`}
-                >
-                    <Hash size={18} />
-                    <span>Explore</span>
-                </button>
-                <button
-                    onClick={() => setActiveView("library")}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors duration-300 ${
-                        activeView === "library" 
-                            ? "bg-indigo-500/10 text-indigo-300 font-medium" 
-                            : "text-gray-300 hover:bg-gray-800/50"
-                    }`}
-                >
-                    <Headphones size={18} />
-                    <span>My Library</span>
-                </button>
-                <button
-                    onClick={() => setActiveView("notifications")}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors duration-300 ${
-                        activeView === "notifications" 
-                            ? "bg-indigo-500/10 text-indigo-300 font-medium" 
-                            : "text-gray-300 hover:bg-gray-800/50"
-                    }`}
-                >
-                    <Bell size={18} />
-                    <span>Notifications</span>
-                </button>
-            </div>
-
-            <div className="px-4 mb-6">
-                <div className="text-lg font-semibold text-gray-300 mb-4 ml-2">Categories</div>
-                <div className="space-y-2">
-                    {categories.map((category) => (
-                        <button
-                            key={category.id}
-                            onClick={() => setActiveCategory(category.id)}
-                            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors duration-300 cursor-pointer ${
-                                activeCategory === category.id
-                                    ? "bg-indigo-500/10 text-indigo-300 font-medium"
-                                    : "text-gray-300 hover:bg-gray-800/50"
-                            }`}
-                        >
-                            {category.icon}
-                            <span>{category.name}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="mt-auto px-4 py-4">
-                <div className="p-4 rounded-xl bg-slate-700/30 text-center border border-slate-600/30">
-                    <h4 className="font-medium text-white mb-2">Share Your Voice</h4>
-                    <p className="text-sm text-gray-300 mb-3">Recording and sharing your stories helps build our community.</p>
-                    <button className="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors duration-300 cursor-pointer">
-                        Learn More
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-interface ActivitySidebarProps {
-    onTopicSelect: (topic: TrendingTopic) => void;
-    onUserSelect: (user: User) => void;
-    onActivityClick: (activity: Activity) => void;
-    followedUsers: string[];
-    onFollow: (userId: string) => void;
-}
-
-const ActivitySidebar = ({ onTopicSelect, onUserSelect, onActivityClick, followedUsers, onFollow }: ActivitySidebarProps) => {
-    return (
-        <div className="w-full h-full px-4 py-5">
-            <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-200 mb-4">Trending Topics</h3>
-                <div className="space-y-3">
-                    {trendingTopics.map((topic) => (
-                        <button
-                            key={topic.id}
-                            onClick={() => onTopicSelect(topic)}
-                            className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-800/40 transition-colors duration-300 cursor-pointer"
-                        >
-                            <div className="flex items-center space-x-3">
-                                <div className="w-1.5 h-8 bg-indigo-500 rounded-full"></div>
-                                <span className="text-gray-200">{topic.name}</span>
-                            </div>
-                            <span className="text-sm text-gray-400">{topic.count.toLocaleString()} stories</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-200 mb-4">Suggested Creators</h3>
-                <div className="space-y-4">
-                    {suggestedUsers.map((user) => (
-                        <div
-                            key={user.id}
-                            className="w-full flex items-center p-3 rounded-lg hover:bg-gray-800/40 transition-colors duration-300 cursor-pointer"
-                        >
-                            <div
-                                className="h-10 w-10 rounded-full overflow-hidden mr-3 ring-2 ring-indigo-500/30 cursor-pointer"
-                                onClick={() => onUserSelect(user)}
-                            >
-                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex-grow min-w-0 text-left cursor-pointer" onClick={() => onUserSelect(user)}>
-                                <div className="text-gray-200 font-medium truncate">{user.name}</div>
-                                <div className="text-gray-400 text-sm truncate">{user.username}</div>
-                            </div>
-                            <button
-                                className={`ml-2 px-3 py-1 text-xs font-medium cursor-pointer ${
-                                    followedUsers?.includes(user.id)
-                                        ? "text-white bg-indigo-700 hover:bg-indigo-800"
-                                        : "text-indigo-200 bg-indigo-900/40 hover:bg-indigo-700"
-                                } rounded-full transition-colors duration-300`}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onFollow(user.id);
-                                }}
-                            >
-                                {followedUsers?.includes(user.id) ? "Following" : "Follow"}
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-200 mb-4">Activity</h3>
-                <div className="space-y-3">
-                    {initialActivity.map((activity) => (
-                        <button
-                            key={activity.id}
-                            onClick={() => onActivityClick(activity)}
-                            className="w-full flex p-3 rounded-lg hover:bg-gray-800/40 transition-colors duration-300 text-left cursor-pointer"
-                        >
-                            <div className="h-8 w-8 rounded-full overflow-hidden mr-3">
-                                <img src={activity.avatar} alt={activity.user} className="w-full h-full object-cover" />
-                            </div>
-                            <div>
-                                <div className="text-sm">
-                                    <span className="text-gray-200 font-medium">{activity.user}</span>
-                                    <span className="text-gray-400"> {activity.action}</span>
-                                    {activity.story && <span className="text-indigo-300"> {activity.story}</span>}
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">{activity.time}</div>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-interface ViewContentProps {
-    activeView: string;
-    notifications: any[];
-    showAllNotifications: boolean;
-    onToggleAllNotifications: () => void;
-    onMarkAllAsRead: () => void;
-}
-
-const ViewContent = ({ activeView, notifications, showAllNotifications, onToggleAllNotifications, onMarkAllAsRead }: ViewContentProps) => {
-    if (activeView === "home") {
-        return null;
-    }
-
-    if (activeView === "trending") {
-        return (
-            <div className="bg-slate-800 rounded-xl border border-slate-700/50 shadow-lg p-6 mb-8">
-                <h2 className="text-xl font-bold text-white mb-4">Trending This Week</h2>
-                <div className="space-y-4">
-                    {trendingTopics.map((topic) => (
-                        <div key={topic.id} className="flex items-center justify-between p-2 border-b border-slate-700/50">
-                            <div className="flex items-center gap-3">
-                                <span className="text-indigo-400 text-lg font-semibold">#{topic.name}</span>
-                                <span className="text-sm text-gray-400">{topic.count.toLocaleString()} stories</span>
-                            </div>
-                            <button className="text-sm bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded-full transition-colors duration-300 cursor-pointer">
-                                Explore
-                            </button>
-                        </div>
-                    ))}
-                </div>
-                <button className="mt-4 text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors duration-300 cursor-pointer">
-                    View all trending topics →
-                </button>
-            </div>
-        );
-    }
-
-    if (activeView === "explore") {
-        return (
-            <div className="bg-slate-800 rounded-xl border border-slate-700/50 shadow-lg p-6 mb-8">
-                <h2 className="text-xl font-bold text-white mb-4">Explore</h2>
-                <div className="mb-4">
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Search for topics, creators, or stories..."
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg py-3 pl-10 pr-4 text-white"
-                        />
-                        <Search size={18} className="absolute left-3 top-3.5 text-gray-400" />
-                        <button className="absolute right-3 top-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors duration-300 cursor-pointer">
-                            Search
-                        </button>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
-                        <h3 className="text-lg font-semibold text-white mb-2">Popular Categories</h3>
-                        <div className="space-y-2">
-                            {categories
-                                .filter((c) => c.id !== "all")
-                                .map((category) => (
-                                    <button
-                                        key={category.id}
-                                        className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors duration-300 cursor-pointer"
-                                    >
-                                        <div className="w-8 h-8 bg-indigo-600/20 rounded-md flex items-center justify-center text-indigo-400">
-                                            {category.icon}
-                                        </div>
-                                        <span>{category.name}</span>
-                                    </button>
-                                ))}
-                        </div>
-                    </div>
-
-                    <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
-                        <h3 className="text-lg font-semibold text-white mb-2">For You</h3>
-                        <p className="text-gray-400 text-sm mb-3">Based on your listening history</p>
-                        <div className="space-y-2">
-                            <div className="flex gap-2 items-center">
-                                <div className="w-8 h-8 bg-green-600/20 rounded-md flex items-center justify-center text-green-400">
-                                    <Music size={16} />
-                                </div>
-                                <span className="text-gray-300">Ambient Sound Design</span>
-                            </div>
-                            <div className="flex gap-2 items-center">
-                                <div className="w-8 h-8 bg-purple-600/20 rounded-md flex items-center justify-center text-purple-400">
-                                    <Headphones size={16} />
-                                </div>
-                                <span className="text-gray-300">Tech Discussions</span>
-                            </div>
-                            <div className="flex gap-2 items-center">
-                                <div className="w-8 h-8 bg-blue-600/20 rounded-md flex items-center justify-center text-blue-400">
-                                    <BookOpen size={16} />
-                                </div>
-                                <span className="text-gray-300">Design Podcasts</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (activeView === "library") {
-        return (
-            <div className="bg-slate-800 rounded-xl border border-slate-700/50 shadow-lg p-6 mb-8">
-                <h2 className="text-xl font-bold text-white mb-4">My Library</h2>
-                <div className="mb-6">
-                    <div className="flex space-x-2 border-b border-slate-700">
-                        <button className="px-4 py-2 text-white font-medium border-b-2 border-indigo-500 cursor-pointer">Saved</button>
-                        <button className="px-4 py-2 text-gray-400 hover:text-white transition-colors duration-300 cursor-pointer">History</button>
-                        <button className="px-4 py-2 text-gray-400 hover:text-white transition-colors duration-300 cursor-pointer">Downloads</button>
-                    </div>
-                </div>
-
-                <div className="text-center py-10">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-700 flex items-center justify-center">
-                        <Bookmark size={24} className="text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-white mb-2">No saved stories yet</h3>
-                    <p className="text-gray-400 max-w-sm mx-auto mb-4">When you save stories they'll appear here for easy access</p>
-                    <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-300 cursor-pointer">
-                        Browse Stories
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    if (activeView === "notifications") {
-        const notificationsToShow = showAllNotifications ? [...notifications, ...additionalNotifications] : notifications;
-
-        return (
-            <div className="bg-slate-800 rounded-xl border border-slate-700/50 shadow-lg p-6 mb-8">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-white">Notifications</h2>
-                    <button
-                        className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors duration-300 cursor-pointer"
-                        onClick={onMarkAllAsRead}
-                    >
-                        Mark all as read
-                    </button>
-                </div>
-
-                <div className="space-y-4">
-                    {notificationsToShow.map((activity) => (
-                        <div
-                            key={activity.id}
-                            className={`p-3 rounded-lg border border-slate-700/50 hover:bg-slate-700/30 transition-colors duration-300 ${
-                                activity.read ? "opacity-60" : "opacity-100"
-                            }`}
-                        >
-                            <div className="flex items-start">
-                                <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
-                                    <img src={activity.avatar} alt={activity.user} className="w-full h-full object-cover" />
-                                </div>
-                                <div>
-                                    <div className="text-sm">
-                                        <span className="text-white font-medium">{activity.user}</span>
-                                        <span className="text-gray-300"> {activity.action}</span>
-                                        {activity.story && <span className="text-indigo-300"> {activity.story}</span>}
-                                    </div>
-                                    <div className="text-xs text-gray-400 mt-1">{activity.time}</div>
-                                </div>
-                                {!activity.read && (
-                                    <div className="ml-auto">
-                                        <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                                    </div>
-                                )}
-                            </div>
-                            {activity.story && (
-                                <div className="mt-2 ml-13">
-                                    <button className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors duration-300 cursor-pointer">
-                                        View story
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-
-                <button
-                    className="w-full mt-4 py-2 text-center text-indigo-400 hover:text-indigo-300 text-sm transition-colors duration-300 cursor-pointer"
-                    onClick={onToggleAllNotifications}
-                >
-                    {showAllNotifications ? "Show fewer notifications" : "View all notifications"}
-                </button>
-            </div>
-        );
-    }
-
-    return null;
-};
-
-
-const formatFollowerCount = (count: number): string => {
-  if (count >= 1000000) {
-    return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-  }
-  if (count >= 1000) {
-    return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-  }
-  return count.toString();
-};
-
-export default function AudioStoryPlatform() {
-    const [stories, setStories] = useState<Story[]>(initialStories);
-    const [activeView, setActiveView] = useState("home");
-    const [activeCategory, setActiveCategory] = useState<string>("all");
-    const [currentPlaying, setCurrentPlaying] = useState<string | null>(null);
-    const [recordingModalOpen, setRecordingModalOpen] = useState(false);
-    const [profileModalOpen, setProfileModalOpen] = useState(false);
-    const [selectedProfile, setSelectedProfile] = useState<User | null>(null);
-    const [followedUsers, setFollowedUsers] = useState<string[]>(["u1"]);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [alertConfig, setAlertConfig] = useState<AlertConfig>({
-        isOpen: false,
-        message: "",
-        type: "info"
-    });
-    const [notifications, setNotifications] = useState<Activity[]>(initialActivity);
-    const [showAllNotifications, setShowAllNotifications] = useState(false);
-    const [chatBoxOpen, setChatBoxOpen] = useState(false);
-    const [chatUser, setChatUser] = useState<User | null>(null);
-    const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
-    const [storyMenuOpen, setStoryMenuOpen] = useState<string | null>(null);
-
-    const audioRefs = useRef<{ [key: string]: AudioElementWithContext }>({});
-    const currentUser = "current_user_id";
-
-    
-    const filteredStories = stories.filter(
-        (story) =>
-            (activeCategory === "all" || story.category === activeCategory) &&
-            (searchQuery === "" ||
-                story.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                story.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                story.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                story.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
-    );
-
-    const togglePlay = async (storyId: string) => {
-        console.log("Toggle play for story:", storyId);
-        const audioRef = audioRefs.current[storyId];
-        
-        if (!audioRef) {
-            console.error("Audio element not found for story:", storyId);
-            return;
-        }
-
-        try {
-            console.log("Audio element:", audioRef);
-            console.log("Audio readyState:", audioRef.readyState);
-            console.log("Current audio URL:", audioRef.src);
-            
-            
-            audioRef.crossOrigin = "anonymous";
-            
-            
-            if (audioRef.readyState === 0) {
-                console.log("Loading audio...");
-                audioRef.load();
-                
-                
-                await new Promise<void>((resolve) => {
-                    const handleCanPlay = () => {
-                        console.log("Audio can play now");
-                        audioRef.removeEventListener("canplaythrough", handleCanPlay);
-                        resolve();
-                    };
-                    audioRef.addEventListener("canplaythrough", handleCanPlay, { once: true });
-                    
-                    
-                    setTimeout(() => {
-                        audioRef.removeEventListener("canplaythrough", handleCanPlay);
-                        console.log("Timed out waiting for audio to load, trying to play anyway");
-                        resolve();
-                    }, 3000);
-                });
-            }
-
-            if (currentPlaying === storyId) {
-                
-                console.log("Pausing current story");
-                audioRef.pause();
-                setCurrentPlaying(null);
-            } else {
-                
-                if (currentPlaying && audioRefs.current[currentPlaying]) {
-                    console.log("Stopping currently playing story");
-                    audioRefs.current[currentPlaying].pause();
-                }
-
-                
-                if (!audioRef.context) {
-                    console.log("Setting up audio context for the first time");
-                    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                    audioRef.context = new AudioContext();
-                    audioRef.analyser = audioRef.context.createAnalyser();
-                    audioRef.analyser.fftSize = 512;
-                    audioRef.analyser.smoothingTimeConstant = 0.85;
-                    audioRef.source = audioRef.context.createMediaElementSource(audioRef);
-                    audioRef.source.connect(audioRef.analyser);
-                    audioRef.analyser.connect(audioRef.context.destination);
-                } else if (audioRef.context.state === "suspended") {
-                    console.log("Resuming audio context");
-                    await audioRef.context.resume();
-                }
-
-                
-                console.log("Playing new story");
-                try {
-                    const playPromise = audioRef.play();
-                    if (playPromise !== undefined) {
-                        playPromise.then(() => {
-                            console.log("Playback started successfully");
-                            setCurrentPlaying(storyId);
-                        }).catch(error => {
-                            console.error("Playback failed:", error);
-                            
-                            
-                            setAlertConfig({
-                                isOpen: true,
-                                message: "Playback couldn't start automatically. Click again to play.",
-                                type: "info"
-                            });
-                        });
-                    } else {
-                        console.log("Play returned undefined, setting current playing anyway");
-                        setCurrentPlaying(storyId);
-                    }
-                } catch (error) {
-                    console.error("Error playing audio:", error);
-                }
-            }
-        } catch (error) {
-            console.error("Audio playback error:", error);
-            setAlertConfig({
-                isOpen: true,
-                message: "Error playing audio. Please try again.",
-                type: "error"
-            });
+                );
         }
     };
-
-    const likeStory = (storyId: string) => {
-        setStories(
-            stories.map((story) => {
-                if (story.id === storyId) {
-                    if (!story.likedBy.includes(currentUser)) {
-                        return {
-                            ...story,
-                            likes: story.likes + 1,
-                            likedBy: [...story.likedBy, currentUser],
-                        };
-                    } else {
-                        return {
-                            ...story,
-                            likes: story.likes - 1,
-                            likedBy: story.likedBy.filter((id) => id !== currentUser),
-                        };
-                    }
-                }
-                return story;
-            })
-        );
-    };
-
-    const shareStory = (storyId: string) => {
-        
-        const url = window.location.href;
-        navigator.clipboard.writeText(url).then(() => {
-            setAlertConfig({
-                isOpen: true,
-                message: "Story shared successfully! A link has been copied to your clipboard.",
-                type: "success",
-            });
-        }).catch(() => {
-            setAlertConfig({
-                isOpen: true,
-                message: "Could not copy URL to clipboard. Please try again.",
-                type: "error",
-            });
-        });
-
-        setStories(
-            stories.map((story) => {
-                if (story.id === storyId) {
-                    return {
-                        ...story,
-                        shares: story.shares + 1,
-                    };
-                }
-                return story;
-            })
-        );
-    };
-
-    const handleSaveRecording = (recordingData: RecordingData) => {
-        const newStory: Story = {
-            id: `new-${Date.now()}`,
-            user: {
-                id: "current_user_id",
-                name: "You",
-                avatar: "https://images.unsplash.com/photo-1629747490241-624f07d70e1e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8aHVtYW4lMjBwb3J0cmFpdHxlbnwwfHwwfHx8MA%3D%3D",
-                username: "@you",
-                bio: "Your personal bio would go here.",
-                location: "Your Location",
-                followers: 123,
-                following: 321,
-                memberSince: "April 2023",
-                social: {
-                    twitter: "",
-                    instagram: ""
-                }
-            },
-            audioUrl: recordingData.audioUrl,
-            title: recordingData.title,
-            description: recordingData.description || "Just shared a new story",
-            duration: "0:00",
-            likes: 0,
-            plays: 0,
-            shares: 0,
-            timestamp: "Just now",
-            likedBy: [],
-            tags: recordingData.tags || [],
-            category: recordingData.category || "podcast"
-        };
-
-        setStories([newStory, ...stories]);
-
-        setAlertConfig({
-            isOpen: true,
-            message: "Your story has been successfully shared!",
-            type: "success"
-        });
-    };
-
-    const handleTopicSelect = (topic: TrendingTopic) => {
-        setActiveCategory(topic.category);
-    };
-
-    const handleUserSelect = (user: User) => {
-        setSelectedProfile(user);
-        setProfileModalOpen(true);
-    };
-
-    const handleActivityClick = (activity: Activity) => {
-        setNotifications(notifications.map((notif) => (notif.id === activity.id ? { ...notif, read: true } : notif)));
-
-        setAlertConfig({
-            isOpen: true,
-            message: `${activity.user} ${activity.action}`,
-            type: "info"
-        });
-    };
-
-    const toggleFollow = (userId: string) => {
-        setFollowedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]));
-
-        const user =
-            suggestedUsers.find((u) => u.id === userId) || (selectedProfile && selectedProfile.id === userId ? selectedProfile : null);
-
-        if (user) {
-            setAlertConfig({
-                isOpen: true,
-                message: followedUsers.includes(userId) ? `You unfollowed ${user.name}` : `You are now following ${user.name}`,
-                type: followedUsers.includes(userId) ? "info" : "success"
-            });
-        }
-    };
-
-    const openUserProfile = (user: User) => {
-        setSelectedProfile(user);
-        setProfileModalOpen(true);
-    };
-
-    const openChatBox = (user: User) => {
-        setChatUser(user);
-        setChatBoxOpen(true);
-    };
-
-    const markAllAsRead = () => {
-        setNotifications(notifications.map((notif) => ({ ...notif, read: true })));
-
-        setAlertConfig({
-            isOpen: true,
-            message: "All notifications marked as read",
-            type: "success",
-        });
-    };
-
-    const toggleAllNotifications = () => {
-        setShowAllNotifications((prev) => !prev);
-    };
-
-    const closeAlert = () => {
-        setAlertConfig({
-            ...alertConfig,
-            isOpen: false,
-        });
-    };
-
-    useEffect(() => {
-        const handleClickOutside = () => {
-            setNotificationDropdownOpen(false);
-        };
-        
-        if (notificationDropdownOpen) {
-            document.addEventListener('click', handleClickOutside);
-        }
-        
-        return () => {
-            document.removeEventListener('click', handleClickOutside);
-        };
-    }, [notificationDropdownOpen]);
-
-    
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchQuery(e.target.value);
-    };
-
-    
-    const handleSearchSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        setAlertConfig({
-            isOpen: true,
-            message: `Showing results for "${searchQuery}"`,
-            type: "info",
-        });
-    };
-
-    
-    useEffect(() => {
-        return () => {
-            if (currentPlaying && audioRefs.current[currentPlaying]) {
-                const audio = audioRefs.current[currentPlaying];
-                if (!audio.paused) {
-                    audio.pause();
-                }
-            }
-        };
-    }, [currentPlaying]);
-
-    
-    useEffect(() => {
-        
-    }, [activeCategory, stories]);
-
-    
-    const saveStory = (storyId: string) => {
-        setAlertConfig({
-            isOpen: true,
-            message: "Story saved to your library!",
-            type: "success",
-        });
-        setStoryMenuOpen(null);
-    };
-
-    
-    const reportStory = (storyId: string) => {
-        setAlertConfig({
-            isOpen: true,
-            message: "Story reported. Thank you for helping keep our community safe.",
-            type: "info",
-        });
-        setStoryMenuOpen(null);
-    };
-
-    
-    const hideStory = (storyId: string) => {
-        setStories(stories.filter(story => story.id !== storyId));
-        setAlertConfig({
-            isOpen: true,
-            message: "Story hidden from your feed.",
-            type: "success",
-        });
-        setStoryMenuOpen(null);
-    };
-
-    
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            
-            if (storyMenuOpen && !(e.target as Element).closest('.story-menu-container')) {
-                setStoryMenuOpen(null);
-            }
-        };
-        
-        document.addEventListener("click", handleClickOutside);
-        return () => {
-            document.removeEventListener("click", handleClickOutside);
-        };
-    }, [storyMenuOpen]);
 
     return (
         <div
-            style={{
-                backgroundColor: colors.background,
-            }}
-            className="min-h-screen text-white"
+            className={`flex min-h-screen ${theme.main.background} ${playfair.variable} ${montserrat.variable} ${raleway.variable} ${cormorant.variable}`}
         >
-            <style jsx global>{`
-                body {
-                    font-family: "Inter", "Poppins", sans-serif;
-                    margin: 0;
-                    padding: 0;
-                    background-color: ${colors.background};
-                    color: ${colors.text};
-                }
-
-                @keyframes pulse {
-                    0%,
-                    100% {
-                        opacity: 1;
-                    }
-                    50% {
-                        opacity: 0.5;
-                    }
-                }
-            `}</style>
-
-            <AnimatePresence>
-                {alertConfig.isOpen && (
-                    <CustomAlert isOpen={alertConfig.isOpen} message={alertConfig.message} type={alertConfig.type} onClose={closeAlert} />
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {chatBoxOpen && chatUser && (
-                    <ChatBox
-                        user={chatUser}
-                        isOpen={chatBoxOpen}
-                        onClose={() => {
-                            setChatBoxOpen(false);
-                            setChatUser(null);
-                        }}
-                    />
-                )}
-            </AnimatePresence>
-
-            <header className="sticky top-0 z-50 shadow-lg bg-slate-900/95 backdrop-blur-md">
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="flex items-center justify-between h-16">
-                        <div className="flex items-center space-x-3">
-                            <h1 className="text-xl font-bold text-indigo-400">StoryVoice</h1>
-                        </div>
-
-                        <div className="hidden md:flex items-center space-x-1">
-                            <div className="relative">
-                                <form onSubmit={handleSearchSubmit}>
-                                    <input
-                                        type="text"
-                                        placeholder="Search stories..."
-                                        className="bg-slate-800 border border-slate-700 rounded-full py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 w-64 transition-all"
-                                        value={searchQuery}
-                                        onChange={handleSearchChange}
-                                    />
-                                    <Search size={15} className="absolute left-3 top-2 text-gray-400" />
-                                </form>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center space-x-5">
-                            <div className="relative">
-                                <button 
-                                    className="text-gray-400 hover:text-white transition-colors cursor-pointer"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setNotificationDropdownOpen(!notificationDropdownOpen);
-                                    }}
-                                >
-                                    <Bell size={20} />
-                                </button>
-
-                                {notifications.some((n) => !n.read) && (
-                                    <span className="absolute top-2 right-2 bg-red-500 text-white rounded-full text-xs px-1.5 py-0.5">
-                                        {notifications.filter((n) => !n.read).length}
-                                    </span>
-                                )}
-                                
-                                {notificationDropdownOpen && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 10 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="absolute right-0 top-full mt-2 w-80 bg-slate-800 rounded-lg shadow-lg border border-slate-700 overflow-hidden z-50"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <div className="flex justify-between items-center px-4 py-2 border-b border-slate-700">
-                                            <h3 className="text-sm font-medium text-white">Notifications</h3>
-                                            <button 
-                                                className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    markAllAsRead();
-                                                }}
-                                            >
-                                                Mark all as read
-                                            </button>
-                                        </div>
-                                        <div className="max-h-96 overflow-y-auto">
-                                            {notifications.length === 0 ? (
-                                                <div className="py-8 text-center text-gray-400">
-                                                    <p>No notifications yet</p>
-                                                </div>
-                                            ) : (
-                                                <div>
-                                                    {notifications.slice(0, 5).map((activity) => (
-                                                        <div
-                                                            key={activity.id}
-                                                            className={`p-3 border-b border-slate-700/50 hover:bg-slate-700/20 cursor-pointer transition-colors duration-300 ${
-                                                                activity.read ? "opacity-60" : "opacity-100"
-                                                            }`}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleActivityClick(activity);
-                                                                setNotificationDropdownOpen(false);
-                                                            }}
-                                                        >
-                                                            <div className="flex items-start">
-                                                                <div className="h-8 w-8 rounded-full overflow-hidden mr-3">
-                                                                    <img src={activity.avatar} alt={activity.user} className="w-full h-full object-cover" />
-                                                                </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="text-sm">
-                                                                        <span className="text-white font-medium">{activity.user}</span>
-                                                                        <span className="text-gray-300"> {activity.action}</span>
-                                                                        {activity.story && <span className="text-indigo-300"> {activity.story}</span>}
-                                                                    </div>
-                                                                    <div className="text-xs text-gray-400 mt-1">{activity.time}</div>
-                                                                </div>
-                                                                {!activity.read && (
-                                                                    <div className="ml-2">
-                                                                        <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    <div className="p-2 text-center">
-                                                        <button 
-                                                            className="w-full text-sm text-indigo-400 hover:text-indigo-300 py-2 cursor-pointer"
-                                                            onClick={() => {
-                                                                setActiveView("notifications");
-                                                                setNotificationDropdownOpen(false);
-                                                            }}
-                                                        >
-                                                            View all notifications
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </div>
-
-                            <div
-                                className="h-8 w-8 rounded-full bg-indigo-600 p-0.5 cursor-pointer"
-                                onClick={() => {
-                                    const currentUser: User = {
-                                        id: "current_user",
-                                        name: "You",
-                                        username: "@you",
-                                        avatar: "https://images.unsplash.com/photo-1629747490241-624f07d70e1e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8aHVtYW4lMjBwb3J0cmFpdHxlbnwwfHwwfHx8MA%3D%3D",
-                                        bio: "Your personal profile and bio details would appear here.",
-                                        location: "Your Location",
-                                        followers: 123,
-                                        following: 321,
-                                        memberSince: "April 2023",
-                                        stories: 5,
-                                        social: {
-                                            twitter: "your_handle",
-                                            instagram: "your_instagram"
-                                        }
-                                    };
-                                    setSelectedProfile(currentUser);
-                                    setProfileModalOpen(true);
+            <motion.aside
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                className={`w-[240px] ${theme.sidebar.background} fixed h-screen border-r ${theme.sidebar.border} py-8 shadow-md`}
+            >
+                <div className="px-6 mb-8">
+                    <div className="flex items-center space-x-3 mb-3">
+                        <motion.div 
+                            className="relative w-12 h-12 rounded-full overflow-hidden shadow-md"
+                            whileHover={{ 
+                                boxShadow: "0 0 15px rgba(184, 92, 56, 0.7)",
+                                scale: 1.05,
+                                transition: { duration: 0.3 }
+                            }}
+                        >
+                            <Image src="https://picsum.photos/id/1/400/400" alt="Profile picture" fill className="object-cover" />
+                        </motion.div>
+                        <div>
+                            <motion.h1 
+                                className={`text-xl font-bold ${theme.main.text} ${theme.heading} relative`}
+                                whileHover={{ 
+                                    scale: 1.03,
+                                    transition: { duration: 0.2 }
                                 }}
                             >
-                                <img
-                                    src="https://images.unsplash.com/photo-1629747490241-624f07d70e1e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8aHVtYW4lMjBwb3J0cmFpdHxlbnwwfHwwfHx8MA%3D%3D"
-                                    alt="User Profile"
-                                    className="w-full h-full object-cover rounded-full"
-                                />
-                            </div>
+                                <span className="hover:bg-gradient-to-r from-[#b85c38] to-[#e8956c] hover:text-transparent hover:bg-clip-text transition-all duration-300">
+                                    John Smith
+                                </span>
+                            </motion.h1>
+                            <p className={`text-sm ${theme.main.textSecondary} ${theme.body}`}>Full Stack Developer</p>
                         </div>
                     </div>
-                </div>
-                <div className="h-px bg-slate-800"></div>
-            </header>
-
-            <div className="max-w-7xl mx-auto flex">
-                <div className="w-64 hidden lg:block shrink-0 border-r border-slate-800/50">
-                    <SidebarNav activeCategory={activeCategory} setActiveCategory={setActiveCategory} setActiveView={setActiveView} activeView={activeView} />
-                </div>
-
-                <main className="flex-grow py-6 px-4">
-                    <ViewContent
-                        activeView={activeView}
-                        notifications={notifications}
-                        showAllNotifications={showAllNotifications}
-                        onToggleAllNotifications={toggleAllNotifications}
-                        onMarkAllAsRead={markAllAsRead}
-                    />
-
-                    {activeView === "home" && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5 }}
-                            className="bg-slate-800 rounded-xl shadow-lg overflow-hidden mb-8 border border-slate-700/50"
+                    <div className="flex space-x-3 mt-4">
+                        <motion.a
+                            href="https://github.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`${theme.main.textSecondary} transition-colors cursor-pointer`}
+                            whileHover={{ 
+                                color: isDarkMode ? "#e07a56" : "#b85c38",
+                                scale: 1.2,
+                                transition: { duration: 0.2 } 
+                            }}
                         >
-                            <div className="p-4">
-                                <div className="flex items-center space-x-4">
-                                    <div className="h-10 w-10 rounded-full bg-indigo-600 p-0.5">
-                                        <img
-                                            src="https://images.unsplash.com/photo-1629747490241-624f07d70e1e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8aHVtYW4lMjBwb3J0cmFpdHxlbnwwfHwwfHx8MA%3D%3D"
-                                            alt="User"
-                                            className="w-full h-full object-cover rounded-full"
+                            <FiGithub size={20} />
+                        </motion.a>
+                        <motion.a
+                            href="https://linkedin.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`${theme.main.textSecondary} transition-colors cursor-pointer`}
+                            whileHover={{ 
+                                color: isDarkMode ? "#e07a56" : "#b85c38",
+                                scale: 1.2,
+                                transition: { duration: 0.2 } 
+                            }}
+                        >
+                            <FiLinkedin size={20} />
+                        </motion.a>
+                    </div>
+                </div>
+                <nav className="px-4">
+                    {menuItems.map((item) => (
+                        <motion.button
+                            key={item.name}
+                            whileHover={{ x: 5 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleMenuChange(item.name)}
+                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors mb-1 cursor-pointer ${
+                                theme.body
+                            } ${
+                                activeMenu === item.name
+                                    ? `${theme.sidebar.activeBackground} ${theme.main.text} font-medium`
+                                    : `${theme.main.textSecondary} ${theme.sidebar.hoverBackground}`
+                            }`}
+                        >
+                            {item.icon}
+                            <span className="text-sm">{item.name}</span>
+                        </motion.button>
+                    ))}
+                </nav>
+                <div className="absolute bottom-8 left-0 right-0 px-6">
+                    <motion.div
+                        className={`relative h-10 w-full rounded-full overflow-hidden cursor-pointer transition-colors duration-500 ${
+                            isDarkMode ? "bg-[#2a2a2a]" : "bg-[#fceee7]"
+                        } border ${isDarkMode ? "border-[#3d3d3d]" : "border-[#e0d5cc]"}`}
+                        onClick={toggleTheme}
+                    >
+                        
+                        <motion.div
+                            className="absolute inset-0 z-10"
+                            initial={{ opacity: isDarkMode ? 1 : 0 }}
+                            animate={{ opacity: isDarkMode ? 1 : 0 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            {[...Array(12)].map((_, i) => (
+                                <motion.div
+                                    key={i}
+                                    className="absolute rounded-full bg-[#e07a56]"
+                                    style={{
+                                        width: Math.random() * 2 + 1 + "px",
+                                        height: Math.random() * 2 + 1 + "px",
+                                        top: Math.random() * 100 + "%",
+                                        left: Math.random() * 100 + "%",
+                                    }}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: isDarkMode ? [0, 1, 0.5, 1] : 0 }}
+                                    transition={{
+                                        duration: 1.5,
+                                        repeat: isDarkMode ? Infinity : 0,
+                                        repeatType: "reverse",
+                                        delay: Math.random() * 3,
+                                    }}
+                                />
+                            ))}
+                        </motion.div>
+
+                        
+                        <motion.div
+                            className={`absolute top-1/2 ${isDarkMode ? "right-2" : "left-2"} transform -translate-y-1/2 h-7 w-7 rounded-full flex items-center justify-center z-20`}
+                            initial={false}
+                            animate={{
+                                backgroundColor: isDarkMode ? "#e07a56" : "#b85c38",
+                                left: isDarkMode ? "auto" : "8px",
+                                right: isDarkMode ? "8px" : "auto",
+                            }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            
+                            {isDarkMode ? (
+                                
+                                <>
+                                    <motion.div
+                                        className="absolute rounded-full bg-[#f08c68] w-1.5 h-1.5"
+                                        style={{ top: "30%", left: "25%" }}
+                                    />
+                                    <motion.div
+                                        className="absolute rounded-full bg-[#f08c68] w-2 h-2"
+                                        style={{ bottom: "30%", right: "25%" }}
+                                    />
+                                </>
+                            ) : (
+                                
+                                <>
+                                    {[...Array(8)].map((_, i) => (
+                                        <motion.div
+                                            key={i}
+                                            className="absolute bg-[#e8956c]"
+                                            style={{
+                                                height: "1.5px",
+                                                width: "4px",
+                                                transformOrigin: "12px 0.75px",
+                                                transform: `rotate(${i * 45}deg) translateX(8px)`,
+                                            }}
+                                            initial={{ opacity: 0, scale: 0 }}
+                                            animate={{ opacity: isDarkMode ? 0 : 1, scale: isDarkMode ? 0 : 1 }}
+                                            transition={{ duration: 0.5 }}
                                         />
+                                    ))}
+                                </>
+                            )}
+                        </motion.div>
+
+                        
+                        <motion.div
+                            className="absolute left-1/2 top-2 w-6 h-3 rounded-full bg-white opacity-80 z-10"
+                            initial={{ opacity: isDarkMode ? 0 : 0.8, x: 0 }}
+                            animate={{ opacity: isDarkMode ? 0 : 0.8, x: isDarkMode ? 20 : 0 }}
+                            transition={{ duration: 0.5 }}
+                        />
+                        <motion.div
+                            className="absolute left-1/4 top-5 w-8 h-3 rounded-full bg-white opacity-80 z-10"
+                            initial={{ opacity: isDarkMode ? 0 : 0.8, x: 0 }}
+                            animate={{ opacity: isDarkMode ? 0 : 0.8, x: isDarkMode ? -20 : 0 }}
+                            transition={{ duration: 0.5 }}
+                        />
+
+                        
+                        <div className="absolute inset-0 flex items-center justify-center z-10">
+                            <motion.span 
+                                className={`text-xs font-medium ${isDarkMode ? "text-[#c0c0c0]" : "text-[#444444]"} ${theme.body}`}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                key={isDarkMode ? "dark" : "light"}
+                            >
+                                {isDarkMode ? "Light Mode" : "Dark Mode"}
+                            </motion.span>
+                        </div>
+                    </motion.div>
+                </div>
+            </motion.aside>
+
+            <main className="ml-[240px] flex-1 p-8">{renderContent()}</main>
+            
+            {isModalOpen && selectedPost && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4"
+                    onClick={() => setIsModalOpen(false)}
+                >
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className={`${theme.content.card} border rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto`}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-6">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <div className={`${theme.accent} text-xs mb-2 font-medium ${theme.body}`}>
+                                        {selectedPost.date} • {selectedPost.readTime}
                                     </div>
-                                    <button
-                                        onClick={() => setRecordingModalOpen(true)}
-                                        className="flex-grow text-left px-4 py-2.5 rounded-full bg-slate-700 hover:bg-slate-600 transition-colors duration-300 text-gray-300"
+                                    <h2 className={`text-2xl font-bold ${theme.main.text} ${theme.heading}`}>{selectedPost.title}</h2>
+                                </div>
+                                <button
+                                    onClick={() => setIsModalOpen(false)}
+                                    className={`${theme.main.textSecondary} hover:${theme.main.text} p-1 rounded-full`}
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-6 w-6"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
                                     >
-                                        Share your voice with the world...
-                                    </button>
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div className="mb-6">
+                                <div className="relative h-60 w-full rounded-lg overflow-hidden mb-4">
+                                    <Image
+                                        src={`https://picsum.photos/id/${200 + selectedPost.id}/1200/600`}
+                                        alt={selectedPost.title}
+                                        fill
+                                        className="object-cover transition-transform duration-500 hover:scale-105"
+                                    />
+                                </div>
+                                <p className={`${theme.main.textSecondary} mb-4`}>{selectedPost.description}</p>
+                                <p className={`${theme.main.textSecondary} mb-4`}>
+                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nisl vel ultricies lacinia, nisl
+                                    nisl aliquam nisl, eu aliquam nisl nisl sit amet nisl. Sed euismod, nisl vel ultricies lacinia, nisl
+                                    nisl aliquam nisl, eu aliquam nisl nisl sit amet nisl.
+                                </p>
+                                <p className={`${theme.main.textSecondary} mb-4`}>
+                                    Proin auctor, urna eget tincidunt tincidunt, nisl nisl aliquam nisl, eu aliquam nisl nisl sit amet nisl.
+                                    Curabitur ac nisl nisl. Sed euismod, nisl vel ultricies lacinia, nisl nisl aliquam nisl, eu aliquam nisl
+                                    nisl sit amet nisl.
+                                </p>
+                            </div>
+
+                            
+                            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
+                                <h4 className={`text-sm font-semibold ${theme.main.text} ${theme.heading} mb-3`}>Share this post</h4>
+                                <div className="flex space-x-3">
                                     <motion.button
-                                        onClick={() => setRecordingModalOpen(true)}
-                                        whileHover={{ scale: 1.03 }}
-                                        whileTap={{ scale: 0.97 }}
-                                        transition={{ duration: 0.4 }}
-                                        className="p-2.5 rounded-full shadow-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-300"
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        className={`p-2 rounded-full bg-[#1DA1F2] text-white`}
+                                        onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(selectedPost.title)}&url=${encodeURIComponent(window.location.origin + '/blog/' + selectedPost.id)}`, '_blank')}
                                     >
-                                        <Mic size={18} />
+                                        <FiTwitter className="w-5 h-5" />
+                                    </motion.button>
+                                    <motion.button
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        className={`p-2 rounded-full bg-[#4267B2] text-white`}
+                                        onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin + '/blog/' + selectedPost.id)}`, '_blank')}
+                                    >
+                                        <FiFacebook className="w-5 h-5" />
+                                    </motion.button>
+                                    <motion.button
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        className={`p-2 rounded-full bg-[#0A66C2] text-white`}
+                                        onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin + '/blog/' + selectedPost.id)}`, '_blank')}
+                                    >
+                                        <FiLinkedin className="w-5 h-5" />
+                                    </motion.button>
+                                    <motion.button
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        className={`p-2 rounded-full ${theme.sidebar.activeBackground} ${theme.main.text}`}
+                                        onClick={() => copyToClipboard(selectedPost.id)}
+                                    >
+                                        <FiCopy className="w-5 h-5" />
                                     </motion.button>
                                 </div>
                             </div>
-                        </motion.div>
-                    )}
 
-                    <AnimatePresence>
-                        {recordingModalOpen && (
-                            <RecordingModal
-                                isOpen={recordingModalOpen}
-                                onClose={() => setRecordingModalOpen(false)}
-                                onSave={handleSaveRecording}
-                            />
-                        )}
-                    </AnimatePresence>
-
-                    <AnimatePresence>
-                        {profileModalOpen && selectedProfile && (
-                            <ProfileModal
-                                user={selectedProfile}
-                                isOpen={profileModalOpen}
-                                onClose={() => {
-                                    setProfileModalOpen(false);
-                                    setSelectedProfile(null);
-                                }}
-                                onFollow={toggleFollow}
-                                followedUsers={followedUsers}
-                            />
-                        )}
-                    </AnimatePresence>
-
-                    {activeCategory !== "all" && (
-                        <div className="mb-4 flex items-center">
-                            <span className="text-gray-400">Filtered by: </span>
-                            <span className="ml-2 px-3 py-1 bg-indigo-600/20 text-indigo-300 rounded-full text-sm">
-                                {categories.find((c) => c.id === activeCategory)?.name || activeCategory}
-                            </span>
-                            <button
-                                onClick={() => setActiveCategory("all")}
-                                className="ml-2 text-gray-400 hover:text-white transition-colors duration-300"
-                            >
-                                <X size={16} />
-                            </button>
+                            <div className="flex justify-end">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => setIsModalOpen(false)}
+                                    className={`px-4 py-2 rounded-lg bg-[#b85c38] text-white font-medium hover:bg-[#a04b2b] transition-colors cursor-pointer`}
+                                >
+                                    Close
+                                </motion.button>
+                            </div>
                         </div>
-                    )}
+                    </motion.div>
+                </motion.div>
+            )}
 
-                    <div className="space-y-6">
-                        <AnimatePresence>
-                            {filteredStories.length > 0 ? (
-                                filteredStories.map((story, index) => (
-                                    <motion.div
-                                        key={story.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{
-                                            duration: 0.4,
-                                            delay: index * 0.05,
-                                        }}
-                                        whileHover={{ y: -2, transition: { duration: 0.3 } }}
-                                        className="bg-slate-800 rounded-xl shadow-lg overflow-hidden border border-slate-700/30"
-                                    >
-                                        <div className="p-4 flex items-center justify-between">
-                                            <div
-                                                className="flex items-center space-x-3 cursor-pointer"
-                                                onClick={() => openUserProfile(story.user)}
-                                            >
-                                                <div className="h-10 w-10 rounded-full bg-indigo-600/20 p-0.5">
-                                                    <img
-                                                        src={story.user.avatar}
-                                                        alt={story.user.name}
-                                                        className="w-full h-full object-cover rounded-full"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-medium text-white">{story.user.name}</h3>
-                                                    <p className="text-sm text-gray-400">{story.user.username}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="relative story-menu-container">
-                                                <button 
-                                                    className="text-gray-500 hover:text-gray-300 transition-colors duration-300 cursor-pointer"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setStoryMenuOpen(storyMenuOpen === story.id ? null : story.id);
-                                                    }}
-                                                >
-                                                    <MoreHorizontal size={18} />
-                                                </button>
-                                                
-                                                {storyMenuOpen === story.id && (
-                                                    <div 
-                                                        className="absolute right-0 top-full mt-1 w-36 bg-slate-800 rounded-lg shadow-lg border border-slate-700 overflow-hidden z-30"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <button 
-                                                            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 transition-colors cursor-pointer"
-                                                            onClick={() => saveStory(story.id)}
-                                                        >
-                                                            <span className="flex items-center gap-2">
-                                                                <Bookmark size={14} />
-                                                                Save
-                                                            </span>
-                                                        </button>
-                                                        <button 
-                                                            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 transition-colors cursor-pointer"
-                                                            onClick={() => reportStory(story.id)}
-                                                        >
-                                                            <span className="flex items-center gap-2">
-                                                                <AlertCircle size={14} />
-                                                                Report
-                                                            </span>
-                                                        </button>
-                                                        <button 
-                                                            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 transition-colors cursor-pointer"
-                                                            onClick={() => hideStory(story.id)}
-                                                        >
-                                                            <span className="flex items-center gap-2">
-                                                                <X size={14} />
-                                                                Hide
-                                                            </span>
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="px-4 pb-2">
-                                            <h4 className="font-semibold text-lg text-white">{story.title}</h4>
-                                            <p className="text-sm mt-1 text-gray-300">{story.description}</p>
-
-                                            <div className="mt-2 flex items-center">
-                                                <span className="text-xs px-2 py-1 rounded-md bg-slate-700 text-gray-300">
-                                                    {categories.find((c) => c.id === story.category)?.name || story.category}
-                                                </span>
-                                            </div>
-
-                                            {story.tags && story.tags.length > 0 && (
-                                                <div className="flex flex-wrap gap-1.5 mt-2">
-                                                    {story.tags.map((tag) => (
-                                                        <span
-                                                            key={tag}
-                                                            className="text-xs px-2 py-0.5 rounded-full bg-indigo-900/40 text-indigo-200"
-                                                        >
-                                                            #{tag}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="px-4 pt-2 pb-4">
-                                            <div className="relative rounded-lg overflow-hidden border border-slate-700/30 bg-slate-900">
-                                                <div className="h-20 w-full">
-                                                    <AudioVisualizer
-                                                        audioElement={audioRefs.current[story.id]}
-                                                        isPlaying={currentPlaying === story.id}
-                                                        color={colors.primary}
-                                                        accentColor={colors.secondary}
-                                                        height={80}
-                                                    />
-                                                </div>
-
-                                                <div className="px-4 py-3">
-                                                    <div className="flex items-center space-x-4 mb-3">
-                                                        <motion.button
-                                                            onClick={() => togglePlay(story.id)}
-                                                            whileHover={{ scale: 1.03 }}
-                                                            whileTap={{ scale: 0.97 }}
-                                                            transition={{ duration: 0.4 }}
-                                                            className="h-10 w-10 rounded-full shadow-md flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 transition-colors duration-300 cursor-pointer"
-                                                        >
-                                                            {currentPlaying === story.id ? (
-                                                                <Pause size={18} className="text-white" />
-                                                            ) : (
-                                                                <Play size={18} className="text-white ml-1" />
-                                                            )}
-                                                        </motion.button>
-
-                                                        <audio
-                                                            ref={(el) => {
-                                                                if (el) {
-                                                                    audioRefs.current[story.id] = el;
-                                                                }
-                                                            }}
-                                                            src={story.audioUrl}
-                                                            onEnded={() => setCurrentPlaying(null)}
-                                                            crossOrigin="anonymous"
-                                                            preload="metadata"
-                                                        />
-
-                                                        <div className="flex-grow">
-                                                            <ProgressBar
-                                                                audioElement={audioRefs.current[story.id]}
-                                                                duration={Number(story.duration)}
-                                                                isPlaying={currentPlaying === story.id}
-                                                            />
-                                                        </div>
-
-                                                        <VolumeControl audioElement={audioRefs.current[story.id]} />
-                                                    </div>
-
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center space-x-4">
-                                                            <motion.button
-                                                                onClick={() => likeStory(story.id)}
-                                                                whileHover={{ scale: 1.05 }}
-                                                                whileTap={{ scale: 0.95 }}
-                                                                transition={{ duration: 0.4 }}
-                                                                className="flex items-center space-x-1.5"
-                                                            >
-                                                                <Heart
-                                                                    size={18}
-                                                                    fill={story.likedBy.includes(currentUser) ? colors.accent : "none"}
-                                                                    stroke={
-                                                                        story.likedBy.includes(currentUser)
-                                                                            ? colors.accent
-                                                                            : colors.textSecondary
-                                                                    }
-                                                                />
-                                                                <span className="text-sm text-gray-400">{story.likes}</span>
-                                                            </motion.button>
-
-                                                            <motion.button
-                                                                onClick={() => shareStory(story.id)}
-                                                                whileHover={{ scale: 1.05 }}
-                                                                whileTap={{ scale: 0.95 }}
-                                                                transition={{ duration: 0.4 }}
-                                                                className="flex items-center space-x-1.5"
-                                                            >
-                                                                <Share2 size={16} className="text-gray-400" />
-                                                                <span className="text-sm text-gray-400">{story.shares}</span>
-                                                            </motion.button>
-                                                        </div>
-
-                                                        <div className="text-xs text-gray-400">{story.timestamp}</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                ))
-                            ) : (
-                                <div className="text-center py-12 bg-slate-800/50 rounded-xl">
-                                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-700 flex items-center justify-center">
-                                        <Search size={24} className="text-gray-400" />
-                                    </div>
-                                    <h3 className="text-lg font-medium text-white mb-2">No stories found</h3>
-                                    <p className="text-gray-400 max-w-sm mx-auto mb-4">
-                                        No stories match your current filter. Try selecting a different category.
-                                    </p>
-                                    <button
-                                        onClick={() => setActiveCategory("all")}
-                                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-300"
-                                    >
-                                        Show All Stories
-                                    </button>
-                                </div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                </main>
-
-                <div className="w-80 hidden xl:block shrink-0 border-l border-slate-800/50">
-                    <ActivitySidebar
-                        onTopicSelect={handleTopicSelect}
-                        onUserSelect={handleUserSelect}
-                        onActivityClick={handleActivityClick}
-                        followedUsers={followedUsers}
-                        onFollow={toggleFollow}
-                    />
-                </div>
-            </div>
+            
+            <AnimatePresence>
+                {showNotification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className="fixed bottom-5 right-5 z-50 flex items-center px-4 py-2 bg-green-500 text-white rounded-lg shadow-lg"
+                    >
+                        <FiCheck className="mr-2" />
+                        <span>{notificationMessage}</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
