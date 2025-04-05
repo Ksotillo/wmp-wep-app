@@ -65,8 +65,74 @@ function formatDateTime(date: string): string {
     })}`;
 }
 
+
+const initialBlogPosts: BlogPost[] = [
+    {
+        id: 1,
+        title: "Reflections on My Latest Victory",
+        excerpt: "Last night's fight against Rodriguez was one of the toughest of my career. Here's what I learned...",
+        date: "2025-03-15",
+        content:
+            "Last night's fight against Rodriguez was one of the toughest of my career. The crowd was electric, and I could feel the energy from the moment I stepped into the arena. Rodriguez came out strong in the first two rounds, landing some solid body shots that had me adjusting my strategy early.\n\nBy round three, I found my rhythm and started countering his aggressive style with my jab-hook combinations. The turning point came in round five when I connected with a clean right cross that visibly stunned him. From there, I maintained control, focusing on my footwork and timing.\n\nWhat I learned most from this fight is the importance of patience. There were moments when I wanted to go for the knockout, but sticking to the game plan ultimately led to a more decisive victory. My corner did an amazing job keeping me focused and making the right adjustments between rounds.\n\nI want to thank all my fans for their incredible support. Your energy fuels me in those tough moments when I need to dig deep. Now it's time to recover, review the tape, and start preparing for the next challenge. The journey continues!",
+    },
+    {
+        id: 2,
+        title: "Training Camp Updates",
+        excerpt: "Three weeks into camp for my upcoming title defense. Here's how preparation is going...",
+        date: "2025-03-01",
+        content:
+            "Three weeks into camp for my upcoming title defense, and I'm feeling stronger than ever. We've completely revamped my training regimen for this fight, incorporating new strength conditioning exercises and focusing heavily on my defensive movement.\n\nMy sparring partners have been pushing me to my limits, simulating my opponent's aggressive southpaw style. Those sessions have been brutal but necessary. Coach Williams has been drilling counter-punching combinations that we believe will be effective against a southpaw.\n\nNutrition has been on point as well. Working with a new nutritionist who has me on a clean, high-protein diet that's helping me maintain strength while staying within my weight class. The weight cut is going smoothly so far.\n\nMentally, I'm in a great place. Meditation has become a key part of my daily routine, helping me stay focused and calm under pressure. I'm visualizing the fight every night before bed, seeing different scenarios and how I'll respond.\n\nStill have four weeks to go, but I'm confident this will be my best performance yet. The belt is staying with me!",
+    },
+    {
+        id: 3,
+        title: "The Mental Game of Boxing",
+        excerpt: "People often focus on the physical aspects of boxing, but the mental game is equally important...",
+        date: "2025-02-15",
+        content:
+            "People often focus on the physical aspects of boxing, but the mental game is equally important. In fact, I'd argue that at the highest levels of the sport, mental fortitude is what separates champions from contenders.\n\nIn my early career, I relied heavily on my natural physical gifts – my power and speed. But after suffering my first professional loss, I realized that wasn't enough. I needed to develop mental toughness and strategic thinking to reach the next level.\n\nNow, my preparation is as much mental as physical. I study opponents meticulously, looking for patterns and tendencies I can exploit. During fights, I'm constantly making micro-adjustments based on what I'm seeing and feeling. This awareness has transformed my performance in the ring.\n\nFear and doubt are natural before any fight. The key isn't eliminating these feelings but acknowledging them and using them as fuel. When I step into the ring now, I carry a calm confidence that comes from knowing I've prepared for every possible scenario.\n\nFor any young boxers reading this, my advice is simple: train your mind as hard as you train your body. Learn to stay present in the moment, especially when facing adversity. The fighter who maintains mental clarity under pressure is usually the one whose hand gets raised at the end.",
+    },
+];
+
+const tournaments: Tournament[] = [
+    {
+        id: 1,
+        title: "Middleweight Championship Defense",
+        date: "2025-04-20",
+        location: "United Center, Chicago",
+        opponent: "Carlos 'The Viper' Rodriguez",
+        ticketLink: "https://example.com/tickets",
+        description:
+            "Defending my WBC Middleweight title against the #1 contender. Rodriguez brings a 26-1 record with 18 KOs to this highly anticipated matchup.",
+        details:
+            "This will be my second title defense since winning the belt last year. Rodriguez has been on an impressive 8-fight winning streak, with his last three victories coming by knockout. His southpaw stance and counter-punching style present a unique challenge, but we've been preparing specifically for his approach.\n\nThe undercard features several exciting matchups, including the women's welterweight championship and a heavyweight eliminator bout. Doors open at 6:00 PM with the main event expected to start around 10:30 PM ET.\n\nThis fight will be broadcast live on PPV and streaming on FightZone Premium.",
+    },
+    {
+        id: 2,
+        title: "Thunder vs. Lightning Exhibition Match",
+        date: "2025-06-15",
+        location: "United Center, Chicago",
+        opponent: "Jamal 'Lightning' Williams",
+        ticketLink: "https://example.com/tickets",
+        description:
+            "Special exhibition match against former sparring partner and rising star Jamal Williams. All proceeds go to youth boxing programs in Chicago.",
+        details:
+            "This exhibition match is particularly special to me as it takes place in my hometown of Chicago. While not a title defense, this 8-round exhibition will showcase high-level boxing while raising money for a cause close to my heart - youth boxing programs that keep kids off the streets.\n\nJamal Williams is one of the most promising talents in the division, with incredible hand speed that earned him the 'Lightning' nickname. We've sparred countless rounds together when he was coming up, and now he's making his own name in the professional ranks.\n\nThe event will include a pre-fight youth boxing showcase and a meet-and-greet opportunity for VIP ticket holders. Local Chicago businesses have donated amazing items for a silent auction that will take place throughout the event.",
+    },
+    {
+        id: 3,
+        title: "International Boxing Gala",
+        date: "2025-08-10",
+        location: "United Center, Chicago",
+        opponent: "TBD",
+        ticketLink: "https://example.com/tickets",
+        description: "Making my UK debut at the prestigious International Boxing Gala. Opponent to be announced in the coming weeks.",
+        details:
+            "I'm thrilled to announce my UK debut at the International Boxing Gala in London. This event brings together champions from multiple weight classes for an unforgettable night of boxing at the iconic O2 Arena.\n\nWhile my opponent hasn't been officially announced, we're in talks with several top-ranked contenders. This non-title bout will be contested at a catchweight of 165 pounds, allowing me to test the waters at a slightly higher weight class.\n\nThe UK fans are known for their boxing knowledge and passionate support, so I'm looking forward to putting on a show worthy of this historic venue. The entire card will feature international matchups, with boxers representing over 10 different countries.\n\nTickets are expected to sell out quickly once they go on sale next month.",
+    },
+];
+
 const BoxerBlog = (): JSX.Element => {
-    const [activeTab, setActiveTab] = useState<"home" | "blog" | "tournaments">("home");
+    const [activeTab, setActiveTab] = useState<"home" | "blog" | "tournaments" | "write">("home");
     const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
     const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
     const [comments, setComments] = useState<CommentsState>({});
@@ -75,6 +141,15 @@ const BoxerBlog = (): JSX.Element => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [avatarUrl, setAvatarUrl] = useState<string>("");
     const [hasMounted, setHasMounted] = useState<boolean>(false);
+
+    const [blogPosts, setBlogPosts] = useState<BlogPost[]>(initialBlogPosts);
+
+
+    const [postTitle, setPostTitle] = useState<string>("");
+    const [postContent, setPostContent] = useState<string>("");
+    const [matchOpponent, setMatchOpponent] = useState<string>("");
+    const [matchLocation, setMatchLocation] = useState<string>("");
+    const [matchDate, setMatchDate] = useState<string>("");
 
     // Helper function to scroll to top with smooth behavior
     const scrollToTop = () => {
@@ -85,11 +160,40 @@ const BoxerBlog = (): JSX.Element => {
     };
 
     // Enhanced navigation function that changes tab and scrolls to top
-    const navigateTo = (tab: "home" | "blog" | "tournaments", post: BlogPost | null = null, tournament: Tournament | null = null) => {
+    const navigateTo = (tab: "home" | "blog" | "tournaments" | "write", post: BlogPost | null = null, tournament: Tournament | null = null) => {
         setActiveTab(tab);
         setSelectedPost(post);
         setSelectedTournament(tournament);
         scrollToTop();
+    };
+
+    // Function to handle submitting new blog posts
+    const handleSubmitPost = () => {
+        if (!postTitle.trim() || !postContent.trim()) {
+            return;
+        }
+
+        // Create a new blog post
+        const newPost: BlogPost = {
+            id: Date.now(), // Use timestamp for unique ID
+            title: postTitle,
+            excerpt: postContent.split("\n")[0].substring(0, 120) + "...",
+            date: matchDate || new Date().toISOString().split('T')[0],
+            content: postContent,
+        };
+
+        // Add the new post to the state
+        setBlogPosts(prevPosts => [newPost, ...prevPosts]);
+
+        // Reset form fields
+        setPostTitle("");
+        setPostContent("");
+        setMatchOpponent("");
+        setMatchLocation("");
+        setMatchDate("");
+        
+        // Navigate to the blog section and show the newly published article
+        navigateTo("blog", newPost);
     };
 
     useEffect(() => {
@@ -112,71 +216,6 @@ const BoxerBlog = (): JSX.Element => {
         bio: "Professional boxer with 28-2 record. Current middleweight champion known for powerful right hooks and lightning-fast footwork. Training out of Thunder Gym in Chicago.",
         achievements: ["WBC Middleweight Champion", "2x Golden Gloves Winner", "Olympic Bronze Medalist"],
     };
-
-    const blogPosts: BlogPost[] = [
-        {
-            id: 1,
-            title: "Reflections on My Latest Victory",
-            excerpt: "Last night's fight against Rodriguez was one of the toughest of my career. Here's what I learned...",
-            date: "2025-03-15",
-            content:
-                "Last night's fight against Rodriguez was one of the toughest of my career. The crowd was electric, and I could feel the energy from the moment I stepped into the arena. Rodriguez came out strong in the first two rounds, landing some solid body shots that had me adjusting my strategy early.\n\nBy round three, I found my rhythm and started countering his aggressive style with my jab-hook combinations. The turning point came in round five when I connected with a clean right cross that visibly stunned him. From there, I maintained control, focusing on my footwork and timing.\n\nWhat I learned most from this fight is the importance of patience. There were moments when I wanted to go for the knockout, but sticking to the game plan ultimately led to a more decisive victory. My corner did an amazing job keeping me focused and making the right adjustments between rounds.\n\nI want to thank all my fans for their incredible support. Your energy fuels me in those tough moments when I need to dig deep. Now it's time to recover, review the tape, and start preparing for the next challenge. The journey continues!",
-        },
-        {
-            id: 2,
-            title: "Training Camp Updates",
-            excerpt: "Three weeks into camp for my upcoming title defense. Here's how preparation is going...",
-            date: "2025-03-01",
-            content:
-                "Three weeks into camp for my upcoming title defense, and I'm feeling stronger than ever. We've completely revamped my training regimen for this fight, incorporating new strength conditioning exercises and focusing heavily on my defensive movement.\n\nMy sparring partners have been pushing me to my limits, simulating my opponent's aggressive southpaw style. Those sessions have been brutal but necessary. Coach Williams has been drilling counter-punching combinations that we believe will be effective against a southpaw.\n\nNutrition has been on point as well. Working with a new nutritionist who has me on a clean, high-protein diet that's helping me maintain strength while staying within my weight class. The weight cut is going smoothly so far.\n\nMentally, I'm in a great place. Meditation has become a key part of my daily routine, helping me stay focused and calm under pressure. I'm visualizing the fight every night before bed, seeing different scenarios and how I'll respond.\n\nStill have four weeks to go, but I'm confident this will be my best performance yet. The belt is staying with me!",
-        },
-        {
-            id: 3,
-            title: "The Mental Game of Boxing",
-            excerpt: "People often focus on the physical aspects of boxing, but the mental game is equally important...",
-            date: "2025-02-15",
-            content:
-                "People often focus on the physical aspects of boxing, but the mental game is equally important. In fact, I'd argue that at the highest levels of the sport, mental fortitude is what separates champions from contenders.\n\nIn my early career, I relied heavily on my natural physical gifts – my power and speed. But after suffering my first professional loss, I realized that wasn't enough. I needed to develop mental toughness and strategic thinking to reach the next level.\n\nNow, my preparation is as much mental as physical. I study opponents meticulously, looking for patterns and tendencies I can exploit. During fights, I'm constantly making micro-adjustments based on what I'm seeing and feeling. This awareness has transformed my performance in the ring.\n\nFear and doubt are natural before any fight. The key isn't eliminating these feelings but acknowledging them and using them as fuel. When I step into the ring now, I carry a calm confidence that comes from knowing I've prepared for every possible scenario.\n\nFor any young boxers reading this, my advice is simple: train your mind as hard as you train your body. Learn to stay present in the moment, especially when facing adversity. The fighter who maintains mental clarity under pressure is usually the one whose hand gets raised at the end.",
-        },
-    ];
-
-    const tournaments: Tournament[] = [
-        {
-            id: 1,
-            title: "Middleweight Championship Defense",
-            date: "2025-04-20",
-            location: "United Center, Chicago",
-            opponent: "Carlos 'The Viper' Rodriguez",
-            ticketLink: "https://example.com/tickets",
-            description:
-                "Defending my WBC Middleweight title against the #1 contender. Rodriguez brings a 26-1 record with 18 KOs to this highly anticipated matchup.",
-            details:
-                "This will be my second title defense since winning the belt last year. Rodriguez has been on an impressive 8-fight winning streak, with his last three victories coming by knockout. His southpaw stance and counter-punching style present a unique challenge, but we've been preparing specifically for his approach.\n\nThe undercard features several exciting matchups, including the women's welterweight championship and a heavyweight eliminator bout. Doors open at 6:00 PM with the main event expected to start around 10:30 PM ET.\n\nThis fight will be broadcast live on PPV and streaming on FightZone Premium.",
-        },
-        {
-            id: 2,
-            title: "Thunder vs. Lightning Exhibition Match",
-            date: "2025-06-15",
-            location: "United Center, Chicago",
-            opponent: "Jamal 'Lightning' Williams",
-            ticketLink: "https://example.com/tickets",
-            description:
-                "Special exhibition match against former sparring partner and rising star Jamal Williams. All proceeds go to youth boxing programs in Chicago.",
-            details:
-                "This exhibition match is particularly special to me as it takes place in my hometown of Chicago. While not a title defense, this 8-round exhibition will showcase high-level boxing while raising money for a cause close to my heart - youth boxing programs that keep kids off the streets.\n\nJamal Williams is one of the most promising talents in the division, with incredible hand speed that earned him the 'Lightning' nickname. We've sparred countless rounds together when he was coming up, and now he's making his own name in the professional ranks.\n\nThe event will include a pre-fight youth boxing showcase and a meet-and-greet opportunity for VIP ticket holders. Local Chicago businesses have donated amazing items for a silent auction that will take place throughout the event.",
-        },
-        {
-            id: 3,
-            title: "International Boxing Gala",
-            date: "2025-08-10",
-            location: "United Center, Chicago",
-            opponent: "TBD",
-            ticketLink: "https://example.com/tickets",
-            description: "Making my UK debut at the prestigious International Boxing Gala. Opponent to be announced in the coming weeks.",
-            details:
-                "I'm thrilled to announce my UK debut at the International Boxing Gala in London. This event brings together champions from multiple weight classes for an unforgettable night of boxing at the iconic O2 Arena.\n\nWhile my opponent hasn't been officially announced, we're in talks with several top-ranked contenders. This non-title bout will be contested at a catchweight of 165 pounds, allowing me to test the waters at a slightly higher weight class.\n\nThe UK fans are known for their boxing knowledge and passionate support, so I'm looking forward to putting on a show worthy of this historic venue. The entire card will feature international matchups, with boxers representing over 10 different countries.\n\nTickets are expected to sell out quickly once they go on sale next month.",
-        },
-    ];
 
     const handleCommentSubmit = (postId: number): void => {
         if (!commentText.trim()) return;
@@ -307,6 +346,7 @@ const BoxerBlog = (): JSX.Element => {
                     </button>
                 </div>
                 <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                    {/* Show only the 3 most recent blog posts */}
                     {blogPosts.slice(0, 3).map((post, index) => (
                         <div
                             key={post.id}
@@ -912,6 +952,199 @@ const BoxerBlog = (): JSX.Element => {
         </div>
     );
 
+    const renderWrite = (): JSX.Element => (
+        <div className="space-y-10 animate-fadeIn">
+            <div>
+                <div className="inline-flex items-center rounded-full bg-red-500/10 px-3 py-1 text-sm font-medium text-red-500 ring-1 ring-inset ring-red-500/20 mb-2">
+                    Post-Match Thoughts
+                </div>
+                <h2 className="text-3xl font-bold text-white md:text-4xl">Write Your Reflections</h2>
+            </div>
+
+            <div className="grid gap-10 md:grid-cols-3">
+                <div className="md:col-span-2 space-y-6">
+                    <div className="space-y-4">
+                        <label htmlFor="post-title" className="block text-white font-medium">
+                            Post Title
+                        </label>
+                        <input
+                            id="post-title"
+                            type="text"
+                            placeholder="e.g., Reflections on My Fight Against Rodriguez"
+                            value={postTitle}
+                            onChange={(e) => setPostTitle(e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-800 focus:border-red-500 focus:ring-1 focus:ring-red-500/20 text-zinc-300 placeholder:text-zinc-600 rounded-md p-3 transition-colors"
+                        />
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <label htmlFor="post-content" className="block text-white font-medium">
+                            Your Thoughts
+                        </label>
+                        <textarea
+                            id="post-content"
+                            placeholder="Share your thoughts, experiences, techniques, and emotions from the match..."
+                            value={postContent}
+                            onChange={(e) => setPostContent(e.target.value)}
+                            className="min-h-[300px] w-full bg-zinc-900 border border-zinc-800 focus:border-red-500 focus:ring-1 focus:ring-red-500/20 text-zinc-300 placeholder:text-zinc-600 rounded-md p-3 transition-colors"
+                            rows={12}
+                        />
+                    </div>
+                    
+                    <button
+                        onClick={handleSubmitPost}
+                        disabled={!postTitle.trim() || !postContent.trim()}
+                        className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-md flex items-center transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                    >
+                        Publish Post
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="ml-2 h-5 w-5"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="M5 12h14" /> <path d="m12 5 7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div className="space-y-8">
+                    <div className="bg-zinc-900 rounded-xl p-6 border border-zinc-800 transition-all duration-300 hover:border-zinc-700">
+                        <div className="inline-flex items-center rounded-full bg-zinc-800/50 px-3 py-1 text-sm font-medium text-zinc-400 mb-4">
+                            Match Details
+                        </div>
+                        <div className="space-y-5">
+                            <div className="space-y-2">
+                                <label htmlFor="match-opponent" className="block text-zinc-500 text-sm">
+                                    Opponent
+                                </label>
+                                <input
+                                    id="match-opponent"
+                                    type="text"
+                                    placeholder="e.g., Carlos Rodriguez"
+                                    value={matchOpponent}
+                                    onChange={(e) => setMatchOpponent(e.target.value)}
+                                    className="w-full bg-zinc-800 border border-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500/20 text-zinc-300 placeholder:text-zinc-600 rounded-md p-2 text-sm transition-colors"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="match-location" className="block text-zinc-500 text-sm">
+                                    Location
+                                </label>
+                                <input
+                                    id="match-location"
+                                    type="text"
+                                    placeholder="e.g., United Center, Chicago"
+                                    value={matchLocation}
+                                    onChange={(e) => setMatchLocation(e.target.value)}
+                                    className="w-full bg-zinc-800 border border-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500/20 text-zinc-300 placeholder:text-zinc-600 rounded-md p-2 text-sm transition-colors"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="match-date" className="block text-zinc-500 text-sm">
+                                    Date
+                                </label>
+                                <input
+                                    id="match-date"
+                                    type="date"
+                                    value={matchDate}
+                                    onChange={(e) => setMatchDate(e.target.value)}
+                                    className="w-full bg-zinc-800 border border-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500/20 text-zinc-300 placeholder:text-zinc-600 rounded-md p-2 text-sm transition-colors"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-zinc-900 rounded-xl p-6 border border-zinc-800 transition-all duration-300 hover:border-zinc-700">
+                        <div className="inline-flex items-center rounded-full bg-zinc-800/50 px-3 py-1 text-sm font-medium text-zinc-400 mb-4">
+                            Writing Tips
+                        </div>
+                        <ul className="space-y-3 text-zinc-400">
+                            <li className="flex items-start">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <polyline points="9 11 12 14 22 4"></polyline>
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                                </svg>
+                                Start with your immediate emotions and reactions to the match
+                            </li>
+                            <li className="flex items-start">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <polyline points="9 11 12 14 22 4"></polyline>
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                                </svg>
+                                Describe key moments that changed the course of the fight
+                            </li>
+                            <li className="flex items-start">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <polyline points="9 11 12 14 22 4"></polyline>
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                                </svg>
+                                Share what you learned from this experience
+                            </li>
+                            <li className="flex items-start">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <polyline points="9 11 12 14 22 4"></polyline>
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                                </svg>
+                                End with what's next for your training or career
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-900/95 to-zinc-950 text-zinc-100">
             <style jsx global>{`
@@ -1047,7 +1280,7 @@ const BoxerBlog = (): JSX.Element => {
                                     className="cursor-pointer"
                                     onClick={() => navigateTo("home")}>
                                     Mike
-                                    <span className="text-lg ml-[-5] mr-[-5] font-bold tracking-tight text-red-500">"The Thunder"</span>
+                                    <span className="text-lg mx-1 font-bold tracking-tight text-red-500">"The Thunder"</span>
                                     Johnson
                                 </div>
                             </div>
@@ -1075,6 +1308,14 @@ const BoxerBlog = (): JSX.Element => {
                                     onClick={() => navigateTo("tournaments")}
                                 >
                                     Tournaments
+                                </button>
+                                <button
+                                    className={`text-base font-medium ${
+                                        activeTab === "write" ? "text-red-500" : "text-zinc-400 hover:text-white"
+                                    } transition-colors duration-300 ease-in-out`}
+                                    onClick={() => navigateTo("write")}
+                                >
+                                    Write
                                 </button>
                             </nav>
                             <div className="md:hidden">
@@ -1113,8 +1354,7 @@ const BoxerBlog = (): JSX.Element => {
                                                     setMobileMenuOpen(false);
                                                 }}
                                             >
-                                                {" "}
-                                                Home{" "}
+                                                Home
                                             </button>
                                             <button
                                                 className={`w-full text-left p-3 rounded-md font-medium transition-colors duration-200 ${
@@ -1125,8 +1365,7 @@ const BoxerBlog = (): JSX.Element => {
                                                     setMobileMenuOpen(false);
                                                 }}
                                             >
-                                                {" "}
-                                                Blog{" "}
+                                                Blog
                                             </button>
                                             <button
                                                 className={`w-full text-left p-3 rounded-md font-medium transition-colors duration-200 ${
@@ -1137,8 +1376,18 @@ const BoxerBlog = (): JSX.Element => {
                                                     setMobileMenuOpen(false);
                                                 }}
                                             >
-                                                {" "}
-                                                Tournaments{" "}
+                                                Tournaments
+                                            </button>
+                                            <button
+                                                className={`w-full text-left p-3 rounded-md font-medium transition-colors duration-200 ${
+                                                    activeTab === "write" ? "bg-red-600/20 text-red-400" : "text-zinc-300 hover:bg-zinc-800"
+                                                }`}
+                                                onClick={() => {
+                                                    navigateTo("write");
+                                                    setMobileMenuOpen(false);
+                                                }}
+                                            >
+                                                Write
                                             </button>
                                         </div>
                                     </div>
@@ -1151,6 +1400,7 @@ const BoxerBlog = (): JSX.Element => {
                         {activeTab === "home" && renderHome()}
                         {activeTab === "blog" && renderBlog()}
                         {activeTab === "tournaments" && renderTournaments()}
+                        {activeTab === "write" && renderWrite()}
                     </main>
 
                     <footer className="border-t border-zinc-800 bg-zinc-900">
@@ -1182,6 +1432,12 @@ const BoxerBlog = (): JSX.Element => {
                                             onClick={() => navigateTo("tournaments")}
                                         >
                                             Tournaments
+                                        </button>
+                                        <button
+                                            className="w-fit justify-start p-0 h-auto text-zinc-400 hover:text-red-500 text-left transition-colors duration-200"
+                                            onClick={() => navigateTo("write")}
+                                        >
+                                            Write
                                         </button>
                                     </nav>
                                 </div>
