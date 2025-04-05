@@ -1,716 +1,1291 @@
 "use client";
 
-import { Home, Search, Library, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, ListMusic, ChevronLeft, ChevronRight, Bell, Download, User2, } from "lucide-react";
-import Image from "next/image";
-import { useState, useMemo, useEffect, useRef } from "react";
+import type React from "react";
+import { useState, useEffect, JSX } from "react";
 
-
-const fadeInUpAnimation = `
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 1rem, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
+interface Boxer {
+    name: string;
+    image: string;
+    bio: string;
+    achievements: string[];
 }
 
-@keyframes fadeOutDown {
-  from {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    opacity: 0;
-    transform: translate3d(0, 1rem, 0);
-  }
+interface BlogPost {
+    id: number;
+    title: string;
+    excerpt: string;
+    date: string;
+    content: string;
 }
 
-.group:hover .fadeInUp {
-  animation: fadeInUp 0.25s ease-out forwards;
+interface Tournament {
+    id: number;
+    title: string;
+    date: string;
+    location: string;
+    opponent: string;
+    ticketLink: string;
+    description: string;
+    details: string;
 }
 
-.group:not(:hover) .fadeInUp {
-  animation: fadeOutDown 0.25s ease-in forwards;
+interface Comment {
+    id: number;
+    text: string;
+    author: string;
+    date: string;
 }
-`;
 
+type CommentsState = Record<number, Comment[]>;
 
-type Song = {
-  id: string;
-  title: string;
-  artist: string;
-  album: string;
-  duration: string;
-  image: string;
-};
+function formatDate(date: string, format: "short" | "long" = "short"): string {
+    const d = new Date(date);
+    if (format === "short") {
+        return `${d.toLocaleString("en-US", {
+            month: "short",
+        })} ${d.getDate()}, ${d.getFullYear()}`;
+    }
+    return d.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    });
+}
 
-type PlaylistItem = {
-  id: string;
-  title: string;
-  description?: string;
-  image: string;
-  type?: string;
-};
+function formatDateTime(date: string): string {
+    const d = new Date(date);
+    return `${d.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    })} at ${d.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+    })}`;
+}
 
-type Section = "home" | "search" | "library";
+const BoxerBlog = (): JSX.Element => {
+    const [activeTab, setActiveTab] = useState<"home" | "blog" | "tournaments">("home");
+    const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
+    const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+    const [comments, setComments] = useState<CommentsState>({});
+    const [commentText, setCommentText] = useState<string>("");
+    const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [avatarUrl, setAvatarUrl] = useState<string>("");
+    const [hasMounted, setHasMounted] = useState<boolean>(false);
 
-type LibraryFilter = "Playlists" | "Albums" | "Artists";
-
-export default function SpotifyClone() {
-  const [currentTime, setCurrentTime] = useState("0:00");
-  const [duration, setDuration] = useState("3:42");
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(50);
-  const [isMuted, setIsMuted] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const previousVolume = useState(50)[0];
-  const [currentSection, setCurrentSection] = useState<Section>("home");
-  const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>("Playlists");
-  const [scrollY, setScrollY] = useState(0);
-  const mainContentRef = useRef<HTMLDivElement>(null);
-
-  // Update scroll event listener to use the main content's scroll position
-  useEffect(() => {
-    const mainContent = mainContentRef.current;
-    if (!mainContent) return;
-    
-    const handleScroll = () => {
-      setScrollY(mainContent.scrollTop);
+    // Helper function to scroll to top with smooth behavior
+    const scrollToTop = () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
     };
-    
-    mainContent.addEventListener("scroll", handleScroll);
-    return () => {
-      mainContent.removeEventListener("scroll", handleScroll);
+
+    // Enhanced navigation function that changes tab and scrolls to top
+    const navigateTo = (tab: "home" | "blog" | "tournaments", post: BlogPost | null = null, tournament: Tournament | null = null) => {
+        setActiveTab(tab);
+        setSelectedPost(post);
+        setSelectedTournament(tournament);
+        scrollToTop();
     };
-  }, []);
 
-  // Clear search query when changing sections
-  const handleSectionChange = (section: Section) => {
-    setCurrentSection(section);
-    if (section !== "search") {
-      setSearchQuery("");
-    }
-  };
+    useEffect(() => {
+        setAvatarUrl(
+            `https://images.unsplash.com/photo-1606059100110-4230429584fe?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D`
+        );
 
-  
-  const songs: Song[] = [
-    { id: "song-1", title: "Internet Friends", artist: "Knife Party", album: "Rage Valley", duration: "3:42", image: "https://picsum.photos/200?1" },
-    { id: "song-2", title: "Strobe", artist: "Deadmau5", album: "For Lack of a Better Name", duration: "4:56", image: "https://picsum.photos/200?2" },
-    { id: "song-3", title: "Language", artist: "Porter Robinson", album: "Language EP", duration: "3:37", image: "https://picsum.photos/200?3" },
-    { id: "song-4", title: "Ghosts n Stuff", artist: "Deadmau5", album: "For Lack of a Better Name", duration: "4:12", image: "https://picsum.photos/200?4" },
-    { id: "song-5", title: "Shelter", artist: "Porter Robinson & Madeon", album: "Shelter", duration: "3:45", image: "https://picsum.photos/200?5" },
-    { id: "song-6", title: "Sad Machine", artist: "Porter Robinson", album: "Worlds", duration: "5:10", image: "https://picsum.photos/200?6" },
-  ];
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+        }, 500);
 
-  
-  const newMusicFriday: PlaylistItem[] = [
-    { id: "nmf-1", title: "New Music Friday", description: "New music from Taylor Swift, The Weeknd, Drake and more", image: "https://avatars.githubusercontent.com/u/1234" },
-    { id: "nmf-2", title: "Release Radar", description: "Catch all the latest music from artists you follow", image: "https://avatars.githubusercontent.com/u/2345" },
-    { id: "nmf-3", title: "Best of March", description: "The best tracks of March 2025. Cover: Calvin Harris", image: "https://avatars.githubusercontent.com/u/3456" },
-    { id: "nmf-4", title: "Fresh Finds", description: "The latest discoveries in indie music", image: "https://avatars.githubusercontent.com/u/4567" },
-    { id: "nmf-5", title: "All New Pop", description: "The hottest new pop releases", image: "https://avatars.githubusercontent.com/u/5678" },
-    { id: "nmf-6", title: "New Alternative", description: "Fresh alternative and indie rock releases", image: "https://avatars.githubusercontent.com/u/6789" }
-  ];
+        setHasMounted(true);
 
-  const dailyMixes: PlaylistItem[] = [
-    { id: "dm-1", title: "Daily Mix 1", description: "Porter Robinson, Madeon, ODESZA and more", image: "https://randomuser.me/api/portraits/men/1.jpg" },
-    { id: "dm-2", title: "Daily Mix 2", description: "Deadmau5, Daft Punk, The Chemical Brothers", image: "https://randomuser.me/api/portraits/men/2.jpg" },
-    { id: "dm-3", title: "Daily Mix 3", description: "Flume, Disclosure, Rüfüs Du Sol", image: "https://randomuser.me/api/portraits/men/3.jpg" },
-    { id: "dm-4", title: "Daily Mix 4", description: "Tycho, Bonobo, Four Tet and more", image: "https://randomuser.me/api/portraits/men/4.jpg" },
-    { id: "dm-5", title: "Daily Mix 5", description: "Justice, SebastiAn, Kavinsky and more", image: "https://randomuser.me/api/portraits/men/5.jpg" },
-    { id: "dm-6", title: "Daily Mix 6", description: "Aphex Twin, Boards of Canada, Autechre", image: "https://randomuser.me/api/portraits/men/6.jpg" }
-  ];
+        return () => clearTimeout(timer);
+    }, []);
 
-  const recentlyPlayed: PlaylistItem[] = [
-    { id: "rp-1", title: "Daily Mix 1", type: "Mix", description: "Your daily music mix", image: "https://picsum.photos/200?1" },
-    { id: "rp-2", title: "Electronic Essentials", type: "Playlist", description: "The best electronic tracks", image: "https://picsum.photos/200?2" },
-    { id: "rp-3", title: "This Is Porter Robinson", type: "Playlist", description: "All the essential Porter Robinson tracks", image: "https://picsum.photos/200?3" },
-    { id: "rp-4", title: "Liked Songs", type: "Playlist", description: "Your favorite tracks", image: "https://picsum.photos/200?4" },
-    { id: "rp-5", title: "Porter Robinson", type: "Artist", description: "Artist", image: "https://picsum.photos/200?5" },
-    { id: "rp-6", title: "Deadmau5", type: "Artist", description: "Artist", image: "https://picsum.photos/200?6" },
-    { id: "rp-7", title: "Daft Punk", type: "Artist", description: "Artist", image: "https://picsum.photos/200?7" }
-  ];
-
-  
-  const browseCategories = [
-    { id: "cat-music", title: "Music", color: "bg-pink-600", image: "https://picsum.photos/200?1" },
-    { id: "cat-podcasts", title: "Podcasts", color: "bg-emerald-700", image: "https://picsum.photos/200?2" },
-    { id: "cat-audiobooks", title: "Audiobooks", color: "bg-blue-800", image: "https://picsum.photos/200?3" },
-    { id: "cat-live", title: "Live Events", color: "bg-purple-600", image: "https://picsum.photos/200?4" },
-    { id: "cat-made-for-you", title: "Made For You", color: "bg-blue-900", image: "https://picsum.photos/200?5" },
-    { id: "cat-new-releases", title: "New Releases", color: "bg-orange-700", image: "https://picsum.photos/200?6" },
-    { id: "cat-hip-hop", title: "Hip-Hop", color: "bg-slate-600", image: "https://picsum.photos/200?7" },
-    { id: "cat-pop", title: "Pop", color: "bg-slate-500", image: "https://picsum.photos/200?8" },
-    { id: "cat-country", title: "Country", color: "bg-orange-600", image: "https://picsum.photos/200?9" },
-    { id: "cat-latin", title: "Latin", color: "bg-blue-600", image: "https://picsum.photos/200?10" },
-    { id: "cat-podcast-charts", title: "Podcast Charts", color: "bg-blue-500", image: "https://picsum.photos/200?11" },
-    { id: "cat-podcast-new", title: "Podcast New Releases", color: "bg-emerald-600", image: "https://picsum.photos/200?12" }
-  ];
-
-  
-  const searchResults = useMemo(() => {
-    if (!searchQuery) return null;
-    
-    const query = searchQuery.toLowerCase();
-    const matchedSongs = songs.filter(song => 
-      song.title.toLowerCase().includes(query) || 
-      song.artist.toLowerCase().includes(query) ||
-      song.album.toLowerCase().includes(query)
-    );
-    
-    const matchedPlaylists = [...newMusicFriday, ...dailyMixes].filter(playlist =>
-      playlist.title.toLowerCase().includes(query) ||
-      playlist.description?.toLowerCase().includes(query)
-    );
-
-    return {
-      songs: matchedSongs,
-      playlists: matchedPlaylists
+    const boxer: Boxer = {
+        name: 'Mike "The Thunder" Johnson',
+        image: avatarUrl,
+        bio: "Professional boxer with 28-2 record. Current middleweight champion known for powerful right hooks and lightning-fast footwork. Training out of Thunder Gym in Chicago.",
+        achievements: ["WBC Middleweight Champion", "2x Golden Gloves Winner", "Olympic Bronze Medalist"],
     };
-  }, [searchQuery]);
 
-  
-  const libraryItems = [
-    { id: "lib-1", title: "Liked Songs", type: "Playlist", image: "https://picsum.photos/200?lib1", gradient: "from-purple-400 to-purple-600" },
-    { id: "lib-2", title: "DJ", type: "Playlist", image: "https://picsum.photos/200?lib2", isSpotify: true, beta: true },
-    { id: "lib-3", title: "This Is League of Legends", type: "Playlist", image: "https://picsum.photos/200?lib3", isSpotify: true },
-    { id: "lib-4", title: "Porter Robinson", type: "Artist", image: "https://picsum.photos/200?lib4", isSpotify: true },
-    { id: "lib-5", title: "Daily Mix 1", type: "Mix", image: "https://picsum.photos/200?lib5", isSpotify: true },
-    { id: "lib-6", title: "Your Top Songs 2023", type: "Playlist", image: "https://picsum.photos/200?lib6", isSpotify: true },
-  ];
+    const blogPosts: BlogPost[] = [
+        {
+            id: 1,
+            title: "Reflections on My Latest Victory",
+            excerpt: "Last night's fight against Rodriguez was one of the toughest of my career. Here's what I learned...",
+            date: "2025-03-15",
+            content:
+                "Last night's fight against Rodriguez was one of the toughest of my career. The crowd was electric, and I could feel the energy from the moment I stepped into the arena. Rodriguez came out strong in the first two rounds, landing some solid body shots that had me adjusting my strategy early.\n\nBy round three, I found my rhythm and started countering his aggressive style with my jab-hook combinations. The turning point came in round five when I connected with a clean right cross that visibly stunned him. From there, I maintained control, focusing on my footwork and timing.\n\nWhat I learned most from this fight is the importance of patience. There were moments when I wanted to go for the knockout, but sticking to the game plan ultimately led to a more decisive victory. My corner did an amazing job keeping me focused and making the right adjustments between rounds.\n\nI want to thank all my fans for their incredible support. Your energy fuels me in those tough moments when I need to dig deep. Now it's time to recover, review the tape, and start preparing for the next challenge. The journey continues!",
+        },
+        {
+            id: 2,
+            title: "Training Camp Updates",
+            excerpt: "Three weeks into camp for my upcoming title defense. Here's how preparation is going...",
+            date: "2025-03-01",
+            content:
+                "Three weeks into camp for my upcoming title defense, and I'm feeling stronger than ever. We've completely revamped my training regimen for this fight, incorporating new strength conditioning exercises and focusing heavily on my defensive movement.\n\nMy sparring partners have been pushing me to my limits, simulating my opponent's aggressive southpaw style. Those sessions have been brutal but necessary. Coach Williams has been drilling counter-punching combinations that we believe will be effective against a southpaw.\n\nNutrition has been on point as well. Working with a new nutritionist who has me on a clean, high-protein diet that's helping me maintain strength while staying within my weight class. The weight cut is going smoothly so far.\n\nMentally, I'm in a great place. Meditation has become a key part of my daily routine, helping me stay focused and calm under pressure. I'm visualizing the fight every night before bed, seeing different scenarios and how I'll respond.\n\nStill have four weeks to go, but I'm confident this will be my best performance yet. The belt is staying with me!",
+        },
+        {
+            id: 3,
+            title: "The Mental Game of Boxing",
+            excerpt: "People often focus on the physical aspects of boxing, but the mental game is equally important...",
+            date: "2025-02-15",
+            content:
+                "People often focus on the physical aspects of boxing, but the mental game is equally important. In fact, I'd argue that at the highest levels of the sport, mental fortitude is what separates champions from contenders.\n\nIn my early career, I relied heavily on my natural physical gifts – my power and speed. But after suffering my first professional loss, I realized that wasn't enough. I needed to develop mental toughness and strategic thinking to reach the next level.\n\nNow, my preparation is as much mental as physical. I study opponents meticulously, looking for patterns and tendencies I can exploit. During fights, I'm constantly making micro-adjustments based on what I'm seeing and feeling. This awareness has transformed my performance in the ring.\n\nFear and doubt are natural before any fight. The key isn't eliminating these feelings but acknowledging them and using them as fuel. When I step into the ring now, I carry a calm confidence that comes from knowing I've prepared for every possible scenario.\n\nFor any young boxers reading this, my advice is simple: train your mind as hard as you train your body. Learn to stay present in the moment, especially when facing adversity. The fighter who maintains mental clarity under pressure is usually the one whose hand gets raised at the end.",
+        },
+    ];
 
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-  };
+    const tournaments: Tournament[] = [
+        {
+            id: 1,
+            title: "Middleweight Championship Defense",
+            date: "2025-04-20",
+            location: "United Center, Chicago",
+            opponent: "Carlos 'The Viper' Rodriguez",
+            ticketLink: "https://example.com/tickets",
+            description:
+                "Defending my WBC Middleweight title against the #1 contender. Rodriguez brings a 26-1 record with 18 KOs to this highly anticipated matchup.",
+            details:
+                "This will be my second title defense since winning the belt last year. Rodriguez has been on an impressive 8-fight winning streak, with his last three victories coming by knockout. His southpaw stance and counter-punching style present a unique challenge, but we've been preparing specifically for his approach.\n\nThe undercard features several exciting matchups, including the women's welterweight championship and a heavyweight eliminator bout. Doors open at 6:00 PM with the main event expected to start around 10:30 PM ET.\n\nThis fight will be broadcast live on PPV and streaming on FightZone Premium.",
+        },
+        {
+            id: 2,
+            title: "Thunder vs. Lightning Exhibition Match",
+            date: "2025-06-15",
+            location: "United Center, Chicago",
+            opponent: "Jamal 'Lightning' Williams",
+            ticketLink: "https://example.com/tickets",
+            description:
+                "Special exhibition match against former sparring partner and rising star Jamal Williams. All proceeds go to youth boxing programs in Chicago.",
+            details:
+                "This exhibition match is particularly special to me as it takes place in my hometown of Chicago. While not a title defense, this 8-round exhibition will showcase high-level boxing while raising money for a cause close to my heart - youth boxing programs that keep kids off the streets.\n\nJamal Williams is one of the most promising talents in the division, with incredible hand speed that earned him the 'Lightning' nickname. We've sparred countless rounds together when he was coming up, and now he's making his own name in the professional ranks.\n\nThe event will include a pre-fight youth boxing showcase and a meet-and-greet opportunity for VIP ticket holders. Local Chicago businesses have donated amazing items for a silent auction that will take place throughout the event.",
+        },
+        {
+            id: 3,
+            title: "International Boxing Gala",
+            date: "2025-08-10",
+            location: "United Center, Chicago",
+            opponent: "TBD",
+            ticketLink: "https://example.com/tickets",
+            description: "Making my UK debut at the prestigious International Boxing Gala. Opponent to be announced in the coming weeks.",
+            details:
+                "I'm thrilled to announce my UK debut at the International Boxing Gala in London. This event brings together champions from multiple weight classes for an unforgettable night of boxing at the iconic O2 Arena.\n\nWhile my opponent hasn't been officially announced, we're in talks with several top-ranked contenders. This non-title bout will be contested at a catchweight of 165 pounds, allowing me to test the waters at a slightly higher weight class.\n\nThe UK fans are known for their boxing knowledge and passionate support, so I'm looking forward to putting on a show worthy of this historic venue. The entire card will feature international matchups, with boxers representing over 10 different countries.\n\nTickets are expected to sell out quickly once they go on sale next month.",
+        },
+    ];
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseInt(e.target.value);
-    setVolume(newVolume);
-    if (newVolume > 0) {
-      setIsMuted(false);
-    }
-  };
+    const handleCommentSubmit = (postId: number): void => {
+        if (!commentText.trim()) return;
 
-  const handleMuteToggle = () => {
-    if (isMuted) {
-      setVolume(previousVolume);
-    } else {
-      setVolume(0);
-    }
-    setIsMuted(!isMuted);
-  };
+        const newComment: Comment = {
+            id: Date.now(),
+            text: commentText,
+            author: "Guest User",
+            date: new Date().toISOString(),
+        };
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    
-    // If we're not already in search section, navigate there for top navbar searches
-    if (query.trim() !== '' && currentSection !== "search") {
-      setCurrentSection("search");
-    }
-  };
+        setComments((prevComments) => ({
+            ...prevComments,
+            [postId]: [...(prevComments[postId] || []), newComment],
+        }));
 
-  // Handle search for dedicated search section
-  const handleSearchSectionInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
+        setCommentText("");
+    };
 
-  const renderMainContent = () => {
-    switch (currentSection) {
-      case "search":
-        return (
-          <>
-            <div className="sticky top-20 z-10 pb-4 bg-gradient-to-b from-zinc-900 to-transparent">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="What do you want to listen to?"
-                  value={searchQuery}
-                  onChange={handleSearchSectionInput}
-                  className="w-full bg-zinc-800 text-white rounded-full py-3 pl-12 pr-4 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
-                  autoFocus
-                />
-                <Search className="absolute left-4 top-3.5 h-6 w-6 text-gray-400" />
-              </div>
-            </div>
+    const handleCommentChange = (event: React.ChangeEvent<HTMLTextAreaElement>): void => {
+        setCommentText(event.target.value);
+    };
 
-            {searchQuery ? (
-              
-              <div className="space-y-8">
-                {searchResults?.songs && searchResults.songs.length > 0 && (
-                  <section>
-                    <h2 className="text-2xl font-plus-jakarta font-bold text-white mb-4">Songs</h2>
-                    <div className="bg-zinc-800/30 rounded-md">
-                      {searchResults.songs.map((song) => (
-                        <div 
-                          key={`search-song-${song.id}`}
-                          className="flex items-center gap-4 p-4 hover:bg-zinc-800/50 transition-colors duration-75 cursor-pointer group"
+    const renderHome = (): JSX.Element => (
+        <div className="space-y-20 animate-fadeIn">
+            <section className="flex flex-col-reverse md:flex-row gap-12 items-center">
+                <div className="flex-1 space-y-6 animate-slideInLeft">
+                    <div className="inline-flex items-center rounded-full bg-red-500/10 px-3 py-1 text-sm font-medium text-red-500 ring-1 ring-inset ring-red-500/20 mb-2">
+                        Professional Boxer
+                    </div>
+                    <h1 className="text-5xl font-bold tracking-tight text-white leading-tight md:text-6xl lg:text-7xl">
+                        {boxer.name.split('"')[0]}
+                        <span className="text-red-500">"{boxer.name.split('"')[1]}"</span>
+                        {boxer.name.split('"')[2]}
+                    </h1>
+                    <p className="text-xl text-zinc-400 leading-relaxed max-w-2xl">{boxer.bio}</p>
+                    <div className="flex flex-wrap gap-2 pt-2">
+                        {boxer.achievements.map((achievement, i) => (
+                            <div
+                                key={i}
+                                className="bg-zinc-800 text-zinc-300 hover:bg-zinc-700 px-3 py-1 text-sm rounded-md flex items-center transition-all duration-200 cursor-default"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="mr-1 h-3.5 w-3.5 text-red-500"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /> <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                                    <path d="M4 22h16" /> <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                                    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                                </svg>
+                                {achievement}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="pt-4">
+                        <button
+                            className="bg-red-500 hover:bg-red-600 text-white rounded-full px-8 h-12 text-base flex items-center transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
+                            onClick={() => navigateTo("blog")}
                         >
-                          <div className="relative h-12 w-12 flex-shrink-0">
-                            <Image
-                              src={song.image}
-                              alt={song.title}
-                              fill
-                              className="object-cover rounded-md"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="text-white font-plus-jakarta font-semibold">{song.title}</h3>
-                            <p className="text-sm text-gray-400 font-figtree">{song.artist}</p>
-                          </div>
-                          <span className="text-sm text-gray-400 font-figtree">{song.duration}</span>
-                          <button className="opacity-0 bg-green-500 rounded-full p-2 text-black hover:scale-105 shadow-lg cursor-pointer fadeInUp">
-                            <Play fill="black" size={16} />
-                          </button>
-                        </div>
-                      ))}
+                            Read My Blog
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="ml-2 h-4 w-4"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <path d="M5 12h14" /> <path d="m12 5 7 7-7 7" />
+                            </svg>
+                        </button>
                     </div>
-                  </section>
-                )}
-
-                {searchResults?.playlists && searchResults.playlists.length > 0 && (
-                  <section>
-                    <h2 className="text-2xl font-plus-jakarta font-bold text-white mb-4">Playlists</h2>
-                    <div className="grid grid-cols-5 gap-6">
-                      {searchResults.playlists.map((playlist) => (
-                        <div key={`search-playlist-${playlist.id}`} className="bg-zinc-800/30 p-4 rounded-md hover:bg-zinc-800/50 transition-colors duration-75 cursor-pointer group">
-                          <div className="relative aspect-square mb-4">
-                            <Image
-                              src={playlist.image}
-                              alt={playlist.title}
-                              fill
-                              className="object-cover rounded-md"
-                            />
-                            <button className="absolute bottom-2 right-2 opacity-0 bg-green-500 rounded-full p-3 text-black hover:scale-105 shadow-lg cursor-pointer fadeInUp">
-                              <Play fill="black" size={20} />
-                            </button>
-                          </div>
-                          <h3 className="text-white font-plus-jakarta font-bold truncate">{playlist.title}</h3>
-                          <p className="text-sm text-gray-400 font-figtree mt-1 line-clamp-2">{playlist.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {(!searchResults?.songs?.length && !searchResults?.playlists?.length) && (
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-plus-jakarta font-bold text-white mb-2">No results found for "{searchQuery}"</h2>
-                    <p className="text-gray-400 font-figtree">Try searching for something else</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <h2 className="text-2xl font-plus-jakarta font-bold text-white mb-6">Browse all</h2>
-                <div className="grid grid-cols-4 gap-6">
-                  {browseCategories.map((category) => (
-                    <div
-                      key={`category-${category.id}`}
-                      className={`${category.color} rounded-lg aspect-[2/1] relative overflow-hidden cursor-pointer hover:brightness-110 transition-all duration-75`}
-                    >
-                      <h3 className="text-2xl font-plus-jakarta font-bold text-white p-4 relative z-10">
-                        {category.title}
-                      </h3>
-                      <div className="absolute right-0 bottom-0 w-24 h-24 transform rotate-[25deg] translate-x-4 translate-y-4">
-                        <Image
-                          src={category.image}
-                          alt={category.title}
-                          fill
-                          className="object-cover rounded-lg shadow-xl"
+                </div>
+                <div className="flex-shrink-0 relative animate-slideInRight">
+                    <div className="h-56 w-56 md:h-80 md:w-80 rounded-full border-4 border-zinc-900 overflow-hidden transition-all duration-500 ease-in-out hover:scale-105 hover:border-red-500/50">
+                        <img
+                            src={boxer.image || "/placeholder.svg"}
+                            alt={boxer.name}
+                            className="object-cover w-full h-full transition-transform duration-500 ease-in-out hover:scale-110"
+                            width={320}
+                            height={320}
+                            loading="lazy"
                         />
-                      </div>
                     </div>
-                  ))}
                 </div>
-              </>
-            )}
-          </>
-        );
-      case "library":
-        return (
-          <div className="space-y-6">
-            
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-plus-jakarta font-bold text-white">Your Library</h2>
-            </div>
+            </section>
 
-            
-            <div className="flex gap-x-2">
-              {(["Playlists", "Albums", "Artists"] as const).map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setLibraryFilter(filter)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-semibold cursor-pointer ${
-                    libraryFilter === filter
-                      ? "bg-zinc-700 text-white"
-                      : "text-white hover:bg-zinc-800"
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
-
-            
-            <div className="grid grid-cols-5 gap-6">
-              {libraryItems
-                .filter(item => {
-                  switch (libraryFilter) {
-                    case "Playlists":
-                      return item.type === "Playlist" || item.type === "Mix";
-                    case "Albums":
-                      return item.type === "Album";
-                    case "Artists":
-                      return item.type === "Artist";
-                    default:
-                      return true;
-                  }
-                })
-                .map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-zinc-800/30 p-4 rounded-lg hover:bg-zinc-800/50 transition-colors duration-75 cursor-pointer group"
-                >
-                  <div className={`relative aspect-square mb-4 ${
-                    item.title === "Liked Songs" 
-                      ? `bg-gradient-to-br ${item.gradient} rounded-md`
-                      : ""
-                  }`}>
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      fill
-                      className={`object-cover rounded-md ${item.title === "Liked Songs" ? "opacity-0" : ""}`}
-                    />
-                    {item.title === "Liked Songs" && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="white">
-                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+            <section>
+                <div className="flex items-center justify-between mb-10">
+                    <div>
+                        <div className="inline-flex items-center rounded-full bg-red-500/10 px-3 py-1 text-sm font-medium text-red-500 ring-1 ring-inset ring-red-500/20 mb-2">
+                            Latest Updates
+                        </div>
+                        <h2 className="text-3xl font-bold text-white md:text-4xl">Latest Posts</h2>
+                    </div>
+                    <button
+                        onClick={() => navigateTo("blog")}
+                        className="border border-zinc-700 text-zinc-300 hover:text-white hover:border-red-500 px-4 py-2 rounded-md flex items-center transition-all duration-200 cursor-pointer"
+                    >
+                        View All
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="ml-2 h-4 w-4"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="m9 18 6-6-6-6" />
                         </svg>
-                      </div>
-                    )}
-                    <button className="absolute bottom-2 right-2 opacity-0 bg-green-500 rounded-full p-3 text-black hover:scale-105 shadow-lg cursor-pointer fadeInUp">
-                      <Play fill="black" size={20} />
                     </button>
-                  </div>
-                  <h3 className="text-white font-plus-jakarta font-bold truncate">{item.title}</h3>
-                  <div className="flex items-center gap-x-2 mt-1">
-                    {item.isSpotify && (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#1DB954">
-                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-                      </svg>
-                    )}
-                    <span className="text-sm text-gray-400">{item.type}</span>
-                    {item.beta && (
-                      <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500 text-white rounded">
-                        BETA
-                      </span>
-                    )}
-                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        );
-      default:
-        return (
-          <>
-            
-            {searchQuery ? (
-              
-              <div className="space-y-8">
-                
-              </div>
-            ) : (
-              
-              <>
-                
-                <section>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-plus-jakarta font-bold text-white">It's New Music Friday!</h2>
-                    <button className="text-gray-400 hover:text-white hover:underline transition-all duration-75 text-sm font-semibold cursor-pointer">
-                      Show all
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-6 gap-6">
-                    {newMusicFriday.map((item) => (
-                      <div key={`new-music-${item.id}`} className="bg-zinc-800/30 p-4 rounded-md hover:bg-zinc-800/50 transition-colors duration-75 cursor-pointer group">
-                        <div className="relative aspect-square mb-4">
-                          <Image
-                            src={item.image}
-                            alt={item.title}
-                            fill
-                            className="object-cover rounded-md"
-                          />
-                          <button className="absolute bottom-2 right-2 opacity-0 bg-green-500 rounded-full p-3 text-black hover:scale-105 shadow-lg cursor-pointer fadeInUp">
-                            <Play fill="black" size={20} />
-                          </button>
+                <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                    {blogPosts.slice(0, 3).map((post, index) => (
+                        <div
+                            key={post.id}
+                            className="h-full flex flex-col bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden group hover:border-red-500/50 transition-all duration-300 animate-fadeIn cursor-pointer"
+                            style={{ animationDelay: `${index * 150}ms`, opacity: 0 }}
+                            onClick={() => navigateTo("blog", post)}
+                        >
+                            <div className="p-6 pb-4">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="bg-zinc-800 text-zinc-300 border border-zinc-700 rounded-md px-2 py-1 text-sm flex items-center mb-2">
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="mr-1 h-3.5 w-3.5"
+                                            width="24"
+                                            height="24"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        {formatDate(post.date)}
+                                    </div>
+                                    <div className="h-8 w-8 rounded-full flex items-center justify-center bg-zinc-800 text-zinc-400 font-medium">
+                                        {index + 1}
+                                    </div>
+                                </div>
+                                <h3 className="text-xl font-bold text-white group-hover:text-red-500 transition-colors">{post.title}</h3>
+                            </div>
+                            <div className="px-6 pb-6 flex-grow">
+                                <p className="text-zinc-400">{post.excerpt}</p>
+                            </div>
+                            <div className="px-6 pb-6">
+                                <button
+                                    className="text-zinc-400 group-hover:text-red-500 p-0 h-auto font-medium flex items-center transition-all duration-300 ease-in-out cursor-pointer"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigateTo("blog", post);
+                                    }}
+                                >
+                                    Read More
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="ml-2 h-4 w-4 transition-all duration-300 ease-in-out group-hover:translate-x-1"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <path d="M5 12h14" /> <path d="m12 5 7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
-                        <h3 className="text-white font-plus-jakarta font-bold truncate">{item.title}</h3>
-                        <p className="text-sm text-gray-400 font-figtree mt-1 line-clamp-2">{item.description}</p>
-                      </div>
                     ))}
-                  </div>
-                </section>
-
-                
-                <section>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-plus-jakarta font-bold text-white">Made For You</h2>
-                    <button className="text-gray-400 hover:text-white hover:underline transition-all duration-75 text-sm font-semibold cursor-pointer">
-                      Show all
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-6 gap-6">
-                    {dailyMixes.map((mix) => (
-                      <div key={`daily-mix-${mix.id}`} className="bg-zinc-800/30 p-4 rounded-md hover:bg-zinc-800/50 transition-colors duration-75 cursor-pointer group">
-                        <div className="relative aspect-square mb-4">
-                          <Image
-                            src={mix.image}
-                            alt={mix.title}
-                            fill
-                            className="object-cover rounded-md"
-                          />
-                          <button className="absolute bottom-2 right-2 opacity-0 bg-green-500 rounded-full p-3 text-black hover:scale-105 shadow-lg cursor-pointer fadeInUp">
-                            <Play fill="black" size={20} />
-                          </button>
-                        </div>
-                        <h3 className="text-white font-plus-jakarta font-bold truncate">{mix.title}</h3>
-                        <p className="text-sm text-gray-400 font-figtree mt-1 line-clamp-2">{mix.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                
-                <section>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-plus-jakarta font-bold text-white">Recently played</h2>
-                    <button className="text-gray-400 hover:text-white hover:underline transition-all duration-75 text-sm font-semibold cursor-pointer">
-                      Show all
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-7 gap-6">
-                    {recentlyPlayed.map((item) => (
-                      <div key={`recently-played-${item.id}`} className="bg-zinc-800/30 p-4 rounded-md hover:bg-zinc-800/50 transition-colors duration-75 cursor-pointer group">
-                        <div className="relative aspect-square mb-4">
-                          <Image
-                            src={item.image}
-                            alt={item.title}
-                            fill
-                            className="object-cover rounded-md"
-                          />
-                          <button className="absolute bottom-2 right-2 opacity-0 bg-green-500 rounded-full p-3 text-black hover:scale-105 shadow-lg cursor-pointer fadeInUp">
-                            <Play fill="black" size={20} />
-                          </button>
-                        </div>
-                        <h3 className="text-white font-plus-jakarta font-bold truncate">{item.title}</h3>
-                        <p className="text-sm text-gray-400 font-figtree mt-1">{item.type}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </>
-            )}
-          </>
-        );
-    }
-  };
-
-  return (
-    <>
-      <style jsx global>{fadeInUpAnimation}</style>
-      <div className="flex flex-col h-screen bg-black">
-        <div className="flex flex-1 overflow-hidden">
-          
-          <nav className="w-64 bg-black p-6 flex flex-col gap-y-6">
-            
-            <div className="space-y-4">
-              <div 
-                className={`flex items-center gap-x-4 group cursor-pointer ${
-                  currentSection === "home" 
-                    ? "text-green-500" 
-                    : "text-gray-400 hover:text-green-500"
-                }`}
-                onClick={() => handleSectionChange("home")}
-              >
-                <Home className="h-6 w-6 transition-colors duration-75" />
-                <span className="font-plus-jakarta font-semibold transition-colors duration-75">Home</span>
-              </div>
-              <div 
-                className={`flex items-center gap-x-4 group cursor-pointer ${
-                  currentSection === "search" 
-                    ? "text-green-500" 
-                    : "text-gray-400 hover:text-green-500"
-                }`}
-                onClick={() => handleSectionChange("search")}
-              >
-                <Search className="h-6 w-6 transition-colors duration-75" />
-                <span className="font-plus-jakarta font-semibold transition-colors duration-75">Search</span>
-              </div>
-              <div 
-                className={`flex items-center gap-x-4 group cursor-pointer ${
-                  currentSection === "library" 
-                    ? "text-green-500" 
-                    : "text-gray-400 hover:text-green-500"
-                }`}
-                onClick={() => handleSectionChange("library")}
-              >
-                <Library className="h-6 w-6 transition-colors duration-75" />
-                <span className="font-plus-jakarta font-semibold transition-colors duration-75">Your Library</span>
-              </div>
-            </div>
-
-            
-            <div className="mt-8">
-              <div className="bg-zinc-900 rounded-lg p-4 space-y-4">
-                <h2 className="text-white font-plus-jakarta font-bold">Create your first playlist</h2>
-                <p className="text-sm text-gray-400 font-figtree">It's easy, we'll help you</p>
-                <button className="bg-white text-black rounded-full px-4 py-2 font-figtree font-semibold text-sm hover:scale-105 transition-transform duration-75 cursor-pointer">
-                  Create playlist
-                </button>
-              </div>
-            </div>
-          </nav>
-
-          
-          <main ref={mainContentRef} className="flex-1 bg-gradient-to-b from-zinc-900 to-black p-6 overflow-y-auto">
-            <div className={`sticky top-0 z-40 flex items-center justify-between w-full mb-6 py-3 transition-all duration-200 ${
-              scrollY > 10 
-                ? 'bg-zinc-900/80 backdrop-blur-lg border-b border-zinc-800/50 px-1 rounded-lg shadow-md' 
-                : ''
-            }`}>
-              <div className="flex items-center gap-4">
-                <div className="flex gap-2">
-                  <button className="bg-black/70 rounded-full p-2 cursor-pointer hover:bg-black/90 transition-colors duration-75">
-                    <ChevronLeft className="h-6 w-6 text-white" />
-                  </button>
-                  <button className="bg-black/70 rounded-full p-2 cursor-pointer hover:bg-black/90 transition-colors duration-75">
-                    <ChevronRight className="h-6 w-6 text-white" />
-                  </button>
                 </div>
-                {currentSection !== "search" && (
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="What do you want to listen to?"
-                      value={searchQuery}
-                      onChange={handleSearch}
-                      className="bg-zinc-800 text-white rounded-full py-2 pl-10 pr-4 w-80 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
-                    />
-                    <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                  </div>
+            </section>
+
+            <section>
+                <div className="flex items-center justify-between mb-10">
+                    <div>
+                        <div className="inline-flex items-center rounded-full bg-red-500/10 px-3 py-1 text-sm font-medium text-red-500 ring-1 ring-inset ring-red-500/20 mb-2">
+                            Fight Schedule
+                        </div>
+                        <h2 className="text-3xl font-bold text-white md:text-4xl">Upcoming Tournaments</h2>
+                    </div>
+                    <button
+                        onClick={() => navigateTo("tournaments")}
+                        className="border border-zinc-700 text-zinc-300 hover:text-white hover:border-red-500 px-4 py-2 rounded-md flex items-center transition-all duration-200 cursor-pointer"
+                    >
+                        View All
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="ml-2 h-4 w-4"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="m9 18 6-6-6-6" />
+                        </svg>
+                    </button>
+                </div>
+                <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                    {tournaments.slice(0, 3).map((tournament, index) => (
+                        <div
+                            key={tournament.id}
+                            className="h-full flex flex-col bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden group hover:border-red-500/50 transition-all duration-300 animate-fadeIn cursor-pointer"
+                            style={{ animationDelay: `${(index + 3) * 150}ms`, opacity: 0 }}
+                            onClick={() => navigateTo("tournaments", null, tournament)}
+                        >
+                            <div className="p-6 pb-4">
+                                <div className="flex flex-col space-y-2 mb-2">
+                                    <div className="w-fit bg-red-500/10 text-red-500 border border-red-500/20 rounded-md px-2 py-1 text-sm flex items-center">
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="mr-1 h-3.5 w-3.5"
+                                            width="24"
+                                            height="24"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                                            <line x1="16" x2="16" y1="2" y2="6"></line>
+                                            <line x1="8" x2="8" y1="2" y2="6"></line>
+                                            <line x1="3" x2="21" y1="10" y2="10"></line>
+                                        </svg>
+                                        {formatDate(tournament.date, "long")}
+                                    </div>
+                                    <div className="w-fit bg-zinc-800 text-zinc-300 border border-zinc-700 rounded-md px-2 py-1 text-sm flex items-center">
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="mr-1 h-3.5 w-3.5"
+                                            width="24"
+                                            height="24"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                                            <circle cx="12" cy="10" r="3"></circle>
+                                        </svg>
+                                        {tournament.location}
+                                    </div>
+                                </div>
+                                <h3 className="text-xl font-bold text-white group-hover:text-red-500 transition-colors">
+                                    {tournament.title}
+                                </h3>
+                            </div>
+                            <div className="px-6 pb-6 flex-grow">
+                                <p className="text-zinc-400">{tournament.description}</p>
+                            </div>
+                            <div className="px-6 pb-6">
+                                <button
+                                    className="text-zinc-400 group-hover:text-red-500 p-0 h-auto font-medium flex items-center transition-all duration-300 ease-in-out cursor-pointer"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigateTo("tournaments", null, tournament);
+                                    }}
+                                >
+                                    View Details
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="ml-2 h-4 w-4 transition-all duration-300 ease-in-out group-hover:translate-x-1"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <path d="M5 12h14" /> <path d="m12 5 7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+        </div>
+    );
+
+    const renderBlog = (): JSX.Element => (
+        <div className="space-y-10 animate-fadeIn">
+            <div className="flex items-center justify-between">
+                <div>
+                    <div className="inline-flex items-center rounded-full bg-red-500/10 px-3 py-1 text-sm font-medium text-red-500 ring-1 ring-inset ring-red-500/20 mb-2">
+                        My Thoughts
+                    </div>
+                    <h2 className="text-3xl font-bold text-white md:text-4xl">Blog Posts</h2>
+                </div>
+                {selectedPost && (
+                    <button
+                        onClick={() => navigateTo("blog")}
+                        className="border border-zinc-700 text-zinc-300 hover:text-white hover:border-red-500 px-4 py-2 rounded-md transition-all duration-200 cursor-pointer"
+                    >
+                        Back to All Posts
+                    </button>
                 )}
-              </div>
-              <div className="flex items-center gap-4">
-                <button className="text-white hover:scale-105 transition-transform duration-75 cursor-pointer">
-                  <Bell className="h-6 w-6" />
-                </button>
-                <button className="text-white hover:scale-105 transition-transform duration-75 cursor-pointer">
-                  <Download className="h-6 w-6" />
-                </button>
-                <button className="bg-black/70 rounded-full p-1 cursor-pointer hover:bg-black/90 transition-colors duration-75">
-                  <User2 className="h-6 w-6 text-white" />
-                </button>
-              </div>
             </div>
 
-            <div className="max-w-7xl mx-auto space-y-8">
-              {renderMainContent()}
-            </div>
-          </main>
-        </div>
+            {selectedPost ? (
+                <div className="space-y-8 animate-fadeIn">
+                    <div className="space-y-2">
+                        <div className="bg-zinc-800 text-zinc-300 border border-zinc-700 rounded-md px-2 py-1 text-sm inline-flex items-center mb-2">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="mr-1 h-3.5 w-3.5"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            {formatDate(selectedPost.date, "long")}
+                        </div>
+                        <h1 className="text-4xl font-bold text-white md:text-5xl">{selectedPost.title}</h1>
+                    </div>
 
-        
-        <div className="h-24 bg-zinc-900 border-t border-zinc-800 px-4">
-          <div className="flex items-center justify-between h-full">
-            
-            <div className="flex items-center gap-x-4 w-1/3">
-              <div className="relative h-14 w-14">
-                <Image
-                  src="https://picsum.photos/200?random=current"
-                  alt="Now playing"
-                  fill
-                  className="object-cover rounded-md"
-                />
-              </div>
-              <div>
-                <h4 className="text-white font-plus-jakarta font-semibold text-sm hover:text-green-500 transition-colors duration-75 cursor-pointer">Internet Friends</h4>
-                <p className="text-gray-400 text-xs font-figtree hover:text-green-500 transition-colors duration-75 cursor-pointer">Knife Party</p>
-              </div>
-            </div>
+                    <div className="prose prose-invert max-w-none text-zinc-400">
+                        {selectedPost.content.split("\n\n").map((paragraph, i) => (
+                            <p key={i} className="mb-4">
+                                {" "}
+                                {paragraph}
+                            </p>
+                        ))}
+                    </div>
 
-            
-            <div className="flex flex-col items-center w-1/3">
-              <div className="flex items-center gap-x-6">
-                <button className="text-gray-400 hover:text-white transition-colors duration-75 cursor-pointer">
-                  <SkipBack size={20} />
-                </button>
-                <button 
-                  className="bg-white rounded-full p-2 text-black hover:scale-105 transition-transform duration-75 cursor-pointer"
-                  onClick={handlePlayPause}
-                >
-                  {isPlaying ? <Pause fill="black" size={20} /> : <Play fill="black" size={20} />}
-                </button>
-                <button className="text-gray-400 hover:text-white transition-colors duration-75 cursor-pointer">
-                  <SkipForward size={20} />
-                </button>
-              </div>
-              <div className="flex items-center gap-x-2 mt-2 w-full">
-                <span className="text-xs text-gray-400 font-figtree w-10 text-right">{currentTime}</span>
-                <div className="h-1 flex-1 bg-gray-600 rounded-full">
-                  <div className="h-1 w-1/3 bg-green-500 rounded-full relative">
-                    <div className="absolute -right-2 -top-2 h-4 w-4 bg-white rounded-full opacity-0 group-hover:opacity-100" />
-                  </div>
+                    <div className="border-t border-zinc-800 pt-10 mt-12 md:w-1/2">
+                        <h3 className="text-2xl font-bold mb-6 text-white">Comments</h3>
+
+                        <div className="space-y-6 mb-8">
+                            {(comments[selectedPost.id]?.length ?? 0) > 0 ? (
+                                comments[selectedPost.id].map((comment) => (
+                                    <div
+                                        key={comment.id}
+                                        className="border border-zinc-800 rounded-lg p-5 bg-zinc-900 transition-all duration-300 hover:border-zinc-700"
+                                    >
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="h-10 w-10 rounded-full bg-zinc-800 text-zinc-300 flex items-center justify-center border border-zinc-700 font-semibold">
+                                                {comment.author[0]}
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-white">{comment.author}</p>
+                                                <p className="text-xs text-zinc-500">{hasMounted ? formatDateTime(comment.date) : "..."}</p>
+                                            </div>
+                                        </div>
+                                        <p className="text-zinc-400">{comment.text}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-10 border border-dashed border-zinc-800 rounded-lg bg-zinc-900/50">
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-10 w-10 text-zinc-700 mx-auto mb-3"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                    </svg>
+                                    <p className="text-zinc-500">No comments yet. Be the first to share your thoughts!</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-4">
+                            <textarea
+                                placeholder="Leave a comment..."
+                                value={commentText}
+                                onChange={handleCommentChange}
+                                className="min-h-[120px] w-full bg-zinc-900 border border-zinc-800 focus:border-red-500 focus:ring-1 focus:ring-red-500/20 text-zinc-300 placeholder:text-zinc-600 rounded-md p-3 transition-colors"
+                                rows={4}
+                            />
+                            <button
+                                onClick={() => handleCommentSubmit(selectedPost.id)}
+                                disabled={!commentText.trim()}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md flex items-center transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Post Comment
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="ml-2 h-4 w-4"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>{" "}
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <span className="text-xs text-gray-400 font-figtree w-10">{duration}</span>
-              </div>
-            </div>
-
-            
-            <div className="flex items-center gap-x-4 w-1/3 justify-end">
-              <button className="text-gray-400 hover:text-white transition-colors duration-75 cursor-pointer">
-                <ListMusic size={20} />
-              </button>
-              <button 
-                className="text-gray-400 hover:text-white transition-colors duration-75 cursor-pointer"
-                onClick={handleMuteToggle}
-              >
-                {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
-              </button>
-              <div className="w-24 group relative flex items-center">
-                <div className="w-full h-1 bg-gray-600 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-green-500 rounded-full" 
-                    style={{ width: `${volume}%` }}
-                  ></div>
+            ) : (
+                <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                    {blogPosts.map((post, index) => (
+                        <div
+                            key={post.id}
+                            className="h-full flex flex-col bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden group hover:border-red-500/50 transition-all duration-300 hover:translate-y-[-4px] animate-fadeIn cursor-pointer"
+                            style={{ animationDelay: `${index * 100}ms`, opacity: 0 }}
+                            onClick={() => {
+                                setSelectedPost(post);
+                                scrollToTop();
+                            }}
+                        >
+                            <div className="p-6 pb-4">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="bg-zinc-800 text-zinc-300 border border-zinc-700 rounded-md px-2 py-1 text-sm flex items-center mb-2">
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="mr-1 h-3.5 w-3.5"
+                                            width="24"
+                                            height="24"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        {formatDate(post.date)}
+                                    </div>
+                                    <div className="h-8 w-8 rounded-full flex items-center justify-center bg-zinc-800 text-zinc-400 font-medium">
+                                        {index + 1}
+                                    </div>
+                                </div>
+                                <h3 className="text-xl font-bold text-white group-hover:text-red-500 transition-colors">{post.title}</h3>
+                            </div>
+                            <div className="px-6 pb-6 flex-grow">
+                                <p className="text-zinc-400">{post.excerpt}</p>
+                            </div>
+                            <div className="px-6 pb-6">
+                                <button
+                                    className="text-zinc-400 group-hover:text-red-500 p-0 h-auto font-medium flex items-center transition-all duration-300 ease-in-out cursor-pointer"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedPost(post);
+                                        scrollToTop();
+                                    }}
+                                >
+                                    Read More
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="ml-2 h-4 w-4 transition-all duration-300 ease-in-out group-hover:translate-x-1"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <path d="M5 12h14" /> <path d="m12 5 7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={volume}
-                  onChange={handleVolumeChange}
-                  className="w-full h-1 appearance-none absolute inset-0 cursor-pointer opacity-0 z-10 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                />
-                <div 
-                  className="absolute h-3 w-3 rounded-full bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-75 pointer-events-none"
-                  style={{ left: `calc(${volume}% - 6px)` }}
-                ></div>
-              </div>
-              <button className="text-gray-400 hover:text-white transition-colors duration-75 cursor-pointer">
-                <Maximize2 size={20} />
-              </button>
-            </div>
-          </div>
+            )}
         </div>
-      </div>
-    </>
-  );
-}
+    );
 
+    const renderTournaments = (): JSX.Element => (
+        <div className="space-y-10 animate-fadeIn">
+            <div className="flex items-center justify-between">
+                <div>
+                    <div className="inline-flex items-center rounded-full bg-red-500/10 px-3 py-1 text-sm font-medium text-red-500 ring-1 ring-inset ring-red-500/20 mb-2">
+                        Fight Schedule
+                    </div>
+                    <h2 className="text-3xl font-bold text-white md:text-4xl">Upcoming Tournaments</h2>
+                </div>
+                {selectedTournament && (
+                    <button
+                        onClick={() => navigateTo("tournaments")}
+                        className="border border-zinc-700 text-zinc-300 hover:text-white hover:border-red-500 px-4 py-2 rounded-md transition-all duration-200 cursor-pointer"
+                    >
+                        Back to All Tournaments
+                    </button>
+                )}
+            </div>
 
+            {selectedTournament ? (
+                <div className="space-y-10 animate-fadeIn">
+                    <div className="space-y-4">
+                        <div className="flex flex-col space-y-2">
+                            <div className="w-fit bg-red-500/10 text-red-500 border border-red-500/20 rounded-md px-2 py-1 text-sm flex items-center">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="mr-1 h-3.5 w-3.5"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                                    <line x1="16" x2="16" y1="2" y2="6"></line>
+                                    <line x1="8" x2="8" y1="2" y2="6"></line>
+                                    <line x1="3" x2="21" y1="10" y2="10"></line>
+                                </svg>
+                                {formatDate(selectedTournament.date, "long")}
+                            </div>
+                            <div className="w-fit bg-zinc-800 text-zinc-300 border border-zinc-700 rounded-md px-2 py-1 text-sm flex items-center">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="mr-1 h-3.5 w-3.5"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                                    <circle cx="12" cy="10" r="3"></circle>
+                                </svg>
+                                {selectedTournament.location}
+                            </div>
+                        </div>
+                        <h1 className="text-4xl font-bold text-white md:text-5xl">{selectedTournament.title}</h1>
+                    </div>
+
+                    <div className="grid gap-10 md:grid-cols-2">
+                        <div>
+                            <div className="inline-flex items-center rounded-full bg-zinc-800/50 px-3 py-1 text-sm font-medium text-zinc-400 mb-4">
+                                Event Information
+                            </div>
+                            <div className="prose prose-invert max-w-none text-zinc-400">
+                                {selectedTournament.details.split("\n\n").map((paragraph, i) => (
+                                    <p key={i} className="mb-4">
+                                        {paragraph}
+                                    </p>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-8">
+                            <div className="bg-zinc-900 rounded-xl p-6 border border-zinc-800 transition-all duration-300 hover:border-zinc-700">
+                                <div className="inline-flex items-center rounded-full bg-zinc-800/50 px-3 py-1 text-sm font-medium text-zinc-400 mb-4">
+                                    Match Details
+                                </div>
+                                <div className="space-y-5">
+                                    <div>
+                                        <p className="text-sm text-zinc-500 mb-1">Opponent</p>
+                                        <p className="font-medium text-white text-lg">{selectedTournament.opponent}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-zinc-500 mb-1">Date</p>
+                                        <p className="font-medium text-white text-lg">{formatDate(selectedTournament.date, "long")}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-zinc-500 mb-1">Venue</p>
+                                        <p className="font-medium text-white text-lg">{selectedTournament.location}</p>
+                                    </div>
+                                </div>
+                                <div className="mt-8">
+                                    <a
+                                        href={selectedTournament.ticketLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block w-full bg-red-600 hover:bg-red-700 text-white h-12 rounded-md flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
+                                    >
+                                        Get Tickets
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div className="bg-zinc-900 rounded-xl p-6 border border-zinc-800 transition-all duration-300 hover:border-zinc-700">
+                                <div className="inline-flex items-center rounded-full bg-zinc-800/50 px-3 py-1 text-sm font-medium text-zinc-400 mb-4">
+                                    Location
+                                </div>
+                                <div className="aspect-video bg-zinc-800 rounded-lg overflow-hidden">
+                                    <img
+                                        src="https://images.unsplash.com/photo-1731451162440-506d1b3aba95?q=80&w=1935&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                                        alt="Venue map placeholder"
+                                        width={500}
+                                        height={300}
+                                        className="w-full h-full object-cover"
+                                        loading="lazy"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                    {tournaments.map((tournament, index) => (
+                        <div
+                            key={tournament.id}
+                            className="h-full flex flex-col bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden group hover:border-red-500/50 transition-all duration-300 hover:translate-y-[-4px] animate-fadeIn cursor-pointer"
+                            style={{ animationDelay: `${index * 100}ms`, opacity: 0 }}
+                            onClick={() => {
+                                setSelectedTournament(tournament);
+                                scrollToTop();
+                            }}
+                        >
+                            <div className="p-6 pb-4">
+                                <div className="flex flex-col space-y-2 mb-2">
+                                    <div className="w-fit bg-red-500/10 text-red-500 border border-red-500/20 rounded-md px-2 py-1 text-sm flex items-center">
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="mr-1 h-3.5 w-3.5"
+                                            width="24"
+                                            height="24"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                                            <line x1="16" x2="16" y1="2" y2="6"></line>
+                                            <line x1="8" x2="8" y1="2" y2="6"></line>
+                                            <line x1="3" x2="21" y1="10" y2="10"></line>
+                                        </svg>
+                                        {formatDate(tournament.date, "long")}
+                                    </div>
+                                    <div className="w-fit bg-zinc-800 text-zinc-300 border border-zinc-700 rounded-md px-2 py-1 text-sm flex items-center">
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="mr-1 h-3.5 w-3.5"
+                                            width="24"
+                                            height="24"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                                            <circle cx="12" cy="10" r="3"></circle>
+                                        </svg>
+                                        {tournament.location}
+                                    </div>
+                                </div>
+                                <h3 className="text-xl font-bold text-white group-hover:text-red-500 transition-colors">
+                                    {tournament.title}
+                                </h3>
+                            </div>
+                            <div className="px-6 pb-6 flex-grow">
+                                <p className="text-zinc-400">{tournament.description}</p>
+                            </div>
+                            <div className="px-6 pb-6">
+                                <button
+                                    className="text-zinc-400 group-hover:text-red-500 p-0 h-auto font-medium flex items-center transition-all duration-300 ease-in-out cursor-pointer"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedTournament(tournament);
+                                        scrollToTop();
+                                    }}
+                                >
+                                    View Details
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="ml-2 h-4 w-4 transition-all duration-300 ease-in-out group-hover:translate-x-1"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <path d="M5 12h14" /> <path d="m12 5 7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-900/95 to-zinc-950 text-zinc-100">
+            <style jsx global>{`
+                @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap");
+                @import url("https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&display=swap");
+                @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100;200;300;400;500;600;700;800;900&display=swap");
+
+                :root {
+                    --background: 0 0% 100%;
+                    --foreground: 240 10% 3.9%;
+
+                    --primary: 346.8 77.8% 49.8%;
+                    --ring: 346.8 77.8% 49.8%;
+                    --radius: 0.5rem;
+
+                    --font-heading: "Orbitron", sans-serif;
+                    --font-body: "Barlow", sans-serif;
+                    --font-title: "Outfit", sans-serif;
+                }
+
+                .dark {
+                    --background: 240 10% 3.9%;
+                    --foreground: 0 0% 98%;
+                    --card: 240 5.9% 10%;
+                    --card-foreground: 0 0% 98%;
+                    --popover: 240 10% 3.9%;
+                    --popover-foreground: 0 0% 98%;
+                    --primary: 346.8 77.8% 49.8%;
+                    --primary-foreground: 355.7 100% 97.3%;
+                    --secondary: 240 3.7% 15.9%;
+                    --secondary-foreground: 0 0% 98%;
+                    --muted: 240 3.7% 15.9%;
+                    --muted-foreground: 240 5% 64.9%;
+                    --accent: 240 3.7% 15.9%;
+                    --accent-foreground: 0 0% 98%;
+                    --destructive: 0 62.8% 30.6%;
+                    --destructive-foreground: 0 0% 98%;
+                    --border: 240 3.7% 15.9%;
+                    --input: 240 3.7% 15.9%;
+                    --ring: 346.8 77.8% 49.8%;
+                }
+
+                body {
+                    background-color: #09090b;
+                    color: #fafafa;
+                    font-family: var(--font-body);
+                    -webkit-font-smoothing: antialiased;
+                    -moz-osx-font-smoothing: grayscale;
+                }
+
+                @keyframes fadeIn {
+                    from {
+                        opacity: 0;
+                    }
+                    to {
+                        opacity: 1;
+                    }
+                }
+                @keyframes slideInLeft {
+                    from {
+                        transform: translateX(-20px);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                @keyframes slideInRight {
+                    from {
+                        transform: translateX(20px);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+
+                .animate-fadeIn {
+                    animation: fadeIn 0.5s ease-out forwards;
+                }
+                .animate-slideInLeft {
+                    animation: slideInLeft 0.5s ease-out forwards;
+                }
+                .animate-slideInRight {
+                    animation: slideInRight 0.5s ease-out forwards;
+                }
+
+                button,
+                a {
+                    cursor: pointer;
+                    outline-offset: 2px;
+                }
+                button:focus-visible,
+                a:focus-visible {
+                    outline: 2px solid var(--primary);
+                }
+
+                .prose p {
+                    margin-bottom: 1em;
+                }
+                .prose h1,
+                .prose h2,
+                .prose h3 {
+                }
+            `}</style>
+
+            {isLoading && !hasMounted ? (
+                <div className="fixed inset-0 bg-zinc-950 flex items-center justify-center z-50">
+                    <div className="flex flex-col items-center">
+                        <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="mt-4 text-lg text-zinc-400">Loading...</p>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <header className="sticky top-0 z-10 border-b border-zinc-800 bg-gradient-to-br from-zinc-950 via-black/90 to-zinc-950 backdrop-blur-sm">
+                        <div className="max-w-7xl mx-auto px-4 flex h-20 items-center justify-between">
+                            <div className="flex text-lg font-bold tracking-tight text-white items-center gap-3">
+                                <div className="relative h-10 w-10 overflow-hidden rounded-full bg-zinc-800 border border-zinc-700 transition-all duration-300 ease-in-out hover:scale-105 cursor-pointer"
+                                    onClick={() => navigateTo("home")}>
+                                    <img
+                                        src={boxer.image || "/placeholder.svg"}
+                                        alt=""
+                                        width={40}
+                                        height={40}
+                                        className="object-cover w-full h-full"
+                                        loading="lazy"
+                                    />
+                                </div>
+                                <div 
+                                    className="cursor-pointer"
+                                    onClick={() => navigateTo("home")}>
+                                    Mike
+                                    <span className="text-lg ml-[-5] mr-[-5] font-bold tracking-tight text-red-500">"The Thunder"</span>
+                                    Johnson
+                                </div>
+                            </div>
+                            <nav className="hidden md:flex items-center gap-8">
+                                <button
+                                    className={`text-base font-medium ${
+                                        activeTab === "home" ? "text-red-500" : "text-zinc-400 hover:text-white"
+                                    } transition-colors duration-300 ease-in-out`}
+                                    onClick={() => navigateTo("home")}
+                                >
+                                    Home
+                                </button>
+                                <button
+                                    className={`text-base font-medium ${
+                                        activeTab === "blog" ? "text-red-500" : "text-zinc-400 hover:text-white"
+                                    } transition-colors duration-300 ease-in-out`}
+                                    onClick={() => navigateTo("blog")}
+                                >
+                                    Blog
+                                </button>
+                                <button
+                                    className={`text-base font-medium ${
+                                        activeTab === "tournaments" ? "text-red-500" : "text-zinc-400 hover:text-white"
+                                    } transition-colors duration-300 ease-in-out`}
+                                    onClick={() => navigateTo("tournaments")}
+                                >
+                                    Tournaments
+                                </button>
+                            </nav>
+                            <div className="md:hidden">
+                                <button
+                                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                    className="text-zinc-400 hover:text-white transition-colors duration-200 p-2"
+                                    aria-label="Toggle menu"
+                                    aria-expanded={mobileMenuOpen}
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-6 w-6"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <line x1="4" x2="20" y1="12" y2="12"></line>
+                                        <line x1="4" x2="20" y1="6" y2="6"></line>
+                                        <line x1="4" x2="20" y1="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                                {mobileMenuOpen && (
+                                    <div className="absolute top-20 left-0 right-0 bg-zinc-900 border-y border-zinc-800 p-4 z-20 animate-fadeIn shadow-lg">
+                                        <div className="grid gap-4 py-4">
+                                            <button
+                                                className={`w-full text-left p-3 rounded-md font-medium transition-colors duration-200 ${
+                                                    activeTab === "home" ? "bg-red-600/20 text-red-400" : "text-zinc-300 hover:bg-zinc-800"
+                                                }`}
+                                                onClick={() => {
+                                                    navigateTo("home");
+                                                    setMobileMenuOpen(false);
+                                                }}
+                                            >
+                                                {" "}
+                                                Home{" "}
+                                            </button>
+                                            <button
+                                                className={`w-full text-left p-3 rounded-md font-medium transition-colors duration-200 ${
+                                                    activeTab === "blog" ? "bg-red-600/20 text-red-400" : "text-zinc-300 hover:bg-zinc-800"
+                                                }`}
+                                                onClick={() => {
+                                                    navigateTo("blog");
+                                                    setMobileMenuOpen(false);
+                                                }}
+                                            >
+                                                {" "}
+                                                Blog{" "}
+                                            </button>
+                                            <button
+                                                className={`w-full text-left p-3 rounded-md font-medium transition-colors duration-200 ${
+                                                    activeTab === "tournaments" ? "bg-red-600/20 text-red-400" : "text-zinc-300 hover:bg-zinc-800"
+                                                }`}
+                                                onClick={() => {
+                                                    navigateTo("tournaments");
+                                                    setMobileMenuOpen(false);
+                                                }}
+                                            >
+                                                {" "}
+                                                Tournaments{" "}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="max-w-7xl mx-auto px-4 py-16">
+                        {activeTab === "home" && renderHome()}
+                        {activeTab === "blog" && renderBlog()}
+                        {activeTab === "tournaments" && renderTournaments()}
+                    </main>
+
+                    <footer className="border-t border-zinc-800 bg-zinc-900">
+                        <div className="max-w-7xl mx-auto px-4 py-12 md:py-16">
+                            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-12">
+                                <div className="lg:col-span-6">
+                                    <h3 className="text-xl font-bold mb-4 text-white">
+                                        About Mike <span className="text-red-500">"The Thunder"</span> Johnson
+                                    </h3>
+                                    <p className="text-zinc-400 leading-relaxed max-w-2xl">{boxer.bio}</p>
+                                </div>
+                                <div className="lg:col-span-3">
+                                    <h3 className="text-xl font-bold mb-4 text-white">Quick Links</h3>
+                                    <nav className="flex flex-col gap-3">
+                                        <button
+                                            className="w-fit justify-start p-0 h-auto text-zinc-400 hover:text-red-500 text-left transition-colors duration-200"
+                                            onClick={() => navigateTo("home")}
+                                        >
+                                            Home
+                                        </button>
+                                        <button
+                                            className="w-fit justify-start p-0 h-auto text-zinc-400 hover:text-red-500 text-left transition-colors duration-200"
+                                            onClick={() => navigateTo("blog")}
+                                        >
+                                            Blog
+                                        </button>
+                                        <button
+                                            className="w-fit justify-start p-0 h-auto text-zinc-400 hover:text-red-500 text-left transition-colors duration-200"
+                                            onClick={() => navigateTo("tournaments")}
+                                        >
+                                            Tournaments
+                                        </button>
+                                    </nav>
+                                </div>
+                                <div className="lg:col-span-3">
+                                    <h3 className="text-xl font-bold mb-4 text-white">Connect</h3>
+                                    <div className="flex gap-4">
+                                        <a
+                                            href="#"
+                                            aria-label="Facebook"
+                                            className="h-10 w-10 rounded-full border border-zinc-700 text-zinc-400 hover:text-red-500 hover:border-red-500 flex items-center justify-center transition-all duration-300 ease-in-out"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="20"
+                                                height="20"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                className="transition-colors duration-300 ease-in-out"
+                                            >
+                                                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                                            </svg>
+                                        </a>
+                                        <a
+                                            href="#"
+                                            aria-label="Instagram"
+                                            className="h-10 w-10 rounded-full border border-zinc-700 text-zinc-400 hover:text-red-500 hover:border-red-500 flex items-center justify-center transition-all duration-300 ease-in-out"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="20"
+                                                height="20"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                className="transition-colors duration-300 ease-in-out"
+                                            >
+                                                <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+                                                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                                                <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                                            </svg>
+                                        </a>
+                                        <a
+                                            href="#"
+                                            aria-label="Twitter"
+                                            className="h-10 w-10 rounded-full border border-zinc-700 text-zinc-400 hover:text-red-500 hover:border-red-500 flex items-center justify-center transition-all duration-300 ease-in-out"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="20"
+                                                height="20"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                className="transition-colors duration-300 ease-in-out"
+                                            >
+                                                <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z" />
+                                            </svg>
+                                        </a>
+                                        <a
+                                            href="#"
+                                            aria-label="LinkedIn"
+                                            className="h-10 w-10 rounded-full border border-zinc-700 text-zinc-400 hover:text-red-500 hover:border-red-500 flex items-center justify-center transition-all duration-300 ease-in-out"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="20"
+                                                height="20"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                className="transition-colors duration-300 ease-in-out"
+                                            >
+                                                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+                                                <rect width="4" height="12" x="2" y="9" />
+                                                <circle cx="4" cy="4" r="2" />
+                                            </svg>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="border-t border-zinc-800 mt-10 pt-8 text-center text-sm text-zinc-500">
+                                <p>
+                                    © {hasMounted ? new Date().getFullYear() : "..."} {boxer.name}. All rights reserved.
+                                </p>
+                            </div>
+                        </div>
+                    </footer>
+                </>
+            )}
+        </div>
+    );
+};
+
+export default BoxerBlog;
