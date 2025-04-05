@@ -17,8 +17,8 @@ const figtree = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "Spotify Clone",
-  description: "A modern Spotify clone built with Next.js and TailwindCSS",
+  title: "StoryVoice",
+  description: "A podcast platform for creators to share their stories",
 };
 
 export default function RootLayout({

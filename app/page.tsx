@@ -153,8 +153,7 @@ const initialStories: Story[] = [
                 instagram: "zaara.zabeen",
             },
         },
-        audioUrl:
-            "http://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3",
+        audioUrl: "https://raw.githubusercontent.com/Ksotillo/wmp-wep-app/main/public/audio/track1.mp3",
         title: "Late Night Thoughts About Design",
         description: "Reflecting on what makes great user experiences in modern apps",
         duration: "1:42",
@@ -182,7 +181,7 @@ const initialStories: Story[] = [
                 instagram: "alex.product",
             },
         },
-        audioUrl: "https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3",
+        audioUrl: "https://raw.githubusercontent.com/Ksotillo/wmp-wep-app/main/public/audio/track2.mp3",
         title: "Product Design Process Explained",
         description: "My approach to solving complex UX problems in enterprise software",
         duration: "2:15",
@@ -210,7 +209,7 @@ const initialStories: Story[] = [
                 instagram: "jamie.creates",
             },
         },
-        audioUrl: "https://assets.mixkit.co/music/preview/mixkit-hip-hop-02-621.mp3",
+        audioUrl: "https://raw.githubusercontent.com/Ksotillo/wmp-wep-app/main/public/audio/track3.mp3",
         title: "Creative Workflow Tips for Designers",
         description: "How I organize my day for maximum creative output",
         duration: "3:07",
@@ -238,7 +237,7 @@ const initialStories: Story[] = [
                 instagram: "michael.ambient",
             },
         },
-        audioUrl: "https://assets.mixkit.co/music/preview/mixkit-dreaming-big-31.mp3",
+        audioUrl: "https://raw.githubusercontent.com/Ksotillo/wmp-wep-app/main/public/audio/track4.mp3",
         title: "Ambient Soundscape for Focus",
         description: "A carefully crafted soundscape to enhance your concentration during work sessions",
         duration: "5:22",
@@ -266,7 +265,7 @@ const initialStories: Story[] = [
                 instagram: "sophia.sounds",
             },
         },
-        audioUrl: "https://assets.mixkit.co/music/preview/mixkit-sleepy-cat-135.mp3",
+        audioUrl: "https://raw.githubusercontent.com/Ksotillo/wmp-wep-app/main/public/audio/track1.mp3",
         title: "Gentle Rain ASMR",
         description: "Calming rain sounds with gentle tapping to help you relax and fall asleep",
         duration: "8:15",
@@ -440,6 +439,16 @@ interface AudioElementWithContext extends HTMLAudioElement {
 }
 
 const CustomAlert = ({ isOpen, message, type = "info", onClose }: AlertConfig & { onClose?: () => void }) => {
+    useEffect(() => {
+        if (isOpen && onClose) {
+            const timer = setTimeout(() => {
+                onClose();
+            }, 2500);
+            
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     return (
@@ -448,7 +457,7 @@ const CustomAlert = ({ isOpen, message, type = "info", onClose }: AlertConfig & 
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.5 }}
-            className="fixed top-0 left-0 right-0 z-50 flex justify-center p-4"
+            className="fixed top-0 left-0 right-0 z-[100] flex justify-center p-4"
         >
             <div
                 className={`flex items-center space-x-3 px-4 py-3 rounded-lg shadow-lg ${
@@ -526,7 +535,8 @@ const ChatBox = ({ user, isOpen, onClose }: ChatBoxProps) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.4 }}
-            className="fixed bottom-4 right-4 z-40 bg-slate-800 border border-slate-700 rounded-lg shadow-lg w-80 h-96 flex flex-col overflow-hidden"
+            className="fixed bottom-4 right-4 z-50 bg-slate-800 border border-slate-700 rounded-lg shadow-lg w-80 h-96 flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
         >
             <div className="flex items-center justify-between p-3 border-b border-slate-700 bg-slate-900">
                 <div className="flex items-center space-x-2">
@@ -538,7 +548,7 @@ const ChatBox = ({ user, isOpen, onClose }: ChatBoxProps) => {
                         <p className="text-xs text-gray-400">{user.username}</p>
                     </div>
                 </div>
-                <button className="text-gray-400 hover:text-white transition-colors" onClick={onClose}>
+                <button className="text-gray-400 hover:text-white transition-colors cursor-pointer" onClick={(e) => { e.stopPropagation(); onClose(); }}>
                     <X size={16} />
                 </button>
             </div>
@@ -608,24 +618,60 @@ const AudioVisualizer = ({
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationFrameRef = useRef<number | undefined>(undefined);
     const [isInitialized, setIsInitialized] = useState(false);
+    const contextSetupAttempted = useRef<Set<string>>(new Set());
+
+    
+    useEffect(() => {
+        console.log("AudioVisualizer state:", { isPlaying, isRecording, hasAudioElement: !!audioElement });
+        if (audioElement) {
+            console.log("Audio element details:", {
+                readyState: audioElement.readyState,
+                src: audioElement.src,
+                hasContext: !!audioElement.context,
+                contextState: audioElement.context?.state,
+            });
+        }
+    }, [audioElement, isPlaying, isRecording]);
 
     useEffect(() => {
         if (!audioElement && !isRecording) return;
 
         const setupAudio = async () => {
             try {
-                if (audioElement && !audioElement.context) {
-                    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                    audioElement.context = new AudioContext();
-                    audioElement.analyser = audioElement.context.createAnalyser();
-                    audioElement.analyser.fftSize = 512;
-                    audioElement.analyser.smoothingTimeConstant = 0.85;
-                    audioElement.source = audioElement.context.createMediaElementSource(audioElement);
-                    audioElement.source.connect(audioElement.analyser);
-                    audioElement.analyser.connect(audioElement.context.destination);
-                    setIsInitialized(true);
-                } else if (audioElement?.context?.state === "suspended") {
-                    await audioElement.context.resume();
+                if (audioElement) {
+                    
+                    const audioId = audioElement.src || 'unknown-audio';
+                    
+                    
+                    if (!contextSetupAttempted.current.has(audioId) && !audioElement.context) {
+                        console.log("Setting up new audio context for:", audioId);
+                        contextSetupAttempted.current.add(audioId);
+                        
+                        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                        audioElement.context = new AudioContext();
+                        audioElement.analyser = audioElement.context.createAnalyser();
+                        audioElement.analyser.fftSize = 512;
+                        audioElement.analyser.smoothingTimeConstant = 0.85;
+                        
+                        try {
+                            
+                            audioElement.crossOrigin = "anonymous";
+                            audioElement.source = audioElement.context.createMediaElementSource(audioElement);
+                            audioElement.source.connect(audioElement.analyser);
+                            audioElement.analyser.connect(audioElement.context.destination);
+                            console.log("Audio context setup successful for:", audioId);
+                            setIsInitialized(true);
+                        } catch (sourceError) {
+                            console.error("Error creating media source:", sourceError);
+                            
+                            audioElement.context = undefined;
+                            audioElement.analyser = undefined;
+                            audioElement.source = undefined;
+                        }
+                    } else if (audioElement.context && audioElement.context.state === "suspended") {
+                        console.log("Resuming suspended audio context");
+                        await audioElement.context.resume();
+                    }
                 }
             } catch (error) {
                 console.error("Error setting up audio context:", error);
@@ -634,40 +680,28 @@ const AudioVisualizer = ({
 
         setupAudio();
 
-        
-        if (!isInitialized && audioElement) {
-            setupAudio();
-        }
-
         return () => {
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
             }
 
-            if (audioElement?.context) {
-                try {
-                    
-                    if (audioElement.source) {
-                        audioElement.source.disconnect();
-                    }
-                } catch (e) {
-                    console.error("Error disconnecting audio source", e);
-                }
-
-                const canvas = canvasRef.current;
-                if (canvas) {
-                    const ctx = canvas.getContext("2d");
-                    if (ctx) {
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    }
+            
+            
+            const canvas = canvasRef.current;
+            if (canvas) {
+                const ctx = canvas.getContext("2d");
+                if (ctx) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
                 }
             }
-            return;
         };
-    }, [audioElement, isRecording, isInitialized]);
+    }, [audioElement, isRecording]);
 
+    
     useEffect(() => {
-        if ((!isPlaying && !isRecording) || (!audioElement?.analyser && !isRecording) || !canvasRef.current) {
+        if ((!isPlaying && !isRecording) || 
+            (!audioElement?.analyser && !isRecording) || 
+            !canvasRef.current) {
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
 
@@ -707,7 +741,8 @@ const AudioVisualizer = ({
             return data;
         };
 
-        const bufferLength = isRecording ? 64 : (audioElement?.analyser?.frequencyBinCount || 0);
+        
+        const bufferLength = isRecording || !audioElement?.analyser ? 64 : (audioElement.analyser.frequencyBinCount || 0);
         const dataArray = new Uint8Array(bufferLength);
 
         const draw = () => {
@@ -716,19 +751,20 @@ const AudioVisualizer = ({
             if (isRecording) {
                 dataArray.set(generateRecordingData());
             } else if (audioElement?.analyser) {
-                audioElement.analyser.getByteFrequencyData(dataArray);
+                try {
+                    audioElement.analyser.getByteFrequencyData(dataArray);
+                } catch (e) {
+                    console.error("Error getting audio data:", e);
+                    
+                    dataArray.set(generateRecordingData());
+                }
+            } else {
+                
+                dataArray.set(generateRecordingData());
             }
 
             const width = canvas.offsetWidth;
             ctx.clearRect(0, 0, width, height);
-
-            const createBarColor = (ctx: CanvasRenderingContext2D, startY: number, endY: number) => {
-                if (isRecording) {
-                    return colors.accent;
-                } else {
-                    return color;
-                }
-            };
 
             const barSpacing = 1.5;
             const barCount = Math.min(bufferLength / 2, 60);
@@ -736,6 +772,19 @@ const AudioVisualizer = ({
 
             const centerY = height / 2;
             const maxBarHeight = height / 2 - 4;
+
+            
+            const createBarColor = () => {
+                return isRecording ? colors.accent : color;
+            };
+
+            
+            ctx.beginPath();
+            ctx.strokeStyle = isRecording ? `${colors.accent}50` : `${color}50`;
+            ctx.lineWidth = 1;
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(width, centerY);
+            ctx.stroke();
 
             for (let i = 0; i < barCount; i++) {
                 const value = dataArray[i * 2];
@@ -747,45 +796,37 @@ const AudioVisualizer = ({
                 const barHeight = Math.max(3, smoothedPercent * maxBarHeight);
 
                 const barX = i * (barWidth + barSpacing);
+                
+                
                 const topY = centerY - barHeight;
-                const bottomY = centerY;
-
                 ctx.beginPath();
                 ctx.roundRect(barX, topY, barWidth, barHeight, [barWidth / 2, barWidth / 2, 0, 0]);
-                ctx.fillStyle = createBarColor(ctx, topY, centerY);
+                ctx.fillStyle = createBarColor();
                 ctx.fill();
 
                 if (percent > 0.5) {
                     ctx.shadowColor = isRecording ? colors.accent : color;
-                    ctx.shadowBlur = 8;
+                    ctx.shadowBlur = 10;
                     ctx.fillRect(barX, topY, barWidth, 2);
                     ctx.shadowBlur = 0;
                 }
 
+                
                 ctx.beginPath();
-                ctx.roundRect(barX, bottomY, barWidth, barHeight, [0, 0, barWidth / 2, barWidth / 2]);
-                ctx.fillStyle = createBarColor(ctx, bottomY, bottomY + barHeight);
+                ctx.roundRect(barX, centerY, barWidth, barHeight, [0, 0, barWidth / 2, barWidth / 2]);
+                ctx.fillStyle = createBarColor();
                 ctx.fill();
 
                 if (percent > 0.5) {
                     ctx.shadowColor = isRecording ? colors.accent : color;
-                    ctx.shadowBlur = 8;
-                    ctx.fillRect(barX, bottomY + barHeight - 2, barWidth, 2);
+                    ctx.shadowBlur = 10;
+                    ctx.fillRect(barX, centerY + barHeight - 2, barWidth, 2);
                     ctx.shadowBlur = 0;
                 }
             }
-
-            ctx.beginPath();
-            ctx.strokeStyle = isRecording ? `${colors.accent}50` : `${color}50`;
-            ctx.lineWidth = 1;
-            ctx.moveTo(0, centerY);
-            ctx.lineTo(width, centerY);
-            ctx.stroke();
         };
 
-        if (isInitialized || isRecording) {
-            draw();
-        }
+        draw();
 
         return () => {
             if (animationFrameRef.current) {
@@ -793,9 +834,15 @@ const AudioVisualizer = ({
             }
             window.removeEventListener("resize", resizeCanvas);
         };
-    }, [isPlaying, audioElement, isInitialized, color, accentColor, height, isRecording]);
+    }, [audioElement, isPlaying, isRecording, color, accentColor, height]);
 
-    return <canvas ref={canvasRef} className="w-full h-full opacity-90" style={{ height: `${height}px` }} />;
+    return (
+        <canvas
+            ref={canvasRef}
+            className="w-full h-full"
+            style={{ height: `${height}px` }}
+        />
+    );
 };
 
 interface VolumeControlProps {
@@ -828,15 +875,20 @@ const VolumeControl = ({ audioElement }: VolumeControlProps) => {
                     transition={{ duration: 0.4 }}
                     className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-800 p-2 rounded-lg shadow-lg z-20"
                 >
-                    <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={volume}
-                        onChange={handleVolumeChange}
-                        className="w-24 accent-blue-500"
-                    />
+                    <div className="h-16 flex flex-col justify-center items-center">
+                        <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={volume}
+                            onChange={handleVolumeChange}
+                            className="h-16 w-6 accent-blue-500"
+                            style={{
+                                WebkitAppearance: "slider-vertical"
+                            }}
+                        />
+                    </div>
                 </motion.div>
             )}
         </div>
@@ -926,6 +978,7 @@ const ProfileModal = ({ user, isOpen, onClose, onFollow, followedUsers }: Profil
     if (!isOpen || !user) return null;
 
     const isFollowing = followedUsers?.includes(user.id || "");
+    const isCurrentUser = user.id === "current_user";
 
     return (
         <motion.div
@@ -1025,22 +1078,24 @@ const ProfileModal = ({ user, isOpen, onClose, onFollow, followedUsers }: Profil
                         </div>
                     )}
 
-                    <div className="mt-6 flex gap-3">
-                        <button
-                            className={`flex-1 py-2.5 px-4 ${
-                                isFollowing ? "bg-slate-700 hover:bg-slate-600" : "bg-indigo-600 hover:bg-indigo-700"
-                            } text-white font-medium rounded-lg transition-colors duration-300`}
-                            onClick={() => onFollow && onFollow(user.id || "")}
-                        >
-                            {isFollowing ? "Unfollow" : "Follow"}
-                        </button>
-                        <button
-                            className="py-2.5 px-4 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors duration-300"
-                            onClick={() => setChatOpen(true)}
-                        >
-                            Message
-                        </button>
-                    </div>
+                    {!isCurrentUser && (
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                className={`flex-1 py-2.5 px-4 ${
+                                    isFollowing ? "bg-slate-700 hover:bg-slate-600" : "bg-indigo-600 hover:bg-indigo-700"
+                                } text-white font-medium rounded-lg transition-colors duration-300 cursor-pointer`}
+                                onClick={() => onFollow && onFollow(user.id || "")}
+                            >
+                                {isFollowing ? "Unfollow" : "Follow"}
+                            </button>
+                            <button
+                                className="py-2.5 px-4 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors duration-300 cursor-pointer"
+                                onClick={() => setChatOpen(true)}
+                            >
+                                Message
+                            </button>
+                        </div>
+                    )}
                 </div>
             </motion.div>
 
@@ -1065,12 +1120,25 @@ const RecordingModal = ({ isOpen, onClose, onSave }: RecordingModalProps) => {
     const [description, setDescription] = useState("");
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [selectedCategory, setSelectedCategory] = useState("podcast");
+    const [modalAlertConfig, setModalAlertConfig] = useState<AlertConfig>({
+        isOpen: false,
+        message: "",
+        type: "info"
+    });
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<BlobPart[]>([]);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     const availableTags = ["music", "podcast", "interview", "story", "tutorial", "thoughts", "ambient", "discussion"];
+
+    
+    const closeModalAlert = () => {
+        setModalAlertConfig({
+            ...modalAlertConfig,
+            isOpen: false
+        });
+    };
 
     useEffect(() => {
         if (isRecording) {
@@ -1092,7 +1160,7 @@ const RecordingModal = ({ isOpen, onClose, onSave }: RecordingModalProps) => {
             const options = { mimeType: "audio/webm" };
             mediaRecorderRef.current = new MediaRecorder(stream, options);
 
-            mediaRecorderRef.current.addEventListener("dataavailable", (e: BlobEvent) => {
+            mediaRecorderRef.current.addEventListener("dataavailable", (e) => {
                 chunksRef.current.push(e.data);
             });
 
@@ -1117,10 +1185,11 @@ const RecordingModal = ({ isOpen, onClose, onSave }: RecordingModalProps) => {
             setIsRecording(false);
 
             if (mediaRecorderRef.current.stream) {
-                mediaRecorderRef.current.stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+                mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
             }
         }
     };
+
 
     const togglePlayback = () => {
         if (audioRef.current) {
@@ -1196,6 +1265,17 @@ const RecordingModal = ({ isOpen, onClose, onSave }: RecordingModalProps) => {
             className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={handleClose}
         >
+            <AnimatePresence>
+                {modalAlertConfig.isOpen && (
+                    <CustomAlert 
+                        isOpen={modalAlertConfig.isOpen} 
+                        message={modalAlertConfig.message} 
+                        type={modalAlertConfig.type} 
+                        onClose={closeModalAlert} 
+                    />
+                )}
+            </AnimatePresence>
+            
             <motion.div
                 initial={{ scale: 0.95, y: 10 }}
                 animate={{ scale: 1, y: 0 }}
@@ -1426,44 +1506,65 @@ interface SidebarNavProps {
     activeCategory: string;
     setActiveCategory: (category: string) => void;
     setActiveView: (view: string) => void;
+    activeView: string;
 }
 
-const SidebarNav = ({ activeCategory, setActiveCategory, setActiveView }: SidebarNavProps) => {
+const SidebarNav = ({ activeCategory, setActiveCategory, setActiveView, activeView }: SidebarNavProps) => {
     return (
         <div className="w-full h-full flex flex-col py-4">
             <div className="space-y-2 px-4 mb-8">
                 <div className="text-lg font-semibold text-gray-300 mb-4 ml-2">Menu</div>
                 <button
                     onClick={() => setActiveView("home")}
-                    className="w-full flex items-center space-x-3 p-3 rounded-lg bg-indigo-500/10 text-indigo-300 font-medium"
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors duration-300 ${
+                        activeView === "home" 
+                            ? "bg-indigo-500/10 text-indigo-300 font-medium" 
+                            : "text-gray-300 hover:bg-gray-800/50"
+                    }`}
                 >
                     <Home size={18} />
                     <span>Home</span>
                 </button>
                 <button
                     onClick={() => setActiveView("trending")}
-                    className="w-full flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-800/50 transition-colors duration-300"
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors duration-300 ${
+                        activeView === "trending" 
+                            ? "bg-indigo-500/10 text-indigo-300 font-medium" 
+                            : "text-gray-300 hover:bg-gray-800/50"
+                    }`}
                 >
                     <TrendingUp size={18} />
                     <span>Trending</span>
                 </button>
                 <button
                     onClick={() => setActiveView("explore")}
-                    className="w-full flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-800/50 transition-colors duration-300"
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors duration-300 ${
+                        activeView === "explore" 
+                            ? "bg-indigo-500/10 text-indigo-300 font-medium" 
+                            : "text-gray-300 hover:bg-gray-800/50"
+                    }`}
                 >
                     <Hash size={18} />
                     <span>Explore</span>
                 </button>
                 <button
                     onClick={() => setActiveView("library")}
-                    className="w-full flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-800/50 transition-colors duration-300"
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors duration-300 ${
+                        activeView === "library" 
+                            ? "bg-indigo-500/10 text-indigo-300 font-medium" 
+                            : "text-gray-300 hover:bg-gray-800/50"
+                    }`}
                 >
                     <Headphones size={18} />
                     <span>My Library</span>
                 </button>
                 <button
                     onClick={() => setActiveView("notifications")}
-                    className="w-full flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-800/50 transition-colors duration-300"
+                    className={`w-full flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors duration-300 ${
+                        activeView === "notifications" 
+                            ? "bg-indigo-500/10 text-indigo-300 font-medium" 
+                            : "text-gray-300 hover:bg-gray-800/50"
+                    }`}
                 >
                     <Bell size={18} />
                     <span>Notifications</span>
@@ -1477,7 +1578,7 @@ const SidebarNav = ({ activeCategory, setActiveCategory, setActiveView }: Sideba
                         <button
                             key={category.id}
                             onClick={() => setActiveCategory(category.id)}
-                            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors duration-300 ${
+                            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors duration-300 cursor-pointer ${
                                 activeCategory === category.id
                                     ? "bg-indigo-500/10 text-indigo-300 font-medium"
                                     : "text-gray-300 hover:bg-gray-800/50"
@@ -1494,7 +1595,7 @@ const SidebarNav = ({ activeCategory, setActiveCategory, setActiveView }: Sideba
                 <div className="p-4 rounded-xl bg-slate-700/30 text-center border border-slate-600/30">
                     <h4 className="font-medium text-white mb-2">Share Your Voice</h4>
                     <p className="text-sm text-gray-300 mb-3">Recording and sharing your stories helps build our community.</p>
-                    <button className="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors duration-300">
+                    <button className="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors duration-300 cursor-pointer">
                         Learn More
                     </button>
                 </div>
@@ -1521,7 +1622,7 @@ const ActivitySidebar = ({ onTopicSelect, onUserSelect, onActivityClick, followe
                         <button
                             key={topic.id}
                             onClick={() => onTopicSelect(topic)}
-                            className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-800/40 transition-colors duration-300"
+                            className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-800/40 transition-colors duration-300 cursor-pointer"
                         >
                             <div className="flex items-center space-x-3">
                                 <div className="w-1.5 h-8 bg-indigo-500 rounded-full"></div>
@@ -1539,7 +1640,7 @@ const ActivitySidebar = ({ onTopicSelect, onUserSelect, onActivityClick, followe
                     {suggestedUsers.map((user) => (
                         <div
                             key={user.id}
-                            className="w-full flex items-center p-3 rounded-lg hover:bg-gray-800/40 transition-colors duration-300"
+                            className="w-full flex items-center p-3 rounded-lg hover:bg-gray-800/40 transition-colors duration-300 cursor-pointer"
                         >
                             <div
                                 className="h-10 w-10 rounded-full overflow-hidden mr-3 ring-2 ring-indigo-500/30 cursor-pointer"
@@ -1552,7 +1653,7 @@ const ActivitySidebar = ({ onTopicSelect, onUserSelect, onActivityClick, followe
                                 <div className="text-gray-400 text-sm truncate">{user.username}</div>
                             </div>
                             <button
-                                className={`ml-2 px-3 py-1 text-xs font-medium ${
+                                className={`ml-2 px-3 py-1 text-xs font-medium cursor-pointer ${
                                     followedUsers?.includes(user.id)
                                         ? "text-white bg-indigo-700 hover:bg-indigo-800"
                                         : "text-indigo-200 bg-indigo-900/40 hover:bg-indigo-700"
@@ -1576,7 +1677,7 @@ const ActivitySidebar = ({ onTopicSelect, onUserSelect, onActivityClick, followe
                         <button
                             key={activity.id}
                             onClick={() => onActivityClick(activity)}
-                            className="w-full flex p-3 rounded-lg hover:bg-gray-800/40 transition-colors duration-300 text-left"
+                            className="w-full flex p-3 rounded-lg hover:bg-gray-800/40 transition-colors duration-300 text-left cursor-pointer"
                         >
                             <div className="h-8 w-8 rounded-full overflow-hidden mr-3">
                                 <img src={activity.avatar} alt={activity.user} className="w-full h-full object-cover" />
@@ -1621,13 +1722,13 @@ const ViewContent = ({ activeView, notifications, showAllNotifications, onToggle
                                 <span className="text-indigo-400 text-lg font-semibold">#{topic.name}</span>
                                 <span className="text-sm text-gray-400">{topic.count.toLocaleString()} stories</span>
                             </div>
-                            <button className="text-sm bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded-full transition-colors duration-300">
+                            <button className="text-sm bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded-full transition-colors duration-300 cursor-pointer">
                                 Explore
                             </button>
                         </div>
                     ))}
                 </div>
-                <button className="mt-4 text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors duration-300">
+                <button className="mt-4 text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors duration-300 cursor-pointer">
                     View all trending topics →
                 </button>
             </div>
@@ -1646,7 +1747,7 @@ const ViewContent = ({ activeView, notifications, showAllNotifications, onToggle
                             className="w-full bg-slate-900 border border-slate-700 rounded-lg py-3 pl-10 pr-4 text-white"
                         />
                         <Search size={18} className="absolute left-3 top-3.5 text-gray-400" />
-                        <button className="absolute right-3 top-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors duration-300">
+                        <button className="absolute right-3 top-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors duration-300 cursor-pointer">
                             Search
                         </button>
                     </div>
@@ -1661,7 +1762,7 @@ const ViewContent = ({ activeView, notifications, showAllNotifications, onToggle
                                 .map((category) => (
                                     <button
                                         key={category.id}
-                                        className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors duration-300"
+                                        className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors duration-300 cursor-pointer"
                                     >
                                         <div className="w-8 h-8 bg-indigo-600/20 rounded-md flex items-center justify-center text-indigo-400">
                                             {category.icon}
@@ -1707,9 +1808,9 @@ const ViewContent = ({ activeView, notifications, showAllNotifications, onToggle
                 <h2 className="text-xl font-bold text-white mb-4">My Library</h2>
                 <div className="mb-6">
                     <div className="flex space-x-2 border-b border-slate-700">
-                        <button className="px-4 py-2 text-white font-medium border-b-2 border-indigo-500">Saved</button>
-                        <button className="px-4 py-2 text-gray-400 hover:text-white transition-colors duration-300">History</button>
-                        <button className="px-4 py-2 text-gray-400 hover:text-white transition-colors duration-300">Downloads</button>
+                        <button className="px-4 py-2 text-white font-medium border-b-2 border-indigo-500 cursor-pointer">Saved</button>
+                        <button className="px-4 py-2 text-gray-400 hover:text-white transition-colors duration-300 cursor-pointer">History</button>
+                        <button className="px-4 py-2 text-gray-400 hover:text-white transition-colors duration-300 cursor-pointer">Downloads</button>
                     </div>
                 </div>
 
@@ -1719,7 +1820,7 @@ const ViewContent = ({ activeView, notifications, showAllNotifications, onToggle
                     </div>
                     <h3 className="text-lg font-medium text-white mb-2">No saved stories yet</h3>
                     <p className="text-gray-400 max-w-sm mx-auto mb-4">When you save stories they'll appear here for easy access</p>
-                    <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-300">
+                    <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-300 cursor-pointer">
                         Browse Stories
                     </button>
                 </div>
@@ -1735,7 +1836,7 @@ const ViewContent = ({ activeView, notifications, showAllNotifications, onToggle
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold text-white">Notifications</h2>
                     <button
-                        className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors duration-300"
+                        className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors duration-300 cursor-pointer"
                         onClick={onMarkAllAsRead}
                     >
                         Mark all as read
@@ -1770,7 +1871,7 @@ const ViewContent = ({ activeView, notifications, showAllNotifications, onToggle
                             </div>
                             {activity.story && (
                                 <div className="mt-2 ml-13">
-                                    <button className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors duration-300">
+                                    <button className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors duration-300 cursor-pointer">
                                         View story
                                     </button>
                                 </div>
@@ -1780,7 +1881,7 @@ const ViewContent = ({ activeView, notifications, showAllNotifications, onToggle
                 </div>
 
                 <button
-                    className="w-full mt-4 py-2 text-center text-indigo-400 hover:text-indigo-300 text-sm transition-colors duration-300"
+                    className="w-full mt-4 py-2 text-center text-indigo-400 hover:text-indigo-300 text-sm transition-colors duration-300 cursor-pointer"
                     onClick={onToggleAllNotifications}
                 >
                     {showAllNotifications ? "Show fewer notifications" : "View all notifications"}
@@ -1805,64 +1906,141 @@ const formatFollowerCount = (count: number): string => {
 
 export default function AudioStoryPlatform() {
     const [stories, setStories] = useState<Story[]>(initialStories);
-    const [filteredStories, setFilteredStories] = useState<Story[]>(initialStories);
+    const [activeView, setActiveView] = useState("home");
+    const [activeCategory, setActiveCategory] = useState<string>("all");
     const [currentPlaying, setCurrentPlaying] = useState<string | null>(null);
     const [recordingModalOpen, setRecordingModalOpen] = useState(false);
-    const [activeCategory, setActiveCategory] = useState("all");
     const [profileModalOpen, setProfileModalOpen] = useState(false);
     const [selectedProfile, setSelectedProfile] = useState<User | null>(null);
-    const [activeView, setActiveView] = useState("home");
-    const [followedUsers, setFollowedUsers] = useState<string[]>([]);
-    const [notifications, setNotifications] = useState<Activity[]>(initialActivity);
-    const [showAllNotifications, setShowAllNotifications] = useState(false);
-    const [chatBoxOpen, setChatBoxOpen] = useState(false);
-    const [chatUser, setChatUser] = useState<User | null>(null);
+    const [followedUsers, setFollowedUsers] = useState<string[]>(["u1"]);
+    const [searchQuery, setSearchQuery] = useState("");
     const [alertConfig, setAlertConfig] = useState<AlertConfig>({
         isOpen: false,
         message: "",
         type: "info"
     });
+    const [notifications, setNotifications] = useState<Activity[]>(initialActivity);
+    const [showAllNotifications, setShowAllNotifications] = useState(false);
+    const [chatBoxOpen, setChatBoxOpen] = useState(false);
+    const [chatUser, setChatUser] = useState<User | null>(null);
+    const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+    const [storyMenuOpen, setStoryMenuOpen] = useState<string | null>(null);
 
     const audioRefs = useRef<{ [key: string]: AudioElementWithContext }>({});
     const currentUser = "current_user_id";
 
-    useEffect(() => {
-        if (activeCategory === "all") {
-            setFilteredStories(stories);
-        } else {
-            setFilteredStories(stories.filter((story) => story.category === activeCategory));
-        }
-    }, [activeCategory, stories]);
+    
+    const filteredStories = stories.filter(
+        (story) =>
+            (activeCategory === "all" || story.category === activeCategory) &&
+            (searchQuery === "" ||
+                story.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                story.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                story.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                story.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+    );
 
     const togglePlay = async (storyId: string) => {
+        console.log("Toggle play for story:", storyId);
         const audioRef = audioRefs.current[storyId];
-        if (!audioRef) return;
+        
+        if (!audioRef) {
+            console.error("Audio element not found for story:", storyId);
+            return;
+        }
 
         try {
+            console.log("Audio element:", audioRef);
+            console.log("Audio readyState:", audioRef.readyState);
+            console.log("Current audio URL:", audioRef.src);
+            
+            
+            audioRef.crossOrigin = "anonymous";
+            
+            
             if (audioRef.readyState === 0) {
+                console.log("Loading audio...");
                 audioRef.load();
-                await new Promise((resolve) => {
-                    audioRef.addEventListener("canplaythrough", resolve, { once: true });
+                
+                
+                await new Promise<void>((resolve) => {
+                    const handleCanPlay = () => {
+                        console.log("Audio can play now");
+                        audioRef.removeEventListener("canplaythrough", handleCanPlay);
+                        resolve();
+                    };
+                    audioRef.addEventListener("canplaythrough", handleCanPlay, { once: true });
+                    
+                    
+                    setTimeout(() => {
+                        audioRef.removeEventListener("canplaythrough", handleCanPlay);
+                        console.log("Timed out waiting for audio to load, trying to play anyway");
+                        resolve();
+                    }, 3000);
                 });
             }
 
             if (currentPlaying === storyId) {
-                await audioRef.pause();
+                
+                console.log("Pausing current story");
+                audioRef.pause();
                 setCurrentPlaying(null);
             } else {
+                
                 if (currentPlaying && audioRefs.current[currentPlaying]) {
-                    await audioRefs.current[currentPlaying]?.pause();
+                    console.log("Stopping currently playing story");
+                    audioRefs.current[currentPlaying].pause();
                 }
 
-                if (audioRef.context?.state === "suspended") {
+                
+                if (!audioRef.context) {
+                    console.log("Setting up audio context for the first time");
+                    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                    audioRef.context = new AudioContext();
+                    audioRef.analyser = audioRef.context.createAnalyser();
+                    audioRef.analyser.fftSize = 512;
+                    audioRef.analyser.smoothingTimeConstant = 0.85;
+                    audioRef.source = audioRef.context.createMediaElementSource(audioRef);
+                    audioRef.source.connect(audioRef.analyser);
+                    audioRef.analyser.connect(audioRef.context.destination);
+                } else if (audioRef.context.state === "suspended") {
+                    console.log("Resuming audio context");
                     await audioRef.context.resume();
                 }
 
-                await audioRef.play();
-                setCurrentPlaying(storyId);
+                
+                console.log("Playing new story");
+                try {
+                    const playPromise = audioRef.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            console.log("Playback started successfully");
+                            setCurrentPlaying(storyId);
+                        }).catch(error => {
+                            console.error("Playback failed:", error);
+                            
+                            
+                            setAlertConfig({
+                                isOpen: true,
+                                message: "Playback couldn't start automatically. Click again to play.",
+                                type: "info"
+                            });
+                        });
+                    } else {
+                        console.log("Play returned undefined, setting current playing anyway");
+                        setCurrentPlaying(storyId);
+                    }
+                } catch (error) {
+                    console.error("Error playing audio:", error);
+                }
             }
         } catch (error) {
             console.error("Audio playback error:", error);
+            setAlertConfig({
+                isOpen: true,
+                message: "Error playing audio. Please try again.",
+                type: "error"
+            });
         }
     };
 
@@ -1890,10 +2068,20 @@ export default function AudioStoryPlatform() {
     };
 
     const shareStory = (storyId: string) => {
-        setAlertConfig({
-            isOpen: true,
-            message: "Story shared successfully! A link has been copied to your clipboard.",
-            type: "success",
+        
+        const url = window.location.href;
+        navigator.clipboard.writeText(url).then(() => {
+            setAlertConfig({
+                isOpen: true,
+                message: "Story shared successfully! A link has been copied to your clipboard.",
+                type: "success",
+            });
+        }).catch(() => {
+            setAlertConfig({
+                isOpen: true,
+                message: "Could not copy URL to clipboard. Please try again.",
+                type: "error",
+            });
         });
 
         setStories(
@@ -2014,6 +2202,99 @@ export default function AudioStoryPlatform() {
         });
     };
 
+    useEffect(() => {
+        const handleClickOutside = () => {
+            setNotificationDropdownOpen(false);
+        };
+        
+        if (notificationDropdownOpen) {
+            document.addEventListener('click', handleClickOutside);
+        }
+        
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, [notificationDropdownOpen]);
+
+    
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value);
+    };
+
+    
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        setAlertConfig({
+            isOpen: true,
+            message: `Showing results for "${searchQuery}"`,
+            type: "info",
+        });
+    };
+
+    
+    useEffect(() => {
+        return () => {
+            if (currentPlaying && audioRefs.current[currentPlaying]) {
+                const audio = audioRefs.current[currentPlaying];
+                if (!audio.paused) {
+                    audio.pause();
+                }
+            }
+        };
+    }, [currentPlaying]);
+
+    
+    useEffect(() => {
+        
+    }, [activeCategory, stories]);
+
+    
+    const saveStory = (storyId: string) => {
+        setAlertConfig({
+            isOpen: true,
+            message: "Story saved to your library!",
+            type: "success",
+        });
+        setStoryMenuOpen(null);
+    };
+
+    
+    const reportStory = (storyId: string) => {
+        setAlertConfig({
+            isOpen: true,
+            message: "Story reported. Thank you for helping keep our community safe.",
+            type: "info",
+        });
+        setStoryMenuOpen(null);
+    };
+
+    
+    const hideStory = (storyId: string) => {
+        setStories(stories.filter(story => story.id !== storyId));
+        setAlertConfig({
+            isOpen: true,
+            message: "Story hidden from your feed.",
+            type: "success",
+        });
+        setStoryMenuOpen(null);
+    };
+
+    
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            
+            if (storyMenuOpen && !(e.target as Element).closest('.story-menu-container')) {
+                setStoryMenuOpen(null);
+            }
+        };
+        
+        document.addEventListener("click", handleClickOutside);
+        return () => {
+            document.removeEventListener("click", handleClickOutside);
+        };
+    }, [storyMenuOpen]);
+
     return (
         <div
             style={{
@@ -2069,18 +2350,28 @@ export default function AudioStoryPlatform() {
 
                         <div className="hidden md:flex items-center space-x-1">
                             <div className="relative">
-                                <input
-                                    type="text"
-                                    placeholder="Search stories..."
-                                    className="bg-slate-800 border border-slate-700 rounded-full py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 w-64 transition-all"
-                                />
-                                <Search size={15} className="absolute left-3 top-2 text-gray-400" />
+                                <form onSubmit={handleSearchSubmit}>
+                                    <input
+                                        type="text"
+                                        placeholder="Search stories..."
+                                        className="bg-slate-800 border border-slate-700 rounded-full py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 w-64 transition-all"
+                                        value={searchQuery}
+                                        onChange={handleSearchChange}
+                                    />
+                                    <Search size={15} className="absolute left-3 top-2 text-gray-400" />
+                                </form>
                             </div>
                         </div>
 
                         <div className="flex items-center space-x-5">
                             <div className="relative">
-                                <button className="text-gray-400 hover:text-white transition-colors">
+                                <button 
+                                    className="text-gray-400 hover:text-white transition-colors cursor-pointer"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setNotificationDropdownOpen(!notificationDropdownOpen);
+                                    }}
+                                >
                                     <Bell size={20} />
                                 </button>
 
@@ -2089,7 +2380,85 @@ export default function AudioStoryPlatform() {
                                         {notifications.filter((n) => !n.read).length}
                                     </span>
                                 )}
+                                
+                                {notificationDropdownOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 10 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="absolute right-0 top-full mt-2 w-80 bg-slate-800 rounded-lg shadow-lg border border-slate-700 overflow-hidden z-50"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="flex justify-between items-center px-4 py-2 border-b border-slate-700">
+                                            <h3 className="text-sm font-medium text-white">Notifications</h3>
+                                            <button 
+                                                className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    markAllAsRead();
+                                                }}
+                                            >
+                                                Mark all as read
+                                            </button>
+                                        </div>
+                                        <div className="max-h-96 overflow-y-auto">
+                                            {notifications.length === 0 ? (
+                                                <div className="py-8 text-center text-gray-400">
+                                                    <p>No notifications yet</p>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    {notifications.slice(0, 5).map((activity) => (
+                                                        <div
+                                                            key={activity.id}
+                                                            className={`p-3 border-b border-slate-700/50 hover:bg-slate-700/20 cursor-pointer transition-colors duration-300 ${
+                                                                activity.read ? "opacity-60" : "opacity-100"
+                                                            }`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleActivityClick(activity);
+                                                                setNotificationDropdownOpen(false);
+                                                            }}
+                                                        >
+                                                            <div className="flex items-start">
+                                                                <div className="h-8 w-8 rounded-full overflow-hidden mr-3">
+                                                                    <img src={activity.avatar} alt={activity.user} className="w-full h-full object-cover" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="text-sm">
+                                                                        <span className="text-white font-medium">{activity.user}</span>
+                                                                        <span className="text-gray-300"> {activity.action}</span>
+                                                                        {activity.story && <span className="text-indigo-300"> {activity.story}</span>}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-400 mt-1">{activity.time}</div>
+                                                                </div>
+                                                                {!activity.read && (
+                                                                    <div className="ml-2">
+                                                                        <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    <div className="p-2 text-center">
+                                                        <button 
+                                                            className="w-full text-sm text-indigo-400 hover:text-indigo-300 py-2 cursor-pointer"
+                                                            onClick={() => {
+                                                                setActiveView("notifications");
+                                                                setNotificationDropdownOpen(false);
+                                                            }}
+                                                        >
+                                                            View all notifications
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
                             </div>
+
                             <div
                                 className="h-8 w-8 rounded-full bg-indigo-600 p-0.5 cursor-pointer"
                                 onClick={() => {
@@ -2127,7 +2496,7 @@ export default function AudioStoryPlatform() {
 
             <div className="max-w-7xl mx-auto flex">
                 <div className="w-64 hidden lg:block shrink-0 border-r border-slate-800/50">
-                    <SidebarNav activeCategory={activeCategory} setActiveCategory={setActiveCategory} setActiveView={setActiveView} />
+                    <SidebarNav activeCategory={activeCategory} setActiveCategory={setActiveCategory} setActiveView={setActiveView} activeView={activeView} />
                 </div>
 
                 <main className="flex-grow py-6 px-4">
@@ -2249,9 +2618,52 @@ export default function AudioStoryPlatform() {
                                                 </div>
                                             </div>
 
-                                            <button className="text-gray-500 hover:text-gray-300 transition-colors duration-300">
-                                                <MoreHorizontal size={18} />
-                                            </button>
+                                            <div className="relative story-menu-container">
+                                                <button 
+                                                    className="text-gray-500 hover:text-gray-300 transition-colors duration-300 cursor-pointer"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setStoryMenuOpen(storyMenuOpen === story.id ? null : story.id);
+                                                    }}
+                                                >
+                                                    <MoreHorizontal size={18} />
+                                                </button>
+                                                
+                                                {storyMenuOpen === story.id && (
+                                                    <div 
+                                                        className="absolute right-0 top-full mt-1 w-36 bg-slate-800 rounded-lg shadow-lg border border-slate-700 overflow-hidden z-30"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <button 
+                                                            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 transition-colors cursor-pointer"
+                                                            onClick={() => saveStory(story.id)}
+                                                        >
+                                                            <span className="flex items-center gap-2">
+                                                                <Bookmark size={14} />
+                                                                Save
+                                                            </span>
+                                                        </button>
+                                                        <button 
+                                                            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 transition-colors cursor-pointer"
+                                                            onClick={() => reportStory(story.id)}
+                                                        >
+                                                            <span className="flex items-center gap-2">
+                                                                <AlertCircle size={14} />
+                                                                Report
+                                                            </span>
+                                                        </button>
+                                                        <button 
+                                                            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 transition-colors cursor-pointer"
+                                                            onClick={() => hideStory(story.id)}
+                                                        >
+                                                            <span className="flex items-center gap-2">
+                                                                <X size={14} />
+                                                                Hide
+                                                            </span>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
 
                                         <div className="px-4 pb-2">
@@ -2297,7 +2709,7 @@ export default function AudioStoryPlatform() {
                                                             whileHover={{ scale: 1.03 }}
                                                             whileTap={{ scale: 0.97 }}
                                                             transition={{ duration: 0.4 }}
-                                                            className="h-10 w-10 rounded-full shadow-md flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 transition-colors duration-300"
+                                                            className="h-10 w-10 rounded-full shadow-md flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 transition-colors duration-300 cursor-pointer"
                                                         >
                                                             {currentPlaying === story.id ? (
                                                                 <Pause size={18} className="text-white" />
