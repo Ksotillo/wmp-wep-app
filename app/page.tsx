@@ -1,471 +1,380 @@
+// app/page.tsx
 "use client";
-import { useEffect, useRef, useState } from "react";
+
+import { useState, FormEvent, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { FaHeart, FaRegHeart, FaRegComment } from "react-icons/fa";
 
-const schema = {
-    commentary:
-        "I will create a simple chat application using React and TypeScript. The application will have different channels and users can communicate with each other in real-time.",
-    template: "nextjs-developer",
-    title: "Chat App",
-    description: "A simple chat application with multiple channels.",
-    has_additional_dependencies: false,
-    install_dependencies_command: "npm install",
-    port: 3000,
-    file_path: "pages/index.tsx",
-};
-
-const channels = ["General", "Random", "Dev", "Other"];
-
-const messageData = [
-    {
-        user: "John",
-        message: "Hello everyone!",
-        channel: "General",
-        date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
-        unread: false,
-    },
-    {
-        user: "Jane",
-        message: "Hi John! How are you?",
-        channel: "General",
-        date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
-        unread: false,
-    },
-    {
-        user: "John",
-        message: "I'm doing well, thanks! How about you?",
-        channel: "General",
-        date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
-        unread: false,
-    },
-    {
-        user: "Jane",
-        message: "I'm good too. Let's chat more!",
-        channel: "General",
-        date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
-        unread: false,
-    },
-    {
-        user: "John",
-        message: "Sure, let's do that!",
-        channel: "General",
-        date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
-        unread: false,
-    },
-    {
-        user: "John",
-        message: "Hey, how's it going?",
-        channel: "Random",
-        date: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(),
-        unread: true,
-    },
-    {
-        user: "Jane",
-        message: "Not too bad, just busy with work. How about you?",
-        channel: "Random",
-        date: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(),
-        unread: true,
-    },
-    {
-        user: "John",
-        message: "I'm doing well, thanks! How about you?",
-        channel: "Random",
-        date: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(),
-        unread: true,
-    },
-];
-
-const groupMessagesByDate = (messages: any[]) => {
-    const groups: { [key: string]: any[] } = {};
-
-    messages.forEach((msg) => {
-        const msgDate = msg.date ? new Date(msg.date) : new Date();
-        const dateKey = msgDate.toDateString();
-
-        if (!groups[dateKey]) {
-            groups[dateKey] = [];
-        }
-        groups[dateKey].push(msg);
-    });
-
-    return Object.entries(groups).map(([dateStr, msgs]) => ({
-        date: new Date(dateStr),
-        messages: msgs,
-    }));
-};
-
-const formatMessageDate = (date: Date) => {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) {
-        return "Today";
-    } else if (date.toDateString() === yesterday.toDateString()) {
-        return "Yesterday";
-    } else {
-        return date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
-        });
-    }
-};
-
+// Font styles
 const FontStyles = () => (
-    <style jsx global>{`
-        @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Open+Sans:wght@300;400;500;600&display=swap");
+  <style jsx global>{`
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Nunito:wght@300;400;500;600;700&display=swap');
+    
+    html, body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 600;
+    }
+    
+    .comment-text {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 400;
+    }
+    
+    button {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 600;
+    }
+    
+    .heading-text {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 500;
+    }
 
-        html,
-        body {
-            font-family: "Open Sans", -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
-            font-weight: 400;
-        }
+    .hashtag {
+      color: #3b82f6;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: inline-block;
+    }
 
-        h1, h2, h3, h4, h5, h6, button {
-            font-family: "Nunito", "Segoe UI", Tahoma, sans-serif;
-            font-weight: 600;
-            letter-spacing: -0.02em;
-        }
-
-        input, textarea {
-            font-family: "Open Sans", -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
-            font-weight: 400;
-        }
-
-        .message-text {
-            font-size: 15px;
-            line-height: 1.5;
-            font-weight: 400;
-        }
-
-        .channel-name {
-            font-weight: 600;
-        }
-
-        .scrollbar-thin::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .scrollbar-thin::-webkit-scrollbar-track {
-            background: #18181b;
-            border-radius: 3px;
-        }
-
-        .scrollbar-thin::-webkit-scrollbar-thumb {
-            background-color: #4f4d66;
-            border-radius: 3px;
-            transition: background-color 0.2s ease;
-        }
-
-        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background-color: #a099efb7;
-        }
-    `}</style>
+    .hashtag:hover {
+      text-decoration: underline;
+      color: #2563eb;
+      transform: scale(1.02);
+    }
+    
+    .username-gradient-hover {
+      background-size: 200% auto;
+      transition: all 0.3s ease;
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      display: inline-block;
+    }
+    
+    .username-gradient-hover:hover {
+      background-position: right center;
+      transform: scale(1.03);
+    }
+  `}</style>
 );
 
-interface Msg {
+type Comment = {
+    id: number;
+    text: string;
     user: string;
-    message: string;
-    channel: string;
-    date: string;
-    unread: boolean;
-}
-
-// Add this component to handle client-side rendering of time
-const ClientTime = ({ date }: { date: string }) => {
-    const [formattedTime, setFormattedTime] = useState<string>('');
-    
-    useEffect(() => {
-        setFormattedTime(new Date(date).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-        }));
-    }, [date]);
-    
-    return <span className="text-[0.75vmax] text-[#9b9b9b]">{formattedTime}</span>;
+    avatar?: string;
 };
 
-// Add this component to handle client-side rendering of date labels
-const ClientDateLabel = ({ date }: { date: Date }) => {
-    const [formattedDate, setFormattedDate] = useState<string>('');
-    
+// Avatar URLs from GitHub
+const avatars = [
+  "https://avatars.githubusercontent.com/u/1?v=4",
+  "https://avatars.githubusercontent.com/u/583231?v=4",
+  "https://avatars.githubusercontent.com/u/9892522?v=4",
+  "https://avatars.githubusercontent.com/u/6643122?v=4"
+];
+
+export default function Home() {
+    // State with TypeScript types
+    const [liked, setLiked] = useState<boolean>(false);
+    const [comment, setComment] = useState<string>("");
+    const [showComments, setShowComments] = useState<boolean>(true);
+    const [comments, setComments] = useState<Comment[]>([
+        { id: 1, text: "First comment! This design looks fantastic.", user: "Michael Chen", avatar: avatars[0] },
+        { id: 2, text: "Love the design of this post. The animations are super smooth too!", user: "Sophie Williams", avatar: avatars[1] },
+    ]);
+    const [mounted, setMounted] = useState(false);
+
+    // Set mounted to true after the component mounts
     useEffect(() => {
-        setFormattedDate(formatMessageDate(date));
-    }, [date]);
-    
-    return (
-        <motion.span 
-            className="text-xs font-medium bg-[#36353f] text-[#9b9b9b] px-3 py-1 rounded-full"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-        >
-            {formattedDate}
-        </motion.span>
-    );
-};
-
-const App = () => {
-    const [currentChannel, setCurrentChannel] = useState(channels[0]);
-    const [message, setMessage] = useState("");
-    const [messages, setMessages] = useState<Msg[]>([]);
-    const [readChannels, setReadChannels] = useState<Set<string>>(new Set([currentChannel]));
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [isMounted, setIsMounted] = useState(false);
-
-    const scrollToBottom = () => {
-        if (!messagesEndRef) return;
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    const handleSendMessage = () => {
-        if (message.trim() === "") return;
-        const now = new Date();
-        const newMessage = {
-            user: "You",
-            message,
-            channel: currentChannel,
-            date: now.toISOString(),
-            unread: false,
-        };
-
-        setMessages((prevMessages) => [...prevMessages, newMessage]);
-        if (window.localStorage) {
-            localStorage.setItem("messages", JSON.stringify([...messages, newMessage]));
-        }
-        setMessage("");
-    };
-
-    const handleChannelChange = (channel: string) => {
-        setCurrentChannel(channel);
-
-        setMessages((prevMessages) => prevMessages.map((msg) => (msg.channel === channel ? { ...msg, unread: false } : msg)));
-
-        setReadChannels((prev) => new Set([...prev, channel]));
-    };
-
-    useEffect(() => {
-        setIsMounted(true);
-        
-        if (!window.localStorage) return;
-        const oldMessages = localStorage.getItem("messages");
-        if (oldMessages) {
-            setMessages(JSON.parse(oldMessages));
-        } else {
-            setMessages(messageData.map((msg) => 
-                msg.channel === currentChannel ? { ...msg, unread: false } : msg
-            ));
-        }
+        setMounted(true);
     }, []);
 
-    useEffect(() => {
-        if (isMounted) {
-            scrollToBottom();
-        }
-    }, [messages, isMounted]);
-
-    const hasUnreadMessages = (messages: Msg[], channel: string) => {
-        return messages.some((msg) => msg.channel === channel && msg.unread);
+    // Typed event handlers
+    const handleLike = (): void => {
+        setLiked(!liked);
     };
 
+    const toggleComments = (): void => {
+        setShowComments(!showComments);
+    };
+
+    const handleComment = (e: FormEvent): void => {
+        e.preventDefault();
+        if (comment.trim()) {
+            const newComment = {
+                id: comments.length + 1,
+                text: comment,
+                user: "You",
+                avatar: avatars[2]
+            };
+            setComments([...comments, newComment]);
+            setComment("");
+        }
+    };
+
+    // Function to render text with styled hashtags
+    const renderPostContent = (text: string) => {
+        // Split by hashtags
+        const parts = text.split(/(#\w+)/g);
+        return parts.map((part, index) => {
+            if (part.startsWith('#')) {
+                return (
+                    <motion.span 
+                        key={index} 
+                        className="hashtag cursor-pointer" 
+                        whileHover={{ scale: 1.05 }}
+                    >
+                        {part}
+                    </motion.span>
+                );
+            }
+            return part;
+        });
+    };
+
+    // Animation variants
     const containerVariants = {
         hidden: { opacity: 0, y: 20 },
-        visible: { 
-            opacity: 1, 
+        visible: {
+            opacity: 1,
             y: 0,
             transition: {
                 duration: 0.6,
-                staggerChildren: 0.1,
-                when: "beforeChildren"
+                ease: "easeOut",
+                staggerChildren: 0.2
             }
         }
     };
 
     const itemVariants = {
-        hidden: { opacity: 0, x: -10 },
-        visible: { opacity: 1, x: 0 }
-    };
-
-    const messageVariants = {
-        hidden: { opacity: 0, y: 20, scale: 0.8 },
+        hidden: { opacity: 0, y: 10 },
         visible: { 
             opacity: 1, 
-            y: 0, 
-            scale: 1,
-            transition: { type: "spring", stiffness: 500, damping: 25 }
-        },
-        exit: { opacity: 0, scale: 0.8, transition: { duration: 0.2 } }
+            y: 0,
+            transition: { 
+                type: "spring", 
+                stiffness: 200, 
+                damping: 20 
+            }
+        }
     };
 
-    // If not client-side mounted yet, don't render time-sensitive content
-    if (!isMounted) {
-        return (
-            <>
-                <FontStyles />
-                <div className="flex min-h-screen items-center justify-center bg-[#fff]">
-                    <div className="flex gap-6 h-[90vh] w-[90vw] bg-[#18181B] p-6 pb-3 rounded-xl overflow-hidden"
-                        style={{ 
-                            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.1), 0 8px 20px rgba(118, 106, 206, 0.2)",
-                            backdropFilter: "blur(20px)"
-                        }}>
-                        <div className="flex items-center justify-center w-full">
-                            <div className="text-white">Loading chat...</div>
-                        </div>
-                    </div>
-                </div>
-            </>
-        );
-    }
+    const commentVariants = {
+        hidden: { opacity: 0, x: -10 },
+        visible: { 
+            opacity: 1, 
+            x: 0,
+            transition: { 
+                type: "spring", 
+                stiffness: 200 
+            }
+        }
+    };
+
+    const likeVariants = {
+        liked: { 
+            scale: [1, 1.5, 1], 
+            transition: { duration: 0.3 } 
+        },
+        unliked: { scale: 1 }
+    };
+
+    // Animation for showing/hiding comments
+    const commentsContainerVariants = {
+        hidden: { 
+            opacity: 0, 
+            height: 0,
+            transition: {
+                opacity: { duration: 0.2 },
+                height: { duration: 0.3 }
+            }
+        },
+        visible: { 
+            opacity: 1, 
+            height: "auto",
+            transition: {
+                opacity: { duration: 0.3 },
+                height: { duration: 0.4 }
+            }
+        }
+    };
+
+    const postContent = "Just finished working on our latest design project! It was challenging but so rewarding. What do you think of the final result? 💯 #design #uidesign #creative";
 
     return (
         <>
             <FontStyles />
-            <div className="flex min-h-screen items-center justify-center bg-[#fff]">
-                <motion.div
-                    initial="hidden"
-                    animate="visible"
-                    variants={containerVariants}
-                    className="flex gap-6 h-[90vh] w-[90vw] bg-[#18181B] p-6 pb-3 rounded-xl overflow-hidden"
-                    style={{ 
-                        boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.1), 0 8px 20px rgba(118, 106, 206, 0.2)",
-                        backdropFilter: "blur(20px)"
-                    }}
-                >
-                    <div>
-                        <motion.h1 
-                            className="text-3xl font-bold mb-6 text-white"
-                            variants={itemVariants}
-                        >
-                            Chat App
-                        </motion.h1>
-                        <div className="w-48 flex flex-col gap-2">
-                            {channels.map((channel, index) => (
-                                <motion.button
-                                    key={channel}
-                                    variants={itemVariants}
-                                    custom={index}
-                                    className={`cursor-pointer px-4 py-2 text-white rounded-lg transition-colors duration-300 flex items-center justify-between ${
-                                        currentChannel === channel ? "bg-[#5645ee] hover:bg-[#4535dd]" : "bg-[#36353f] hover:bg-[#47465f]"
-                                    }`}
-                                    onClick={() => handleChannelChange(channel)}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                >
-                                    <span className="channel-name">{channel}</span>
-                                    {hasUnreadMessages(messages, channel) && channel !== currentChannel && (
-                                        <motion.span 
-                                            className="w-2 h-2 bg-red-500 rounded-full ml-2"
-                                            initial={{ scale: 0 }}
-                                            animate={{ scale: 1 }}
-                                            transition={{ 
-                                                type: "spring", 
-                                                stiffness: 300, 
-                                                damping: 20 
-                                            }}
-                                        ></motion.span>
-                                    )}
-                                </motion.button>
-                            ))}
-                        </div>
-                    </div>
+            <main className="min-h-screen p-8 bg-gray-50">
+                {mounted && (
                     <motion.div 
-                        className="flex flex-col justify-evenly py-5 px-4 mb-4 bg-[#36353f] rounded-2xl w-full h-auto"
-                        variants={itemVariants}
+                        className="max-w-md mx-auto bg-white rounded-xl overflow-hidden"
+                        initial="hidden"
+                        animate="visible"
+                        variants={containerVariants}
+                        style={{
+                            boxShadow: "0 10px 25px rgba(0,0,0,0.05), 0 6px 10px rgba(0,0,0,0.01), 0 0 1px rgba(0,0,0,0.1)",
+                        }}
                     >
-                        <div className="flex-1 h-10 flex flex-col">
-                            <div className="bg-[#18181B] h-full p-4 rounded-lg overflow-y-auto scrollbar-thin">
-                                {messages.filter((msg) => msg.channel === currentChannel).length === 0 ? (
-                                    <div className="flex items-center justify-center h-full text-gray-500">
-                                        No messages in this channel yet. Start a conversation!
-                                    </div>
-                                ) : (
-                                    <ul className="space-y-4">
-                                        {groupMessagesByDate(messages.filter((msg: Msg) => msg.channel === currentChannel)).map(
-                                            (group, groupIndex) => (
-                                                <li className="w-auto" key={groupIndex}>
-                                                    <div className="flex justify-center mb-2">
-                                                        <ClientDateLabel date={group.date} />
-                                                    </div>
-                                                    <ul className="space-y-3">
-                                                        <AnimatePresence initial={false}>
-                                                            {group.messages.map((msg: Msg, index) => (
-                                                                <motion.li
-                                                                    key={`${msg.date}-${index}`}
-                                                                    variants={messageVariants}
-                                                                    initial="hidden"
-                                                                    animate="visible"
-                                                                    exit="exit"
-                                                                    className={`flex flex-col ${
-                                                                        msg.user === "You" ? "items-end" : "items-start"
-                                                                    }`}
-                                                                >
-                                                                    <div className="flex items-center gap-2 mb-1 px-2">
-                                                                        <span className="text-[0.85vmax] font-semibold text-[#a9a7fc]">
-                                                                            {msg.user === "You" ? "" : msg.user}
-                                                                        </span>
-                                                                        <ClientTime date={msg.date} />
-                                                                    </div>
-                                                                    <motion.div
-                                                                        className={`rounded-lg p-3 shadow-sm min-w-[120px] max-w-[80%] inline-block ${
-                                                                            msg.user === "You" ? "bg-[#5645ee80]" : "bg-[#36353f89]"
-                                                                        }`}
-                                                                        initial={{ scale: 0.8, opacity: 0 }}
-                                                                        animate={{ scale: 1, opacity: 1 }}
-                                                                        transition={{
-                                                                            type: "spring",
-                                                                            stiffness: 500,
-                                                                            damping: 30,
-                                                                            delay: 0.1
-                                                                        }}
-                                                                    >
-                                                                        <div className="text-[#e4e4e7] leading-relaxed message-text">{msg.message}</div>
-                                                                    </motion.div>
-                                                                </motion.li>
-                                                            ))}
-                                                        </AnimatePresence>
-                                                    </ul>
-                                                </li>
-                                            )
-                                        )}
-                                    </ul>
-                                )}
-                                <div ref={messagesEndRef} />
-                            </div>
-                        </div>
-
+                        {/* Header with TypeScript-safe props */}
                         <motion.div 
-                            className="flex gap-2 mt-6"
+                            className="flex items-center p-4"
                             variants={itemVariants}
                         >
-                            <motion.input
-                                type="text"
-                                value={message}
-                                onChange={(e) => setMessage(e.target.value)}
-                                className="px-4 py-2 flex-1 bg-[#4f4d66] rounded-lg text-white"
-                                placeholder="Type a message..."
-                                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.3, duration: 0.5 }}
-                            />
+                            <div className="rounded-full w-12 h-12 flex items-center justify-center mr-3 overflow-hidden">
+                                <img 
+                                    src={avatars[3]} 
+                                    alt="User profile"
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            <div>
+                                <h2 
+                                    className="font-semibold text-lg cursor-pointer username-gradient-hover" 
+                                    style={{
+                                        backgroundImage: "linear-gradient(to right, #4f46e5, #3b82f6, #0ea5e9, #06b6d4)"
+                                    }}
+                                >
+                                    Jane Smith
+                                </h2>
+                                <p className="text-xs text-gray-500">Posted 2h ago</p>
+                            </div>
+                        </motion.div>
+
+                        {/* Post Content */}
+                        <motion.div
+                            className="p-4 border-b border-gray-100"
+                            variants={itemVariants}
+                        >
+                            <p className="mb-4 text-gray-800 leading-relaxed">
+                                {renderPostContent(postContent)}
+                            </p>
+                        </motion.div>
+
+                        {/* Actions */}
+                        <motion.div 
+                            className="flex gap-4 px-4 py-3 border-b border-gray-100"
+                            variants={itemVariants}
+                        >
                             <motion.button
-                                className="cursor-pointer px-4 py-2 bg-[#5645ee] text-white rounded-lg transition-colors duration-300 hover:bg-[#4535dd]"
-                                onClick={handleSendMessage}
-                                whileHover={{ scale: 1.05 }}
+                                onClick={handleLike}
+                                className={`cursor-pointer flex items-center gap-1.5 rounded-lg px-3 py-1.5 ${
+                                    liked ? "text-red-500 bg-red-50" : "text-gray-500 hover:bg-gray-50"
+                                }`}
+                                aria-label={liked ? "Unlike post" : "Like post"}
+                                animate={liked ? "liked" : "unliked"}
+                                variants={likeVariants}
                                 whileTap={{ scale: 0.95 }}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.4, duration: 0.5 }}
                             >
-                                Send
+                                {liked ? (
+                                    <FaHeart className="text-xl" />
+                                ) : (
+                                    <FaRegHeart className="text-xl" />
+                                )}
+                                <span className="font-medium">{liked ? "Liked" : "Like"}</span>
+                            </motion.button>
+                            <motion.button 
+                                onClick={toggleComments}
+                                className={`cursor-pointer flex items-center gap-1.5 rounded-lg px-3 py-1.5 ${
+                                    showComments ? "text-blue-500 bg-blue-50" : "text-gray-500 hover:bg-gray-50"
+                                }`}
+                                aria-label={showComments ? "Hide comments" : "Show comments"}
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.97 }}
+                            >
+                                <FaRegComment className="text-xl" />
+                                <span className="font-medium">{showComments ? "Hide comments" : "Comments"}</span>
                             </motion.button>
                         </motion.div>
+
+                        {/* Typed Comments Section with AnimatePresence for toggle */}
+                        <AnimatePresence>
+                            {showComments && (
+                                <motion.div 
+                                    className="overflow-hidden"
+                                    variants={commentsContainerVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="hidden"
+                                >
+                                    <motion.div 
+                                        className="px-4 py-3 space-y-3"
+                                        variants={itemVariants}
+                                    >
+                                        <h3 className="text-sm font-semibold text-gray-500 mb-2 heading-text">Comments</h3>
+                                        {comments.map((item, index) => (
+                                            <motion.div 
+                                                key={item.id} 
+                                                className="flex items-start"
+                                                initial="hidden"
+                                                animate="visible"
+                                                variants={commentVariants}
+                                                custom={index}
+                                            >
+                                                <div className="rounded-full w-8 h-8 flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
+                                                    {item.avatar ? (
+                                                        <img 
+                                                            src={item.avatar} 
+                                                            alt={`${item.user}'s avatar`}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="bg-gray-200 w-full h-full flex items-center justify-center text-xs">
+                                                            {item.user.charAt(0)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold">{item.user}</p>
+                                                    <p className="text-sm comment-text text-gray-700">{item.text}</p>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </motion.div>
+
+                                    {/* Comment Form with TypeScript events */}
+                                    <motion.form 
+                                        onSubmit={handleComment} 
+                                        className="flex items-center gap-2 p-4 border-t border-gray-100"
+                                        variants={itemVariants}
+                                    >
+                                        <div className="w-8 h-8 rounded-full overflow-hidden">
+                                            <img 
+                                                src={avatars[2]} 
+                                                alt="Your avatar"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <motion.input
+                                            type="text"
+                                            value={comment}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setComment(e.target.value)}
+                                            placeholder="Add a comment..."
+                                            className="flex-1 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
+                                            aria-label="Comment input"
+                                            whileFocus={{ scale: 1.01 }}
+                                        />
+                                        <motion.button
+                                            type="submit"
+                                            disabled={!comment.trim()}
+                                            className="cursor-pointer bg-blue-500 text-white font-medium rounded-full px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                            aria-label="Submit comment"
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                        >
+                                            Post
+                                        </motion.button>
+                                    </motion.form>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </motion.div>
-                </motion.div>
-            </div>
+                )}
+            </main>
         </>
     );
-};
-
-export default App;
+}
