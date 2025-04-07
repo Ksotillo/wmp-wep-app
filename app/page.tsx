@@ -419,7 +419,6 @@ const CreateBlogDialog = ({ isOpen, onClose, onAdd }: CreateBlogDialogProps) => 
     const [formData, setFormData] = useState<Partial<Waterfall>>(initialFormData);
     const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
     const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-    const [showSuccess, setShowSuccess] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const mainImageInputRef = useRef<HTMLInputElement>(null);
@@ -584,12 +583,8 @@ const CreateBlogDialog = ({ isOpen, onClose, onAdd }: CreateBlogDialogProps) => 
                 costs: formData.costs || "N/A",
             };
             onAdd(newWaterfall);
-            setShowSuccess(true);
             resetForm();
-            setTimeout(() => {
-                setShowSuccess(false);
-                onClose();
-            }, 2500);
+            onClose(); // Close the modal immediately after successful submission
         } catch (err) {
             console.error("Error submitting form:", err);
             setError("An unexpected error occurred. Please try again.");
@@ -1080,28 +1075,6 @@ const CreateBlogDialog = ({ isOpen, onClose, onAdd }: CreateBlogDialogProps) => 
                                 </div>
                             </form>
                         </div>
-                        <AnimatePresence mode="wait">
-                            {showSuccess && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 50 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 50, transition: { duration: 0.3 } }}
-                                    transition={{ duration: 0.3, type: "spring", stiffness: 200, damping: 20 }}
-                                    className="absolute bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-xl z-30 flex items-center gap-2"
-                                    role="alert"
-                                    aria-live="polite"
-                                >
-                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                        <path
-                                            fillRule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                            clipRule="evenodd"
-                                        />
-                                    </svg>
-                                    Entry added successfully!
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
                     </motion.div>
                 </motion.div>
             )}
@@ -1115,6 +1088,7 @@ export default function WaterfallBlog() {
     const [selectedCountry, setSelectedCountry] = useState<string>("All");
     const [selectedWaterfall, setSelectedWaterfall] = useState<Waterfall | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [showSuccessMessage, setShowSuccessMessage] = useState(false);
     const [waterfalls, setWaterfalls] = useState<Waterfall[]>([
         {
             id: 1,
@@ -1250,8 +1224,11 @@ export default function WaterfallBlog() {
 
     const handleAddWaterfall = (newWaterfall: Waterfall) => {
         setWaterfalls((prev) => [...prev, newWaterfall]);
-        // Optional: Auto-select the country of the newly added waterfall
-        // setSelectedCountry(newWaterfall.country);
+        setIsCreateModalOpen(false);
+        setShowSuccessMessage(true);
+        setTimeout(() => {
+            setShowSuccessMessage(false);
+        }, 2500);
     };
 
     // Effect to sort waterfalls whenever the list changes
@@ -1525,6 +1502,29 @@ export default function WaterfallBlog() {
 
             <BlogDialog waterfall={selectedWaterfall} isOpen={selectedWaterfall !== null} onClose={() => setSelectedWaterfall(null)} />
             <CreateBlogDialog isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onAdd={handleAddWaterfall} />
+            
+            <AnimatePresence mode="wait">
+                {showSuccessMessage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50, transition: { duration: 0.3 } }}
+                        transition={{ duration: 0.3, type: "spring", stiffness: 200, damping: 20 }}
+                        className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-xl z-30 flex items-center gap-2"
+                        role="alert"
+                        aria-live="polite"
+                    >
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clipRule="evenodd"
+                            />
+                        </svg>
+                        Entry added successfully!
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
