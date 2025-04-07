@@ -60,6 +60,22 @@ const FontStyles = () => (
       background-position: right center;
       transform: scale(1.03);
     }
+
+    .heart-container {
+      position: relative;
+      overflow: visible;
+      display: inline-flex;
+    }
+
+    .mini-heart {
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      pointer-events: none;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
   `}</style>
 );
 
@@ -68,6 +84,55 @@ type Comment = {
     text: string;
     user: string;
     avatar?: string;
+};
+
+// Heart animation particles
+const HeartParticle = ({ animate }: { animate: boolean }) => {
+  if (!animate) return null;
+  
+  // Create array for multiple hearts
+  const particles = Array.from({ length: 8 });
+  
+  return (
+    <>
+      {particles.map((_, i) => {
+        // Random position and animation for each heart
+        const angle = (Math.random() * 360) * (Math.PI / 180);
+        const distance = 15 + Math.random() * 25;
+        const x = Math.cos(angle) * distance;
+        const y = Math.sin(angle) * distance;
+        const scale = 0.5 + Math.random() * 0.5;
+        const duration = 0.6 + Math.random() * 0.4;
+        const opacity = 0.6 + Math.random() * 0.4;
+
+        return (
+          <motion.div
+            key={i}
+            className="mini-heart text-red-500"
+            initial={{ 
+              x: 0, 
+              y: 0, 
+              scale: 0, 
+              opacity: 0 
+            }}
+            animate={{ 
+              x, 
+              y, 
+              scale, 
+              opacity,
+              transition: { 
+                duration,
+                ease: [0.2, 0.9, 0.6, 1] 
+              }
+            }}
+            exit={{ opacity: 0, scale: 0, transition: { duration: 0.2 } }}
+          >
+            <FaHeart size={12} />
+          </motion.div>
+        );
+      })}
+    </>
+  );
 };
 
 // Avatar URLs from GitHub
@@ -83,6 +148,7 @@ export default function Home() {
     const [liked, setLiked] = useState<boolean>(false);
     const [comment, setComment] = useState<string>("");
     const [showComments, setShowComments] = useState<boolean>(true);
+    const [heartAnimation, setHeartAnimation] = useState<boolean>(false);
     const [comments, setComments] = useState<Comment[]>([
         { id: 1, text: "First comment! This design looks fantastic.", user: "Michael Chen", avatar: avatars[0] },
         { id: 2, text: "Love the design of this post. The animations are super smooth too!", user: "Sophie Williams", avatar: avatars[1] },
@@ -96,6 +162,10 @@ export default function Home() {
 
     // Typed event handlers
     const handleLike = (): void => {
+        if (!liked) {
+            setHeartAnimation(true);
+            setTimeout(() => setHeartAnimation(false), 800);
+        }
         setLiked(!liked);
     };
 
@@ -178,8 +248,8 @@ export default function Home() {
 
     const likeVariants = {
         liked: { 
-            scale: [1, 1.5, 1], 
-            transition: { duration: 0.3 } 
+            scale: [1, 1.3, 1], // Reduced by 40% from 1.5 to 1.3
+            transition: { duration: 0.25 } 
         },
         unliked: { scale: 1 }
     };
@@ -260,23 +330,32 @@ export default function Home() {
                             className="flex gap-4 px-4 py-3 border-b border-gray-100"
                             variants={itemVariants}
                         >
-                            <motion.button
-                                onClick={handleLike}
-                                className={`cursor-pointer flex items-center gap-1.5 rounded-lg px-3 py-1.5 ${
-                                    liked ? "text-red-500 bg-red-50" : "text-gray-500 hover:bg-gray-50"
-                                }`}
-                                aria-label={liked ? "Unlike post" : "Like post"}
-                                animate={liked ? "liked" : "unliked"}
-                                variants={likeVariants}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                {liked ? (
-                                    <FaHeart className="text-xl" />
-                                ) : (
-                                    <FaRegHeart className="text-xl" />
-                                )}
-                                <span className="font-medium">{liked ? "Liked" : "Like"}</span>
-                            </motion.button>
+                            <div className="heart-container relative">
+                                <motion.button
+                                    onClick={handleLike}
+                                    className={`cursor-pointer flex items-center gap-1.5 rounded-lg px-3 py-1.5 ${
+                                        liked ? "text-red-500 bg-red-50" : "text-gray-500 hover:bg-gray-50"
+                                    }`}
+                                    aria-label={liked ? "Unlike post" : "Like post"}
+                                    animate={liked ? "liked" : "unliked"}
+                                    variants={likeVariants}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    <div className="relative">
+                                        {liked ? (
+                                            <FaHeart className="text-xl" />
+                                        ) : (
+                                            <FaRegHeart className="text-xl" />
+                                        )}
+                                        
+                                        <AnimatePresence>
+                                            {heartAnimation && <HeartParticle animate={heartAnimation} />}
+                                        </AnimatePresence>
+                                    </div>
+                                    <span className="font-medium">{liked ? "Liked" : "Like"}</span>
+                                </motion.button>
+                            </div>
+                            
                             <motion.button 
                                 onClick={toggleComments}
                                 className={`cursor-pointer flex items-center gap-1.5 rounded-lg px-3 py-1.5 ${
