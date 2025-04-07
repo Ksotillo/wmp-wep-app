@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Poppins, Lora } from "next/font/google";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     Compass,
     Droplets,
@@ -36,6 +37,55 @@ const lora = Lora({
     subsets: ["latin"],
     variable: "--font-lora",
 });
+
+const cascadeAnimation = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.05,
+            delayChildren: 0.8,
+        },
+    },
+};
+
+const letterAnimation = {
+    hidden: { opacity: 0, y: -5 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            y: { type: "spring", stiffness: 100, damping: 15 },
+        }
+    }
+};
+
+const cascadeIconAnimation = {
+    hidden: { opacity: 0 },
+    visible: (custom: number) => ({
+        opacity: 1,
+        transition: {
+            delay: custom * 0.15 + 1.2,
+            duration: 0.5
+        }
+    })
+};
+
+const cascadeGlowKeyframes = `
+@keyframes cascadeGlow {
+    0% { text-shadow: 0 0 0px rgba(94, 234, 212, 0); }
+    25% { text-shadow: 0 0 5px rgba(94, 234, 212, 0.5); }
+    50% { text-shadow: 0 0 10px rgba(94, 234, 212, 0.3); }
+    75% { text-shadow: 0 0 5px rgba(94, 234, 212, 0.5); }
+    100% { text-shadow: 0 0 0px rgba(94, 234, 212, 0); }
+}
+
+@keyframes iconGlow {
+    0% { filter: drop-shadow(0 0 0 rgba(94, 234, 212, 0)); }
+    50% { filter: drop-shadow(0 0 3px rgba(94, 234, 212, 0.5)); }
+    100% { filter: drop-shadow(0 0 0 rgba(94, 234, 212, 0)); }
+}
+`;
 
 interface Waterfall {
     id: number;
@@ -81,7 +131,7 @@ interface CreateBlogDialogProps {
 const TabButton = ({ active, children, onClick }: TabButtonProps) => (
     <button
         onClick={onClick}
-        className={`px-4 py-2 whitespace-nowrap text-sm md:text-base font-medium ${
+        className={`px-4 py-2 whitespace-nowrap text-sm md:text-base font-medium cursor-pointer ${
             active
                 ? "text-blue-400 border-b-2 border-blue-400"
                 : "text-gray-400 hover:text-gray-300 border-b-2 border-transparent hover:border-gray-600"
@@ -100,233 +150,245 @@ const BlogDialog = ({ waterfall, isOpen, onClose }: BlogDialogProps) => {
         }
     }, [isOpen, waterfall?.id]);
 
-    if (!isOpen || !waterfall) return null;
+    if (!waterfall) return null;
 
     return (
-        <div
-            className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4"
-            onClick={onClose}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="dialog-title"
-        >
-            <div
-                className="bg-gray-950 max-w-4xl w-full max-h-[calc(100vh-4rem)] flex flex-col rounded-xl overflow-hidden border border-gray-800 shadow-2xl glass-card"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex-shrink-0 px-4 py-3 md:px-6 md:py-4 flex justify-between items-center border-b border-gray-800/50 bg-gray-900/50 z-20">
-                    <button
-                        onClick={onClose}
-                        className="bg-gray-800/60 backdrop-blur-sm text-gray-200 px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-gray-700 transition-all flex items-center gap-2 group border border-gray-700"
-                        aria-label="Back to wanderings"
+        <AnimatePresence mode="wait">
+            {isOpen && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-center justify-center p-4"
+                    onClick={onClose}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="dialog-title"
+                >
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20, transition: { duration: 0.2 } }}
+                        transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
+                        className="bg-gray-950 max-w-4xl w-full max-h-[calc(100vh-4rem)] flex flex-col rounded-xl overflow-hidden border border-gray-800 shadow-2xl glass-card"
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                        <span className={`${poppins.className} text-xs md:text-sm`}>Back</span>
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="bg-gray-800/60 backdrop-blur-sm p-2 rounded-full hover:bg-gray-700 transition-all group border border-gray-700"
-                        aria-label="Close dialog"
-                    >
-                        <X className="w-5 h-5 group-hover:rotate-90 transition-transform" />
-                    </button>
-                </div>
-                <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500 scrollbar-track-gray-800/50">
-                    <div className="relative flex-shrink-0">
-                        <div className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] max-h-[500px] p-3 sm:p-4 bg-gray-900">
-                            <div className="h-full w-full relative rounded-lg overflow-hidden border-4 md:border-8 border-gray-100 shadow-xl transform -rotate-1">
-                                <img
-                                    src={waterfall.image}
-                                    alt={waterfall.name}
-                                    className="absolute inset-0 w-full h-full object-cover filter saturate-110"
-                                    loading="eager"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
-                            </div>
-
-                            <div
-                                className={`${poppins.className} absolute top-4 right-4 sm:top-6 sm:right-6 transform rotate-6 glass-card px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm z-10`}
+                        <div className="flex-shrink-0 px-4 py-3 md:px-6 md:py-4 flex justify-between items-center border-b border-gray-800/50 bg-gray-900/50 z-20">
+                            <button
+                                onClick={onClose}
+                                className="bg-gray-800/60 backdrop-blur-sm text-gray-200 px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-gray-700 transition-all flex items-center gap-2 group border border-gray-700 cursor-pointer"
+                                aria-label="Back to wanderings"
                             >
-                                <div className="text-blue-300 text-on-glass">Mood</div>
-                                <div className="text-lg sm:text-xl md:text-2xl text-gray-200 text-on-glass">{waterfall.mood}</div>
-                            </div>
-
-                            <div
-                                className={`${poppins.className} absolute bottom-4 left-4 sm:bottom-6 sm:left-6 transform -rotate-3 text-base sm:text-lg md:text-xl text-gray-300 bg-black/30 px-2 py-1 rounded z-10`}
+                                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                                <span className={`${poppins.className} text-xs md:text-sm`}>Back</span>
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="bg-gray-800/60 backdrop-blur-sm p-2 rounded-full hover:bg-gray-700 transition-all group border border-gray-700 cursor-pointer"
+                                aria-label="Close dialog"
                             >
-                                📍 {waterfall.location}
-                            </div>
+                                <X className="w-5 h-5 group-hover:rotate-90 transition-transform" />
+                            </button>
                         </div>
-                    </div>
-                    <div className="p-6 md:p-8 lg:p-10 bg-gradient-to-b from-gray-900 to-gray-950">
-                        <div className="relative mb-8 md:mb-10">
-                            <div className="relative">
-                                <div className={`${poppins.className} text-blue-300/80 text-xs sm:text-sm mb-1 md:mb-2`}>
-                                    <FileText className="inline-block w-4 h-4 mr-1" /> Entry #{waterfall.id} • Visited:{" "}
-                                    {waterfall.visitDate}
-                                </div>
-                                <h1
-                                    id="dialog-title"
-                                    className={`${lora.className} text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 tracking-tight md:tracking-wide`}
-                                >
-                                    {waterfall.name}
-                                </h1>
-                                <div className="flex items-center gap-2 sm:gap-3 mt-3 md:mt-4">
-                                    <div className={`${poppins.className} text-sm text-gray-400`}>My Rating:</div>
-                                    <div className="flex gap-0.5 sm:gap-1">
-                                        {[...Array(5)].map((_, i) => (
-                                            <Star
-                                                key={i}
-                                                className={`h-5 w-5 sm:h-6 sm:w-6 ${
-                                                    i < waterfall.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-600"
-                                                }`}
-                                            />
-                                        ))}
+                        <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500 scrollbar-track-gray-800/50">
+                            <div className="relative flex-shrink-0">
+                                <div className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] max-h-[500px] p-3 sm:p-4 bg-gray-900">
+                                    <div className="h-full w-full relative rounded-lg overflow-hidden border-4 md:border-8 border-gray-100 shadow-xl transform -rotate-1">
+                                        <img
+                                            src={waterfall.image}
+                                            alt={waterfall.name}
+                                            className="absolute inset-0 w-full h-full object-cover filter saturate-110"
+                                            loading="eager"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
+                                    </div>
+
+                                    <div
+                                        className={`${poppins.className} absolute top-4 right-4 sm:top-6 sm:right-6 transform rotate-6 glass-card px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm z-10`}
+                                    >
+                                        <div className="text-blue-300 text-on-glass">Mood</div>
+                                        <div className="text-lg sm:text-xl md:text-2xl text-gray-200 text-on-glass">{waterfall.mood}</div>
+                                    </div>
+
+                                    <div
+                                        className={`${poppins.className} absolute bottom-4 left-4 sm:bottom-6 sm:left-6 transform -rotate-3 text-base sm:text-lg md:text-xl text-gray-300 bg-black/30 px-2 py-1 rounded z-10`}
+                                    >
+                                        📍 {waterfall.location}
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="sticky top-0 z-10 -mx-6 md:-mx-8 lg:-mx-10 mb-6 md:mb-8 border-b border-gray-700 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-900/80 backdrop-blur-sm">
-                            <div className="flex gap-1 sm:gap-2 px-6 md:px-8 lg:px-10 overflow-x-auto scrollbar-hide">
-                                <TabButton active={activeTab === "experience"} onClick={() => setActiveTab("experience")}>
-                                    My Experience
-                                </TabButton>
-                                <TabButton active={activeTab === "gallery"} onClick={() => setActiveTab("gallery")}>
-                                    Photo Gallery
-                                </TabButton>
-                                <TabButton active={activeTab === "info"} onClick={() => setActiveTab("info")}>
-                                    Travel Info
-                                </TabButton>
-                            </div>
-                        </div>
-                        <div className={`${lora.className} space-y-6 md:space-y-8 leading-relaxed text-gray-300`}>
-                            {activeTab === "experience" && (
-                                <>
-                                    <div className="prose prose-lg prose-invert max-w-none prose-p:text-gray-300 prose-headings:text-gray-100 prose-p:leading-relaxed">
-                                        <h3 className={`${lora.className} text-2xl font-semibold text-blue-300 mb-4`}>My Experience</h3>
-                                        <p className="text-lg md:text-xl first-letter:text-5xl md:first-letter:text-6xl first-letter:font-bold first-letter:mr-3 first-letter:float-left first-letter:text-blue-300">
-                                            {waterfall.experience || "No experience description provided."}
-                                        </p>
-                                    </div>
-                                    <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                                        <h3 className="text-lg font-medium leading-6 text-gray-200">
-                                            <FileText className="inline-block w-5 h-5 mr-2" /> Personal Notes
-                                        </h3>
-                                        <p className="text-base md:text-lg text-gray-400 italic">{waterfall.personalNotes}</p>
-                                    </div>
-                                </>
-                            )}
-
-                            {activeTab === "gallery" && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
-                                    {waterfall.gallery.length > 0 ? (
-                                        waterfall.gallery.map((photo, i) => (
-                                            <div
-                                                key={i}
-                                                className={`relative bg-gray-800 p-2 sm:p-3 shadow-xl transform transition-transform duration-300 group hover:scale-105 border border-gray-700 rounded-lg ${
-                                                    i % 2 === 0 ? "rotate-1 sm:rotate-2" : "-rotate-1 sm:-rotate-2"
-                                                }`}
-                                            >
-                                                <div className="aspect-[4/3] relative overflow-hidden rounded bg-gray-700">
-                                                    <img
-                                                        src={photo}
-                                                        alt={`${waterfall.name} memory ${i + 1}`}
-                                                        className="absolute inset-0 w-full h-full object-cover filter saturate-105 group-hover:saturate-110 transition-all duration-300"
-                                                        loading="lazy"
+                            <div className="p-6 md:p-8 lg:p-10 bg-gradient-to-b from-gray-900 to-gray-950">
+                                <div className="relative mb-8 md:mb-10">
+                                    <div className="relative">
+                                        <div className={`${poppins.className} text-blue-300/80 text-xs sm:text-sm mb-1 md:mb-2`}>
+                                            <FileText className="inline-block w-4 h-4 mr-1" /> Entry #{waterfall.id} • Visited:{" "}
+                                            {waterfall.visitDate}
+                                        </div>
+                                        <h1
+                                            id="dialog-title"
+                                            className={`${lora.className} text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 tracking-tight md:tracking-wide`}
+                                        >
+                                            {waterfall.name}
+                                        </h1>
+                                        <div className="flex items-center gap-2 sm:gap-3 mt-3 md:mt-4">
+                                            <div className={`${poppins.className} text-sm text-gray-400`}>My Rating:</div>
+                                            <div className="flex gap-0.5 sm:gap-1">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star
+                                                        key={i}
+                                                        className={`h-5 w-5 sm:h-6 sm:w-6 ${
+                                                            i < waterfall.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-600"
+                                                        }`}
                                                     />
-                                                </div>
-                                                <div className={`${poppins.className} text-gray-400 text-center text-xs sm:text-sm mt-2`}>
-                                                    Memory #{i + 1}
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-gray-400 italic col-span-full text-center py-8">No gallery images added.</p>
-                                    )}
-                                </div>
-                            )}
-
-                            {activeTab === "info" && (
-                                <div className="space-y-8 md:space-y-10">
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                                        {[
-                                            {
-                                                label: "Height",
-                                                value: waterfall.height,
-                                                icon: <AlertTriangle className="w-5 h-5" />,
-                                            },
-                                            {
-                                                label: "Trail",
-                                                value: waterfall.hikingDifficulty,
-                                                icon: <Navigation className="w-5 h-5" />,
-                                            },
-                                            {
-                                                label: "Best Time",
-                                                value: waterfall.bestTimeToVisit,
-                                                icon: <Clock className="w-5 h-5" />,
-                                            },
-                                            {
-                                                label: "Water Flow",
-                                                value: waterfall.flowRate,
-                                                icon: <Droplet className="w-5 h-5" />,
-                                            },
-                                        ].map((stat, i) => (
-                                            <div key={i} className={`${poppins.className} transform transition-transform hover:scale-105`}>
-                                                <div className="bg-blue-900/20 rounded-lg p-3 md:p-4 border border-blue-800/30 hover:shadow-xl transition-shadow h-full flex flex-col">
-                                                    <div className="text-xl md:text-2xl mb-1">{stat.icon}</div>
-                                                    <div className="text-blue-300 text-xs sm:text-sm mb-0.5">{stat.label}</div>
-                                                    <div className="text-base md:text-lg text-gray-100 font-medium">
-                                                        {stat.value || "N/A"}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className={`${poppins.className}`}>
-                                        <h4 className="text-lg md:text-xl text-gray-100 mb-3 md:mb-4 font-semibold">✨ General Tips</h4>
-                                        {waterfall.tips.length > 0 ? (
-                                            <ul className="space-y-2 md:space-y-3">
-                                                {waterfall.tips.map((tip, i) => (
-                                                    <li key={i} className="flex items-start gap-2 md:gap-3 text-base md:text-lg">
-                                                        <span className="text-blue-400 mt-1">•</span>
-                                                        <span className="text-gray-300">{tip}</span>
-                                                    </li>
                                                 ))}
-                                            </ul>
-                                        ) : (
-                                            <p className="text-gray-400 italic">No general tips provided.</p>
-                                        )}
-                                    </div>
-                                    <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                                        <h3 className="text-lg font-medium leading-6 text-gray-200">
-                                            <Info className="inline-block w-5 h-5 mr-2" /> Specific Info
-                                        </h3>
-                                        <div className="space-y-3">
-                                            <p>
-                                                <Bus className="inline-block w-4 h-4 mr-2" />
-                                                <strong className="text-gray-200 font-medium">Transportation:</strong>{" "}
-                                                {waterfall.transportation || "Info not available."}
-                                            </p>
-                                            <p>
-                                                <Bed className="inline-block w-4 h-4 mr-2" />
-                                                <strong className="text-gray-200 font-medium">Accommodation:</strong>{" "}
-                                                {waterfall.accommodation || "Info not available."}
-                                            </p>
-                                            <p>
-                                                <DollarSign className="inline-block w-4 h-4 mr-2" />
-                                                <strong className="text-gray-200 font-medium">Costs:</strong>{" "}
-                                                {waterfall.costs || "Info not available."}
-                                            </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                                <div className="sticky top-0 z-10 -mx-6 md:-mx-8 lg:-mx-10 mb-6 md:mb-8 border-b border-gray-700 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-900/80 backdrop-blur-sm">
+                                    <div className="flex gap-1 sm:gap-2 px-6 md:px-8 lg:px-10 overflow-x-auto scrollbar-hide">
+                                        <TabButton active={activeTab === "experience"} onClick={() => setActiveTab("experience")}>
+                                            My Experience
+                                        </TabButton>
+                                        <TabButton active={activeTab === "gallery"} onClick={() => setActiveTab("gallery")}>
+                                            Photo Gallery
+                                        </TabButton>
+                                        <TabButton active={activeTab === "info"} onClick={() => setActiveTab("info")}>
+                                            Travel Info
+                                        </TabButton>
+                                    </div>
+                                </div>
+                                <div className={`${lora.className} space-y-6 md:space-y-8 leading-relaxed text-gray-300`}>
+                                    {activeTab === "experience" && (
+                                        <>
+                                            <div className="prose prose-lg prose-invert max-w-none prose-p:text-gray-300 prose-headings:text-gray-100 prose-p:leading-relaxed">
+                                                <h3 className={`${lora.className} text-2xl font-semibold text-blue-300 mb-4`}>My Experience</h3>
+                                                <p className="text-lg md:text-xl first-letter:text-5xl md:first-letter:text-6xl first-letter:font-bold first-letter:mr-3 first-letter:float-left first-letter:text-blue-300">
+                                                    {waterfall.experience || "No experience description provided."}
+                                                </p>
+                                            </div>
+                                            <div className="space-y-4 pt-4 border-t border-gray-700/50">
+                                                <h3 className="text-lg font-medium leading-6 text-gray-200">
+                                                    <FileText className="inline-block w-5 h-5 mr-2" /> Personal Notes
+                                                </h3>
+                                                <p className="text-base md:text-lg text-gray-400 italic">{waterfall.personalNotes}</p>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {activeTab === "gallery" && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
+                                            {waterfall.gallery.length > 0 ? (
+                                                waterfall.gallery.map((photo, i) => (
+                                                    <div
+                                                        key={i}
+                                                        className={`relative bg-gray-800 p-2 sm:p-3 shadow-xl transform transition-transform duration-300 group hover:scale-105 border border-gray-700 rounded-lg ${
+                                                            i % 2 === 0 ? "rotate-1 sm:rotate-2" : "-rotate-1 sm:-rotate-2"
+                                                        }`}
+                                                    >
+                                                        <div className="aspect-[4/3] relative overflow-hidden rounded bg-gray-700">
+                                                            <img
+                                                                src={photo}
+                                                                alt={`${waterfall.name} memory ${i + 1}`}
+                                                                className="absolute inset-0 w-full h-full object-cover filter saturate-105 group-hover:saturate-110 transition-all duration-300"
+                                                                loading="lazy"
+                                                            />
+                                                        </div>
+                                                        <div className={`${poppins.className} text-gray-400 text-center text-xs sm:text-sm mt-2`}>
+                                                            Memory #{i + 1}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="text-gray-400 italic col-span-full text-center py-8">No gallery images added.</p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {activeTab === "info" && (
+                                        <div className="space-y-8 md:space-y-10">
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                                                {[
+                                                    {
+                                                        label: "Height",
+                                                        value: waterfall.height,
+                                                        icon: <AlertTriangle className="w-5 h-5" />,
+                                                    },
+                                                    {
+                                                        label: "Trail",
+                                                        value: waterfall.hikingDifficulty,
+                                                        icon: <Navigation className="w-5 h-5" />,
+                                                    },
+                                                    {
+                                                        label: "Best Time",
+                                                        value: waterfall.bestTimeToVisit,
+                                                        icon: <Clock className="w-5 h-5" />,
+                                                    },
+                                                    {
+                                                        label: "Water Flow",
+                                                        value: waterfall.flowRate,
+                                                        icon: <Droplet className="w-5 h-5" />,
+                                                    },
+                                                ].map((stat, i) => (
+                                                    <div key={i} className={`${poppins.className} transform transition-transform hover:scale-105`}>
+                                                        <div className="bg-blue-900/20 rounded-lg p-3 md:p-4 border border-blue-800/30 hover:shadow-xl transition-shadow h-full flex flex-col">
+                                                            <div className="text-xl md:text-2xl mb-1">{stat.icon}</div>
+                                                            <div className="text-blue-300 text-xs sm:text-sm mb-0.5">{stat.label}</div>
+                                                            <div className="text-base md:text-lg text-gray-100 font-medium">
+                                                                {stat.value || "N/A"}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className={`${poppins.className}`}>
+                                                <h4 className="text-lg md:text-xl text-gray-100 mb-3 md:mb-4 font-semibold">✨ General Tips</h4>
+                                                {waterfall.tips.length > 0 ? (
+                                                    <ul className="space-y-2 md:space-y-3">
+                                                        {waterfall.tips.map((tip, i) => (
+                                                            <li key={i} className="flex items-start gap-2 md:gap-3 text-base md:text-lg">
+                                                                <span className="text-blue-400 mt-1">•</span>
+                                                                <span className="text-gray-300">{tip}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                ) : (
+                                                    <p className="text-gray-400 italic">No general tips provided.</p>
+                                                )}
+                                            </div>
+                                            <div className="space-y-4 pt-4 border-t border-gray-700/50">
+                                                <h3 className="text-lg font-medium leading-6 text-gray-200">
+                                                    <Info className="inline-block w-5 h-5 mr-2" /> Specific Info
+                                                </h3>
+                                                <div className="space-y-3">
+                                                    <p>
+                                                        <Bus className="inline-block w-4 h-4 mr-2" />
+                                                        <strong className="text-gray-200 font-medium">Transportation:</strong>{" "}
+                                                        {waterfall.transportation || "Info not available."}
+                                                    </p>
+                                                    <p>
+                                                        <Bed className="inline-block w-4 h-4 mr-2" />
+                                                        <strong className="text-gray-200 font-medium">Accommodation:</strong>{" "}
+                                                        {waterfall.accommodation || "Info not available."}
+                                                    </p>
+                                                    <p>
+                                                        <DollarSign className="inline-block w-4 h-4 mr-2" />
+                                                        <strong className="text-gray-200 font-medium">Costs:</strong>{" "}
+                                                        {waterfall.costs || "Info not available."}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 };
 
@@ -490,6 +552,10 @@ const CreateBlogDialog = ({ isOpen, onClose, onAdd }: CreateBlogDialogProps) => 
             setError("Please describe your experience.");
             return;
         }
+        if (!formData.description?.trim()) {
+            setError("Please enter a short description.");
+            return;
+        }
 
         setIsSubmitting(true);
         try {
@@ -535,491 +601,511 @@ const CreateBlogDialog = ({ isOpen, onClose, onAdd }: CreateBlogDialogProps) => 
     if (!isOpen) return null;
 
     return (
-        <div
-            className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4"
-            onClick={onClose}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="dialog-title"
-        >
-            <div
-                className="bg-gray-900 max-w-3xl w-full max-h-[calc(100vh-4rem)] flex flex-col rounded-xl overflow-hidden border border-gray-700 shadow-2xl glass-card"
-                onClick={(e) => e.stopPropagation()}
-                role="document"
-            >
-                <div className="flex-shrink-0 px-4 py-3 md:px-6 md:py-4 flex justify-between items-center border-b border-gray-700/50 bg-gray-900/80 backdrop-blur-sm z-20">
-                    <h2 className={`${poppins.className} text-lg md:text-xl font-semibold text-gray-100`} id="dialog-title">
-                        Add New Waterfall Entry
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-200 p-1 rounded-full hover:bg-gray-700 transition-colors"
-                        aria-label="Close dialog"
-                        disabled={isSubmitting}
+        <AnimatePresence mode="wait">
+            {isOpen && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-center justify-center p-4"
+                    onClick={onClose}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="dialog-title"
+                >
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20, transition: { duration: 0.2 } }}
+                        transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
+                        className="bg-gray-900 max-w-3xl w-full max-h-[calc(100vh-4rem)] flex flex-col rounded-xl overflow-hidden border border-gray-700 shadow-2xl glass-card"
+                        onClick={(e) => e.stopPropagation()}
+                        role="document"
                     >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-                <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500 scrollbar-track-gray-800/50">
-                    <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-300">Main Image *</label>
-                            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-md">
-                                <div className="space-y-1 text-center">
-                                    {mainImagePreview ? (
-                                        <img
-                                            src={mainImagePreview}
-                                            alt="Main preview"
-                                            className="mx-auto h-32 w-auto object-contain rounded-md"
-                                        />
-                                    ) : (
-                                        <UploadCloud className="mx-auto h-12 w-12 text-gray-500" aria-hidden="true" />
-                                    )}
-                                    <div className="flex text-sm text-gray-500 justify-center">
-                                        <label
-                                            htmlFor="main-image-upload"
-                                            className="relative cursor-pointer bg-gray-800 rounded-md font-medium text-blue-400 hover:text-blue-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-gray-900 focus-within:ring-blue-500 px-2 py-1"
-                                        >
-                                            <span>{mainImagePreview ? "Change file" : "Upload a file"}</span>
-                                            <input
-                                                id="main-image-upload"
-                                                name="mainImageFile"
-                                                type="file"
-                                                className="sr-only"
-                                                accept="image/*"
-                                                onChange={handleMainImageChange}
-                                                ref={mainImageInputRef}
-                                                aria-describedby="main-image-desc"
-                                            />
-                                        </label>
+                        <div className="flex-shrink-0 px-4 py-3 md:px-6 md:py-4 flex justify-between items-center border-b border-gray-700/50 bg-gray-900/80 backdrop-blur-sm z-20">
+                            <h2 className={`${poppins.className} text-lg md:text-xl font-semibold text-gray-100`} id="dialog-title">
+                                Add New Waterfall Entry
+                            </h2>
+                            <button
+                                onClick={onClose}
+                                className="text-gray-400 hover:text-gray-200 p-1 rounded-full hover:bg-gray-700 transition-colors cursor-pointer"
+                                aria-label="Close dialog"
+                                disabled={isSubmitting}
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500 scrollbar-track-gray-800/50">
+                            <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-gray-300">Main Image *</label>
+                                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-md">
+                                        <div className="space-y-1 text-center">
+                                            {mainImagePreview ? (
+                                                <img
+                                                    src={mainImagePreview}
+                                                    alt="Main preview"
+                                                    className="mx-auto h-32 w-auto object-contain rounded-md"
+                                                />
+                                            ) : (
+                                                <UploadCloud className="mx-auto h-12 w-12 text-gray-500" aria-hidden="true" />
+                                            )}
+                                            <div className="flex text-sm text-gray-500 justify-center">
+                                                <label
+                                                    htmlFor="main-image-upload"
+                                                    className="relative cursor-pointer bg-gray-800 rounded-md font-medium text-blue-400 hover:text-blue-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-gray-900 focus-within:ring-blue-500 px-2 py-1"
+                                                >
+                                                    <span>{mainImagePreview ? "Change file" : "Upload a file"}</span>
+                                                    <input
+                                                        id="main-image-upload"
+                                                        name="mainImageFile"
+                                                        type="file"
+                                                        className="sr-only"
+                                                        accept="image/*"
+                                                        onChange={handleMainImageChange}
+                                                        ref={mainImageInputRef}
+                                                        aria-describedby="main-image-desc"
+                                                    />
+                                                </label>
+                                            </div>
+                                            <p id="main-image-desc" className="text-xs text-gray-500">
+                                                PNG, JPG, GIF up to 10MB
+                                            </p>
+                                        </div>
                                     </div>
-                                    <p id="main-image-desc" className="text-xs text-gray-500">
-                                        PNG, JPG, GIF up to 10MB
-                                    </p>
                                 </div>
-                            </div>
-                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                            <div className="space-y-1">
-                                <label htmlFor="name" className="block text-sm font-medium text-gray-300">
-                                    Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    id="name"
-                                    name="name"
-                                    required
-                                    autoComplete="off"
-                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                    value={formData.name}
-                                    onChange={handleInputChange}
-                                    aria-required="true"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label htmlFor="country" className="block text-sm font-medium text-gray-300">
-                                    Country *
-                                </label>
-                                <input
-                                    type="text"
-                                    id="country"
-                                    name="country"
-                                    required
-                                    autoComplete="country-name"
-                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                    value={formData.country}
-                                    onChange={handleInputChange}
-                                    aria-required="true"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label htmlFor="location" className="block text-sm font-medium text-gray-300">
-                                    Location / Region *
-                                </label>
-                                <input
-                                    type="text"
-                                    id="location"
-                                    name="location"
-                                    required
-                                    autoComplete="address-level2"
-                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                    value={formData.location}
-                                    onChange={handleInputChange}
-                                    aria-required="true"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label htmlFor="visitDate" className="block text-sm font-medium text-gray-300">
-                                    Visit Date *
-                                </label>
-                                <input
-                                    type="date"
-                                    id="visitDate"
-                                    name="visitDate"
-                                    required
-                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                    value={formData.visitDate}
-                                    onChange={handleInputChange}
-                                    aria-required="true"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label htmlFor="mood" className="block text-sm font-medium text-gray-300">
-                                    Mood
-                                </label>
-                                <input
-                                    type="text"
-                                    id="mood"
-                                    name="mood"
-                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                    placeholder="e.g., Majestic, Peaceful"
-                                    value={formData.mood}
-                                    onChange={handleInputChange}
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label id="rating-label" className="block text-sm font-medium text-gray-300">
-                                    Rating
-                                </label>
-                                <div className="flex gap-2 items-center pt-1" role="radiogroup" aria-labelledby="rating-label">
-                                    {[1, 2, 3, 4, 5].map((v) => (
-                                        <button
-                                            key={v}
-                                            type="button"
-                                            onClick={() => handleRatingChange(v as 1 | 2 | 3 | 4 | 5)}
-                                            className="focus:outline-none focus:ring-2 focus:ring-yellow-400 rounded-full p-0.5"
-                                            role="radio"
-                                            aria-checked={v === formData.rating}
-                                            aria-label={`${v} star${v !== 1 ? "s" : ""}`}
-                                        >
-                                            <Star
-                                                className={`h-6 w-6 transition-colors ${
-                                                    v <= (formData.rating || 0)
-                                                        ? "text-yellow-400 fill-yellow-400"
-                                                        : "text-gray-600 hover:text-gray-500"
-                                                }`}
-                                            />
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                            <h3 className="text-lg font-medium leading-6 text-gray-200">Details & Experience</h3>
-                            <div className="space-y-1">
-                                <label htmlFor="description" className="block text-sm font-medium text-gray-300">
-                                    Short Description
-                                </label>
-                                <textarea
-                                    id="description"
-                                    name="description"
-                                    rows={3}
-                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                    placeholder="A brief summary..."
-                                    value={formData.description}
-                                    onChange={handleInputChange}
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label htmlFor="experience" className="block text-sm font-medium text-gray-300">
-                                    Your Experience *
-                                </label>
-                                <textarea
-                                    id="experience"
-                                    name="experience"
-                                    rows={5}
-                                    required
-                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                    placeholder="Share your detailed experience..."
-                                    value={formData.experience}
-                                    onChange={handleInputChange}
-                                    aria-required="true"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label htmlFor="personalNotes" className="block text-sm font-medium text-gray-300">
-                                    Personal Notes (Optional)
-                                </label>
-                                <textarea
-                                    id="personalNotes"
-                                    name="personalNotes"
-                                    rows={3}
-                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                    placeholder="Private thoughts or reminders..."
-                                    value={formData.personalNotes}
-                                    onChange={handleInputChange}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                            <h3 className="text-lg font-medium leading-6 text-gray-200">Technical Details</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                <div className="space-y-1">
-                                    <label htmlFor="height" className="block text-sm font-medium text-gray-300">
-                                        Height
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="height"
-                                        name="height"
-                                        className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                        placeholder="e.g., 100 m"
-                                        value={formData.height}
-                                        onChange={handleInputChange}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label htmlFor="flowRate" className="block text-sm font-medium text-gray-300">
-                                        Water Flow
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="flowRate"
-                                        name="flowRate"
-                                        className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                        placeholder="e.g., Strong, Seasonal"
-                                        value={formData.flowRate}
-                                        onChange={handleInputChange}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label htmlFor="hikingDifficulty" className="block text-sm font-medium text-gray-300">
-                                        Hiking Difficulty
-                                    </label>
-                                    <select
-                                        id="hikingDifficulty"
-                                        name="hikingDifficulty"
-                                        className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                        value={formData.hikingDifficulty}
-                                        onChange={handleInputChange}
-                                    >
-                                        <option value="Easy">Easy</option>
-                                        <option value="Moderate">Moderate</option>
-                                        <option value="Hard">Hard</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label htmlFor="bestTimeToVisit" className="block text-sm font-medium text-gray-300">
-                                        Best Time to Visit
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="bestTimeToVisit"
-                                        name="bestTimeToVisit"
-                                        className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                        placeholder="e.g., Spring, Year-round"
-                                        value={formData.bestTimeToVisit}
-                                        onChange={handleInputChange}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                            <h3 className="text-lg font-medium leading-6 text-gray-200">Pro Tips (Categories)</h3>
-                            <div className="space-y-1">
-                                <label htmlFor="transportation" className="block text-sm font-medium text-gray-300">
-                                    Transportation
-                                </label>
-                                <textarea
-                                    id="transportation"
-                                    name="transportation"
-                                    rows={2}
-                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                    placeholder="How to get there..."
-                                    value={formData.transportation}
-                                    onChange={handleInputChange}
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label htmlFor="accommodation" className="block text-sm font-medium text-gray-300">
-                                    Accommodation
-                                </label>
-                                <textarea
-                                    id="accommodation"
-                                    name="accommodation"
-                                    rows={2}
-                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                    placeholder="Nearby places to stay..."
-                                    value={formData.accommodation}
-                                    onChange={handleInputChange}
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label htmlFor="costs" className="block text-sm font-medium text-gray-300">
-                                    Costs
-                                </label>
-                                <textarea
-                                    id="costs"
-                                    name="costs"
-                                    rows={2}
-                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                    placeholder="Entry fees, parking..."
-                                    value={formData.costs}
-                                    onChange={handleInputChange}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                            <label id="tips-label" className="block text-lg font-medium text-gray-200">
-                                General Tips (List)
-                            </label>
-                            <div className="space-y-3" role="group" aria-labelledby="tips-label">
-                                {formData.tips?.map((tip, i) => (
-                                    <div key={i} className="flex gap-2 items-center">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                    <div className="space-y-1">
+                                        <label htmlFor="name" className="block text-sm font-medium text-gray-300">
+                                            Name *
+                                        </label>
                                         <input
                                             type="text"
-                                            value={tip}
-                                            onChange={(e) => handleTipChange(i, e.target.value)}
+                                            id="name"
+                                            name="name"
+                                            required
+                                            autoComplete="off"
                                             className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                            placeholder="Add a helpful general tip..."
-                                            aria-label={`General tip ${i + 1}`}
+                                            value={formData.name}
+                                            onChange={handleInputChange}
+                                            aria-required="true"
                                         />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label htmlFor="country" className="block text-sm font-medium text-gray-300">
+                                            Country *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="country"
+                                            name="country"
+                                            required
+                                            autoComplete="country-name"
+                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                            value={formData.country}
+                                            onChange={handleInputChange}
+                                            aria-required="true"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label htmlFor="location" className="block text-sm font-medium text-gray-300">
+                                            Location / Region *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="location"
+                                            name="location"
+                                            required
+                                            autoComplete="address-level2"
+                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                            value={formData.location}
+                                            onChange={handleInputChange}
+                                            aria-required="true"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label htmlFor="visitDate" className="block text-sm font-medium text-gray-300">
+                                            Visit Date *
+                                        </label>
+                                        <input
+                                            type="date"
+                                            id="visitDate"
+                                            name="visitDate"
+                                            required
+                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                            value={formData.visitDate}
+                                            onChange={handleInputChange}
+                                            aria-required="true"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label htmlFor="mood" className="block text-sm font-medium text-gray-300">
+                                            Mood
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="mood"
+                                            name="mood"
+                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                            placeholder="e.g., Majestic, Peaceful"
+                                            value={formData.mood}
+                                            onChange={handleInputChange}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label id="rating-label" className="block text-sm font-medium text-gray-300">
+                                            Rating
+                                        </label>
+                                        <div className="flex gap-2 items-center pt-1" role="radiogroup" aria-labelledby="rating-label">
+                                            {[1, 2, 3, 4, 5].map((v) => (
+                                                <button
+                                                    key={v}
+                                                    type="button"
+                                                    onClick={() => handleRatingChange(v as 1 | 2 | 3 | 4 | 5)}
+                                                    className="focus:outline-none focus:ring-2 focus:ring-yellow-400 rounded-full p-0.5 cursor-pointer"
+                                                    role="radio"
+                                                    aria-checked={v === formData.rating}
+                                                    aria-label={`${v} star${v !== 1 ? "s" : ""}`}
+                                                >
+                                                    <Star
+                                                        className={`h-6 w-6 transition-colors ${
+                                                            v <= (formData.rating || 0)
+                                                                ? "text-yellow-400 fill-yellow-400"
+                                                                : "text-gray-600 hover:text-gray-500"
+                                                        }`}
+                                                    />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 pt-4 border-t border-gray-700/50">
+                                    <h3 className="text-lg font-medium leading-6 text-gray-200">Details & Experience</h3>
+                                    <div className="space-y-1">
+                                        <label htmlFor="description" className="block text-sm font-medium text-gray-300">
+                                            Short Description *
+                                        </label>
+                                        <textarea
+                                            id="description"
+                                            name="description"
+                                            rows={3}
+                                            required
+                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                            placeholder="A brief summary..."
+                                            value={formData.description}
+                                            onChange={handleInputChange}
+                                            aria-required="true"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label htmlFor="experience" className="block text-sm font-medium text-gray-300">
+                                            Your Experience *
+                                        </label>
+                                        <textarea
+                                            id="experience"
+                                            name="experience"
+                                            rows={5}
+                                            required
+                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                            placeholder="Share your detailed experience..."
+                                            value={formData.experience}
+                                            onChange={handleInputChange}
+                                            aria-required="true"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label htmlFor="personalNotes" className="block text-sm font-medium text-gray-300">
+                                            Personal Notes (Optional)
+                                        </label>
+                                        <textarea
+                                            id="personalNotes"
+                                            name="personalNotes"
+                                            rows={3}
+                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                            placeholder="Private thoughts or reminders..."
+                                            value={formData.personalNotes}
+                                            onChange={handleInputChange}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 pt-4 border-t border-gray-700/50">
+                                    <h3 className="text-lg font-medium leading-6 text-gray-200">Technical Details</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                        <div className="space-y-1">
+                                            <label htmlFor="height" className="block text-sm font-medium text-gray-300">
+                                                Height
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="height"
+                                                name="height"
+                                                className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                                placeholder="e.g., 100 m"
+                                                value={formData.height}
+                                                onChange={handleInputChange}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label htmlFor="flowRate" className="block text-sm font-medium text-gray-300">
+                                                Water Flow
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="flowRate"
+                                                name="flowRate"
+                                                className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                                placeholder="e.g., Strong, Seasonal"
+                                                value={formData.flowRate}
+                                                onChange={handleInputChange}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label htmlFor="hikingDifficulty" className="block text-sm font-medium text-gray-300">
+                                                Hiking Difficulty
+                                            </label>
+                                            <select
+                                                id="hikingDifficulty"
+                                                name="hikingDifficulty"
+                                                className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                                value={formData.hikingDifficulty}
+                                                onChange={handleInputChange}
+                                            >
+                                                <option value="Easy">Easy</option>
+                                                <option value="Moderate">Moderate</option>
+                                                <option value="Hard">Hard</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label htmlFor="bestTimeToVisit" className="block text-sm font-medium text-gray-300">
+                                                Best Time to Visit
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="bestTimeToVisit"
+                                                name="bestTimeToVisit"
+                                                className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                                placeholder="e.g., Spring, Year-round"
+                                                value={formData.bestTimeToVisit}
+                                                onChange={handleInputChange}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 pt-4 border-t border-gray-700/50">
+                                    <h3 className="text-lg font-medium leading-6 text-gray-200">Pro Tips (Categories)</h3>
+                                    <div className="space-y-1">
+                                        <label htmlFor="transportation" className="block text-sm font-medium text-gray-300">
+                                            Transportation
+                                        </label>
+                                        <textarea
+                                            id="transportation"
+                                            name="transportation"
+                                            rows={2}
+                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                            placeholder="How to get there..."
+                                            value={formData.transportation}
+                                            onChange={handleInputChange}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label htmlFor="accommodation" className="block text-sm font-medium text-gray-300">
+                                            Accommodation
+                                        </label>
+                                        <textarea
+                                            id="accommodation"
+                                            name="accommodation"
+                                            rows={2}
+                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                            placeholder="Nearby places to stay..."
+                                            value={formData.accommodation}
+                                            onChange={handleInputChange}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label htmlFor="costs" className="block text-sm font-medium text-gray-300">
+                                            Costs
+                                        </label>
+                                        <textarea
+                                            id="costs"
+                                            name="costs"
+                                            rows={2}
+                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                            placeholder="Entry fees, parking..."
+                                            value={formData.costs}
+                                            onChange={handleInputChange}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 pt-4 border-t border-gray-700/50">
+                                    <label id="tips-label" className="block text-lg font-medium text-gray-200">
+                                        General Tips (List)
+                                    </label>
+                                    <div className="space-y-3" role="group" aria-labelledby="tips-label">
+                                        {formData.tips?.map((tip, i) => (
+                                            <div key={i} className="flex gap-2 items-center">
+                                                <input
+                                                    type="text"
+                                                    value={tip}
+                                                    onChange={(e) => handleTipChange(i, e.target.value)}
+                                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
+                                                    placeholder="Add a helpful general tip..."
+                                                    aria-label={`General tip ${i + 1}`}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeTip(i)}
+                                                    className="text-red-500 hover:text-red-400 p-1 rounded-md hover:bg-gray-700 cursor-pointer"
+                                                    aria-label={`Remove general tip ${i + 1}`}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ))}
                                         <button
                                             type="button"
-                                            onClick={() => removeTip(i)}
-                                            className="text-red-500 hover:text-red-400 p-1 rounded-md hover:bg-gray-700"
-                                            aria-label={`Remove general tip ${i + 1}`}
+                                            onClick={addTip}
+                                            className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-sm font-medium p-1 rounded-md hover:bg-gray-800 cursor-pointer"
+                                            aria-label="Add another general tip"
                                         >
-                                            <Trash2 className="w-4 h-4" />
+                                            <Plus className="w-4 h-4" /> Add General Tip
                                         </button>
                                     </div>
-                                ))}
-                                <button
-                                    type="button"
-                                    onClick={addTip}
-                                    className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-sm font-medium p-1 rounded-md hover:bg-gray-800"
-                                    aria-label="Add another general tip"
-                                >
-                                    <Plus className="w-4 h-4" /> Add General Tip
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                            <h3 className="text-lg font-medium leading-6 text-gray-200">Photo Gallery</h3>
-                            {galleryPreviews.length > 0 && (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                    {galleryPreviews.map((url, i) => (
-                                        <div key={i} className="relative group aspect-square bg-gray-800 rounded-md border border-gray-700">
-                                            <img
-                                                src={url}
-                                                alt={`Gallery preview ${i + 1}`}
-                                                className="absolute inset-0 w-full h-full rounded-md object-cover"
-                                                loading="lazy"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => removeGalleryImage(i)}
-                                                className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600/80"
-                                                aria-label={`Remove gallery image ${i + 1}`}
-                                            >
-                                                <X className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    ))}
                                 </div>
-                            )}
-                            <div>
-                                <label
-                                    htmlFor="gallery-upload"
-                                    className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-800 hover:bg-gray-700"
-                                >
-                                    <UploadCloud className="w-4 h-4" aria-hidden="true" />
-                                    <span>Add Gallery Images</span>
-                                    <input
-                                        id="gallery-upload"
-                                        name="galleryFiles"
-                                        type="file"
-                                        className="sr-only"
-                                        multiple
-                                        accept="image/*"
-                                        onChange={handleGalleryChange}
-                                        ref={galleryInputRef}
-                                        aria-describedby="gallery-desc"
-                                    />
-                                </label>
-                                <p id="gallery-desc" className="text-xs text-gray-500 mt-1">
-                                    Add photos from your visit (max 5MB each).
-                                </p>
-                            </div>
-                        </div>
 
-                        {error && (
-                            <div className="p-3 bg-red-900/30 border border-red-700/50 rounded-md text-red-300 text-sm" role="alert">
-                                {error}
-                            </div>
-                        )}
-
-                        <div className="pt-5 border-t border-gray-700/50">
-                            <div className="flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    disabled={isSubmitting}
-                                    className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <svg
-                                                className="animate-spin h-4 w-4 text-white"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <circle
-                                                    className="opacity-25"
-                                                    cx="12"
-                                                    cy="12"
-                                                    r="10"
-                                                    stroke="currentColor"
-                                                    strokeWidth="4"
-                                                ></circle>
-                                                <path
-                                                    className="opacity-75"
-                                                    fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                                ></path>
-                                            </svg>
-                                            Submitting...
-                                        </>
-                                    ) : (
-                                        "Add Entry"
+                                <div className="space-y-4 pt-4 border-t border-gray-700/50">
+                                    <h3 className="text-lg font-medium leading-6 text-gray-200">Photo Gallery</h3>
+                                    {galleryPreviews.length > 0 && (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                            {galleryPreviews.map((url, i) => (
+                                                <div key={i} className="relative group aspect-square bg-gray-800 rounded-md border border-gray-700">
+                                                    <img
+                                                        src={url}
+                                                        alt={`Gallery preview ${i + 1}`}
+                                                        className="absolute inset-0 w-full h-full rounded-md object-cover"
+                                                        loading="lazy"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeGalleryImage(i)}
+                                                        className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600/80 cursor-pointer"
+                                                        aria-label={`Remove gallery image ${i + 1}`}
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
                                     )}
-                                </button>
-                            </div>
+                                    <div>
+                                        <label
+                                            htmlFor="gallery-upload"
+                                            className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-800 hover:bg-gray-700"
+                                        >
+                                            <UploadCloud className="w-4 h-4" aria-hidden="true" />
+                                            <span>Add Gallery Images</span>
+                                            <input
+                                                id="gallery-upload"
+                                                name="galleryFiles"
+                                                type="file"
+                                                className="sr-only"
+                                                multiple
+                                                accept="image/*"
+                                                onChange={handleGalleryChange}
+                                                ref={galleryInputRef}
+                                                aria-describedby="gallery-desc"
+                                            />
+                                        </label>
+                                        <p id="gallery-desc" className="text-xs text-gray-500 mt-1">
+                                            Add photos from your visit (max 5MB each).
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {error && (
+                                    <div className="p-3 bg-red-900/30 border border-red-700/50 rounded-md text-red-300 text-sm" role="alert">
+                                        {error}
+                                    </div>
+                                )}
+
+                                <div className="pt-5 border-t border-gray-700/50">
+                                    <div className="flex justify-end gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={onClose}
+                                            disabled={isSubmitting}
+                                            className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={isSubmitting}
+                                            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors cursor-pointer"
+                                        >
+                                            {isSubmitting ? (
+                                                <>
+                                                    <svg
+                                                        className="animate-spin h-4 w-4 text-white"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <circle
+                                                            className="opacity-25"
+                                                            cx="12"
+                                                            cy="12"
+                                                            r="10"
+                                                            stroke="currentColor"
+                                                            strokeWidth="4"
+                                                        ></circle>
+                                                        <path
+                                                            className="opacity-75"
+                                                            fill="currentColor"
+                                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                        ></path>
+                                                    </svg>
+                                                    Submitting...
+                                                </>
+                                            ) : (
+                                                "Add Entry"
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
-                    </form>
-                </div>
-                {showSuccess && (
-                    <div
-                        className="absolute bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-xl z-30 flex items-center gap-2 animate-fade-in-out"
-                        role="alert"
-                        aria-live="polite"
-                    >
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clipRule="evenodd"
-                            />
-                        </svg>
-                        Entry added successfully!
-                    </div>
-                )}
-            </div>
-        </div>
+                        <AnimatePresence mode="wait">
+                            {showSuccess && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 50 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 50, transition: { duration: 0.3 } }}
+                                    transition={{ duration: 0.3, type: "spring", stiffness: 200, damping: 20 }}
+                                    className="absolute bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-xl z-30 flex items-center gap-2"
+                                    role="alert"
+                                    aria-live="polite"
+                                >
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path
+                                            fillRule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clipRule="evenodd"
+                                        />
+                                    </svg>
+                                    Entry added successfully!
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 };
 
@@ -1194,24 +1280,74 @@ export default function WaterfallBlog() {
                 <div className="absolute inset-0 bg-gradient-to-b from-slate-900/60 via-slate-900/85 to-teal-900/10" />
             </div>
 
-            <header className="relative z-10 py-16 sm:py-20">
+            <motion.header 
+                className="relative z-10 py-16 sm:py-20"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+            >
                 <div className="max-w-7xl mx-auto px-4 text-center">
-                    <div className={`${poppins.className} text-teal-300 text-xl sm:text-2xl mb-3 sm:mb-4`}>
-                        Welcome to my personal journal of
-                    </div>
-                    <h1
-                        className={`${lora.className} text-4xl sm:text-5xl md:text-6xl font-bold mb-6 sm:mb-8 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-teal-200 to-emerald-300`}
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.8, delay: 0.5 }}
+                        className={`${poppins.className} text-teal-300 text-xl sm:text-2xl mb-3 sm:mb-4`}
                     >
-                        Nature&apos;s Greatest Cascades
-                    </h1>
-                    <div className="flex justify-center gap-6 sm:gap-8 text-cyan-400/80 mb-12 sm:mb-16">
-                        <Droplets className="w-7 h-7 sm:w-8 sm:h-8" />
-                        <MountainSnow className="w-7 h-7 sm:w-8 sm:h-8" />
-                        <Compass className="w-7 h-7 sm:w-8 sm:h-8" />
-                        <Cloud className="w-7 h-7 sm:w-8 sm:h-8" />
-                    </div>
+                        Welcome to my personal journal of
+                    </motion.div>
+                    <style jsx global>{cascadeGlowKeyframes}</style>
+                    <motion.h1
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.8, delay: 0.7 }}
+                        className={`${lora.className} text-4xl sm:text-5xl md:text-6xl font-bold mb-6 sm:mb-8 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-teal-200 to-emerald-300 select-none`}
+                    >
+                        <motion.span
+                            variants={cascadeAnimation}
+                            initial="hidden"
+                            animate="visible"
+                            className="inline-block"
+                        >
+                            {"Nature\u2019s Greatest Cascades".split("").map((letter, index) => (
+                                <motion.span 
+                                    key={index} 
+                                    variants={letterAnimation}
+                                    className="inline-block"
+                                    style={{ 
+                                        animation: `cascadeGlow 3s infinite ${index * 0.1}s`,
+                                    }}
+                                >
+                                    {letter === " " ? "\u00A0" : letter}
+                                </motion.span>
+                            ))}
+                        </motion.span>
+                    </motion.h1>
+                    <motion.div 
+                        className="flex justify-center gap-6 sm:gap-8 text-cyan-400/80 mb-12 sm:mb-16"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.8, delay: 0.9 }}
+                    >
+                        <motion.div custom={0} variants={cascadeIconAnimation} initial="hidden" animate="visible">
+                            <Droplets className="w-7 h-7 sm:w-8 sm:h-8" style={{ animation: 'iconGlow 3s infinite' }} />
+                        </motion.div>
+                        <motion.div custom={1} variants={cascadeIconAnimation} initial="hidden" animate="visible">
+                            <MountainSnow className="w-7 h-7 sm:w-8 sm:h-8" style={{ animation: 'iconGlow 3s infinite 0.3s' }} />
+                        </motion.div>
+                        <motion.div custom={2} variants={cascadeIconAnimation} initial="hidden" animate="visible">
+                            <Compass className="w-7 h-7 sm:w-8 sm:h-8" style={{ animation: 'iconGlow 3s infinite 0.6s' }} />
+                        </motion.div>
+                        <motion.div custom={3} variants={cascadeIconAnimation} initial="hidden" animate="visible">
+                            <Cloud className="w-7 h-7 sm:w-8 sm:h-8" style={{ animation: 'iconGlow 3s infinite 0.9s' }} />
+                        </motion.div>
+                    </motion.div>
 
-                    <div className="flex flex-col sm:flex-row justify-center items-center lg:items-end gap-4 mt-8">
+                    <motion.div 
+                        className="flex flex-col sm:flex-row justify-center items-center sm:items-end gap-4 mt-8"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 1.2 }}
+                    >
                         <div className="relative inline-block group">
                             <label
                                 htmlFor="country-filter"
@@ -1241,16 +1377,21 @@ export default function WaterfallBlog() {
 
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white px-5 py-2.5 rounded-full flex items-center gap-2 transition-all duration-300 text-sm font-medium shadow-lg shadow-teal-900/20 hover:shadow-teal-900/30"
+                            className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white px-5 py-2.5 rounded-full flex items-center gap-2 transition-all duration-500 ease-in-out text-sm font-medium shadow-lg shadow-teal-900/20 hover:shadow-teal-900/30 sm:mt-0 cursor-pointer"
                         >
                             <Plus className="w-4 h-4" />
                             <span>Add New Entry</span>
                         </button>
-                    </div>
+                    </motion.div>
                 </div>
-            </header>
+            </motion.header>
 
-            <main className="relative z-10 max-w-5xl mx-auto py-8 px-4">
+            <motion.main 
+                className="relative z-10 max-w-5xl mx-auto py-8 px-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 1.4 }}
+            >
                 <div className="space-y-12">
                     {sortedCountries.length > 0 ? (
                         sortedCountries.map((country) => (
@@ -1259,7 +1400,7 @@ export default function WaterfallBlog() {
                                 className="space-y-4"
                                 aria-labelledby={`country-heading-${country.replace(/\s+/g, "-")}`}
                             >
-                                <div className="flex items-center gap-4 mb-8">
+                                <div className="flex items-center gap-4 mt-6 mb-6">
                                     <h2
                                         id={`country-heading-${country.replace(/\s+/g, "-")}`}
                                         className={`${lora.className} text-3xl text-blue-300`}
@@ -1273,9 +1414,19 @@ export default function WaterfallBlog() {
                                 </div>
 
                                 <div className="space-y-8 pl-4 border-l-2 border-blue-500/10">
-                                    {groupedWaterfalls[country].map((waterfall) => (
-                                        <article
+                                    {groupedWaterfalls[country].map((waterfall, index) => (
+                                        <motion.article
                                             key={waterfall.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ 
+                                                duration: 0.4, 
+                                                delay: index * 0.1 + 1.6, // Add base delay for page load
+                                                type: "spring",
+                                                stiffness: 100,
+                                                damping: 15 
+                                            }}
+                                            whileHover={{ scale: 1.02 }}
                                             className="glass-card rounded-xl overflow-hidden border border-gray-700/50 hover:border-gray-600/80 transition-all duration-300 shadow-lg hover:shadow-2xl group cursor-pointer"
                                             onClick={() => setSelectedWaterfall(waterfall)}
                                             aria-labelledby={`waterfall-title-${waterfall.id}`}
@@ -1347,7 +1498,7 @@ export default function WaterfallBlog() {
                                                     </div>
                                                 </div>
                                             </div>
-                                        </article>
+                                        </motion.article>
                                     ))}
                                 </div>
                             </section>
@@ -1355,17 +1506,22 @@ export default function WaterfallBlog() {
                     ) : (
                         <div className="text-center py-16 text-gray-400">
                             <p className="text-xl mb-4">No entries match the current filter.</p>
-                            <button onClick={() => setSelectedCountry("All")} className="text-blue-400 hover:underline font-medium">
+                            <button onClick={() => setSelectedCountry("All")} className="text-blue-400 hover:underline font-medium cursor-pointer">
                                 Show all entries
                             </button>
                         </div>
                     )}
                 </div>
-            </main>
+            </motion.main>
 
-            <footer className="relative z-10 text-center py-10 mt-16 border-t border-gray-800/50">
+            <motion.footer 
+                className="relative z-10 text-center py-10 mt-16 border-t border-gray-800/50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 2.0 }}
+            >
                 <p className={`${poppins.className} text-sm text-gray-500`}>Waterfall Wanderings © {new Date().getFullYear()}</p>
-            </footer>
+            </motion.footer>
 
             <BlogDialog waterfall={selectedWaterfall} isOpen={selectedWaterfall !== null} onClose={() => setSelectedWaterfall(null)} />
             <CreateBlogDialog isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onAdd={handleAddWaterfall} />
