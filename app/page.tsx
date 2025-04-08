@@ -31,6 +31,10 @@ interface CelebrationBubbleProps {
     isGameOver?: boolean;
 }
 
+interface IceParticleProps {
+    index: number;
+}
+
 const WaterDrop = ({ index, isHot }: WaterDropProps) => {
     const left = 40 + Math.sin(index * 0.5) * 20;
     const delay = index * 0.2;
@@ -164,6 +168,65 @@ const CelebrationBubble = ({ index, total, isGameOver = false }: CelebrationBubb
     );
 };
 
+const IntenseSteam = ({ index }: SteamProps) => {
+    const left = 25 + (index % 8) * 7;
+    const delay = index * 0.15;
+    const size = 1.5 + (index % 4) * 0.7;
+    const duration = 1.8 + (index % 3) * 0.4;
+
+    return (
+        <div
+            className="absolute rounded-full"
+            style={{
+                left: `${left}%`,
+                top: "-5%",
+                width: `${size * 12}px`,
+                height: `${size * 12}px`,
+                background: "radial-gradient(circle at center, rgba(255, 200, 200, 0.9), rgba(255, 180, 180, 0))",
+                animation: `steamRise ${duration}s infinite`,
+                animationDelay: `${delay}s`,
+                filter: "blur(2px)",
+                zIndex: 5
+            }}
+        />
+    );
+};
+
+const IceParticle = ({ index }: IceParticleProps) => {
+    const left = 20 + (index % 10) * 6;
+    const delay = index * 0.2;
+    const size = 1 + (index % 5) * 0.4;
+    const duration = 2 + (index % 4) * 0.5;
+    const opacity = 0.7 + (index % 3) * 0.1;
+
+    // Choose between different ice shapes
+    const shapes = [
+        "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)", // diamond
+        "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)", // hexagon
+        "polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%)" // octagon
+    ];
+    const shape = shapes[index % shapes.length];
+
+    return (
+        <div
+            className="absolute"
+            style={{
+                left: `${left}%`,
+                top: "10%",
+                width: `${size * 10}px`,
+                height: `${size * 10}px`,
+                background: `radial-gradient(circle at center, rgba(210, 240, 255, ${opacity}), rgba(180, 220, 255, ${opacity * 0.6}))`,
+                boxShadow: `0 0 8px rgba(140, 210, 255, ${opacity})`,
+                animation: `iceFall ${duration}s infinite`,
+                animationDelay: `${delay}s`,
+                clipPath: shape,
+                transform: `rotate(${index * 45}deg)`,
+                zIndex: 5
+            }}
+        />
+    );
+};
+
 const ShowerGame = () => {
     const [gameState, setGameState] = useState<"title" | "playing" | "gameOver">("title");
     const [hotValue, setHotValue] = useState(20);
@@ -202,6 +265,8 @@ const ShowerGame = () => {
     const [steamVisible, setSteamVisible] = useState(false);
     const [gameMessage, setGameMessage] = useState("");
     const [showCelebration, setShowCelebration] = useState(false);
+    const [extremeHotVisible, setExtremeHotVisible] = useState(false);
+    const [extremeColdVisible, setExtremeColdVisible] = useState(false);
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const celebrationTimeoutRefs = useRef<NodeJS.Timeout[]>([]);
@@ -361,9 +426,14 @@ const ShowerGame = () => {
             setGameMessage("Adjust the temperature...");
         }
 
+        // Update visibility of water effects
         setWaterVisible(hotValue > 5 || coldValue > 5);
         setBubblesVisible(hotValue > 30 || coldValue > 30);
         setSteamVisible(hotValue > 70 && coldValue < 30);
+        
+        // Add extreme temperature effects
+        setExtremeHotVisible(newTemp >= 80);
+        setExtremeColdVisible(newTemp <= 25);
 
         // Win condition
         if (newInComfortZone && !targetFound) {
@@ -527,6 +597,20 @@ const ShowerGame = () => {
                     }
                     100% {
                         transform: translateY(-60px) scale(2) rotate(10deg);
+                        opacity: 0;
+                    }
+                }
+
+                @keyframes iceFall {
+                    0% {
+                        transform: translateY(-20px) scale(0.5);
+                        opacity: 0;
+                    }
+                    20% {
+                        opacity: 0.9;
+                    }
+                    100% {
+                        transform: translateY(60px) scale(0.8) rotate(180deg);
                         opacity: 0;
                     }
                 }
@@ -702,13 +786,90 @@ const ShowerGame = () => {
 
                         <div className="relative h-32 flex justify-center mb-4 mt-10">
                             <div className="absolute top-3 w-full flex justify-center">
-                                <div className="w-36 h-8 bg-blue-400 rounded-t-lg flex justify-center items-end shadow-lg">
-                                    <div className="w-5 h-10 bg-blue-500 absolute -top-8 rounded-t-md shadow-md" />
-                                    <div className="w-full h-5 bg-blue-500 flex justify-around items-center px-4 shadow-inner">
+                                <div 
+                                    className={`w-36 h-8 bg-blue-400 rounded-t-lg flex justify-center items-end shadow-lg relative ${
+                                        extremeHotVisible 
+                                            ? "transition-all duration-300" 
+                                            : extremeColdVisible 
+                                            ? "transition-all duration-300" 
+                                            : ""
+                                    }`}
+                                    style={{
+                                        boxShadow: extremeHotVisible 
+                                            ? "0 0 15px rgba(239, 68, 68, 0.7)" 
+                                            : extremeColdVisible 
+                                            ? "0 0 15px rgba(59, 130, 246, 0.7)" 
+                                            : "0 5px 15px rgba(0, 0, 0, 0.2)"
+                                    }}
+                                >
+                                    <div 
+                                        className={`w-5 h-10 absolute -top-8 rounded-t-md shadow-md transition-colors duration-300 ${
+                                            extremeHotVisible 
+                                                ? "bg-red-500" 
+                                                : extremeColdVisible 
+                                                ? "bg-blue-600" 
+                                                : "bg-blue-500"
+                                        }`}
+                                        style={{
+                                            boxShadow: extremeHotVisible 
+                                                ? "0 0 10px rgba(239, 68, 68, 0.5)" 
+                                                : extremeColdVisible 
+                                                ? "0 0 10px rgba(59, 130, 246, 0.5)" 
+                                                : "none"
+                                        }}
+                                    />
+                                    <div 
+                                        className={`w-full h-5 flex justify-around items-center px-4 shadow-inner transition-colors duration-300 ${
+                                            extremeHotVisible 
+                                                ? "bg-red-500" 
+                                                : extremeColdVisible 
+                                                ? "bg-blue-600" 
+                                                : "bg-blue-500"
+                                        }`}
+                                    >
                                         {Array.from({ length: 6 }).map((_, i) => (
-                                            <div key={i} className="w-1 h-1 rounded-full bg-blue-800" />
+                                            <div 
+                                                key={i} 
+                                                className={`w-1 h-1 rounded-full ${
+                                                    extremeHotVisible 
+                                                        ? "bg-red-800" 
+                                                        : extremeColdVisible 
+                                                        ? "bg-blue-900" 
+                                                        : "bg-blue-800"
+                                                }`} 
+                                            />
                                         ))}
                                     </div>
+                                    
+                                    {extremeHotVisible && (
+                                        <div className="absolute -bottom-1 left-0 right-0 h-1 flex justify-around">
+                                            {Array.from({ length: 8 }).map((_, i) => (
+                                                <div 
+                                                    key={`hot-indicator-${i}`} 
+                                                    className="w-1 h-1 bg-red-500 rounded-full animate-pulse" 
+                                                    style={{ 
+                                                        animationDelay: `${i * 0.1}s`,
+                                                        boxShadow: "0 0 5px rgba(239, 68, 68, 0.8)"
+                                                    }} 
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                    
+                                    {extremeColdVisible && (
+                                        <div className="absolute -bottom-1 left-0 right-0 h-1 flex justify-around">
+                                            {Array.from({ length: 8 }).map((_, i) => (
+                                                <div 
+                                                    key={`cold-indicator-${i}`} 
+                                                    className="w-1 h-1 bg-blue-300 rounded-full animate-pulse" 
+                                                    style={{ 
+                                                        animationDelay: `${i * 0.1}s`,
+                                                        boxShadow: "0 0 5px rgba(59, 130, 246, 0.8)"
+                                                    }} 
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -725,6 +886,12 @@ const ShowerGame = () => {
 
                                             {steamVisible &&
                                                 Array.from({ length: 2 }).map((_, i) => <Steam key={`steam-${i}`} index={i} />)}
+                                                
+                                            {extremeHotVisible &&
+                                                Array.from({ length: 6 }).map((_, i) => <IntenseSteam key={`intense-steam-${i}`} index={i} />)}
+                                                
+                                            {extremeColdVisible &&
+                                                Array.from({ length: 8 }).map((_, i) => <IceParticle key={`ice-${i}`} index={i} />)}
                                         </>
                                     )}
                                 </div>
