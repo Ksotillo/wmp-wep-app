@@ -1,1530 +1,1058 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Poppins, Lora } from "next/font/google";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-    Compass,
-    Droplets,
-    Cloud,
-    MapPin,
-    Star,
-    ChevronDown,
-    MountainSnow,
-    X,
-    ArrowLeft,
-    Plus,
-    UploadCloud,
-    Trash2,
-    Info,
-    Clock,
-    Droplet,
-    Navigation,
-    DollarSign,
-    Bed,
-    Bus,
-    FileText,
-    AlertTriangle,
-} from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { XCircle, RefreshCw, Trophy, Home, Clock, Droplets, Thermometer } from "lucide-react";
+import { Satisfy, Montserrat } from "next/font/google";
 
-const poppins = Poppins({
-    weight: "400",
-    subsets: ["latin"],
-    variable: "--font-poppins",
-});
+const satisfy = Satisfy({ weight: "400", subsets: ["latin"] });
+const montserrat = Montserrat({ subsets: ["latin"] });
 
-const lora = Lora({
-    subsets: ["latin"],
-    variable: "--font-lora",
-});
+// Temperature calculation constants
+const MIN_TEMP = 0;
+const MAX_TEMP = 100;
+const COMFORT_ZONE_WIDTH = 8;
 
-const cascadeAnimation = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.05,
-            delayChildren: 0.8,
-        },
-    },
+interface WaterDropProps {
+    index: number;
+    isHot: boolean;
+}
+
+interface BubbleProps {
+    index: number;
+}
+
+interface SteamProps {
+    index: number;
+}
+
+interface CelebrationBubbleProps {
+    index: number;
+    total: number;
+    isGameOver?: boolean;
+}
+
+const WaterDrop = ({ index, isHot }: WaterDropProps) => {
+    const left = 40 + Math.sin(index * 0.5) * 20;
+    const delay = index * 0.2;
+    const size = 0.8 + (index % 5) * 0.1;
+    const opacity = 0.6 + (index % 4) * 0.1;
+
+    return (
+        <div
+            className="absolute rounded-full"
+            style={{
+                left: `${left}%`,
+                width: `${size * 10}px`,
+                height: `${size * 15}px`,
+                opacity,
+                background: isHot
+                    ? "radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(255, 180, 180, 0.8))"
+                    : "radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(180, 220, 255, 0.8))",
+                boxShadow: isHot ? "0 0 10px rgba(255, 100, 100, 0.5)" : "0 0 10px rgba(100, 150, 255, 0.5)",
+                animation: `waterDrop 1.5s infinite`,
+                animationDelay: `${delay}s`,
+            }}
+        />
+    );
 };
 
-const letterAnimation = {
-    hidden: { opacity: 0, y: -5 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: {
-            y: { type: "spring", stiffness: 100, damping: 15 },
+const Bubble = ({ index }: BubbleProps) => {
+    const left = 30 + (index % 4) * 10;
+    const delay = index * 0.3 + (index % 5) * 0.1;
+    const size = 0.5 + (index % 3) * 0.5;
+    const duration = 2 + (index % 4) * 0.5;
+
+    return (
+        <div
+            className="absolute rounded-full"
+            style={{
+                left: `${left}%`,
+                bottom: "0",
+                width: `${size * 10}px`,
+                height: `${size * 10}px`,
+                background: "radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.2))",
+                boxShadow: "0 0 5px rgba(255, 255, 255, 0.3)",
+                animation: `bubbleRise ${duration}s infinite`,
+                animationDelay: `${delay}s`,
+            }}
+        />
+    );
+};
+
+const Steam = ({ index }: SteamProps) => {
+    const left = 35 + (index % 6) * 5;
+    const delay = index * 0.2;
+    const size = 1 + (index % 3) * 0.5;
+    const duration = 2 + (index % 5) * 0.2;
+
+    return (
+        <div
+            className="absolute rounded-full"
+            style={{
+                left: `${left}%`,
+                top: "10%",
+                width: `${size * 10}px`,
+                height: `${size * 10}px`,
+                background: "radial-gradient(circle at center, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0))",
+                animation: `steamRise ${duration}s infinite`,
+                animationDelay: `${delay}s`,
+            }}
+        />
+    );
+};
+
+const CelebrationBubble = ({ index, total, isGameOver = false }: CelebrationBubbleProps & { isGameOver?: boolean }) => {
+    // Faster animation for game over screen
+    const animationDuration = isGameOver 
+        ? 1.5 + Math.random() * 2  // 1.5-3.5s for game over screen
+        : 3 + Math.random() * 4;   // 3-7s for in-game celebration
+    
+    const delay = isGameOver
+        ? Math.random() * 0.8      // 0-0.8s delay for game over screen
+        : Math.random() * 2;       // 0-2s delay for in-game celebration
+    
+    const size = 10 + Math.random() * 30;
+    const left = (index / total) * 100 + (Math.random() * 10 - 5);
+    
+    // Create a variety of colors for the bubbles
+    const colors = [
+        "rgba(34, 211, 238, 0.8)", // cyan
+        "rgba(34, 197, 94, 0.8)",  // green
+        "rgba(168, 85, 247, 0.8)",  // purple
+        "rgba(59, 130, 246, 0.8)",  // blue
+        "rgba(249, 115, 22, 0.8)",  // orange
+        "rgba(236, 72, 153, 0.8)",  // pink
+    ];
+    
+    const colorIndex = index % colors.length;
+    const color = colors[colorIndex];
+    
+    // Different paths for different bubbles
+    const horizontalMovement = Math.random() * 60 - 30; // -30px to +30px
+    
+    return (
+        <div
+            className="celebration-bubble"
+            style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                left: `${left}%`,
+                bottom: `-${size}px`,
+                background: `radial-gradient(circle at 30% 30%, ${color.replace('0.8', '0.9')}, ${color.replace('0.8', '0.3')})`,
+                animationDuration: `${animationDuration}s`,
+                animationDelay: `${delay}s`,
+                animationTimingFunction: "cubic-bezier(0.1, 0.8, 0.8, 1)",
+                transform: `translateX(0)`,
+                opacity: 0
+            }}
+            onAnimationStart={(e) => {
+                // Add a bit of horizontal drift using CSS transform
+                const keyframes = [
+                    { transform: `translateX(0) translateY(0) scale(0.5)`, opacity: 0 },
+                    { transform: `translateX(0) translateY(0) scale(0.7)`, opacity: 1, offset: 0.1 },
+                    { transform: `translateX(${horizontalMovement}px) translateY(-${window.innerHeight/2}px) scale(1.0)`, opacity: 0.7, offset: 0.7 },
+                    { transform: `translateX(${horizontalMovement*1.5}px) translateY(-${window.innerHeight}px) scale(1.2) rotate(${Math.random() * 360}deg)`, opacity: 0 }
+                ];
+                
+                e.currentTarget.animate(keyframes, {
+                    duration: animationDuration * 1000,
+                    delay: delay * 1000,
+                    fill: "forwards"
+                });
+            }}
+        />
+    );
+};
+
+const ShowerGame = () => {
+    const [gameState, setGameState] = useState<"title" | "playing" | "gameOver">("title");
+    const [hotValue, setHotValue] = useState(20);
+    const [coldValue, setColdValue] = useState(20);
+    const [isMounted, setIsMounted] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const [activeKnob, setActiveKnob] = useState<"hot" | "cold" | null>(null);
+
+    const coldKnobRef = useRef<HTMLDivElement>(null);
+    const hotKnobRef = useRef<HTMLDivElement>(null);
+
+    const [backgroundParticles, setBackgroundParticles] = useState<
+        Array<{
+            width: number;
+            height: number;
+            top: number;
+            left: number;
+            opacity: number;
+            animation: string;
+            delay: number;
+        }>
+    >([]);
+
+    const [temperature, setTemperature] = useState(50);
+    const [targetTemp, setTargetTemp] = useState(50);
+    const [comfortZoneMin, setComfortZoneMin] = useState(0);
+    const [comfortZoneMax, setComfortZoneMax] = useState(0);
+    const [inComfortZone, setInComfortZone] = useState(false);
+    const [targetFound, setTargetFound] = useState(false);
+    const [timer, setTimer] = useState(0);
+    const [bestTime, setBestTime] = useState<number | null>(null);
+    const [showInstructions, setShowInstructions] = useState<boolean>(false);
+    const [startTime, setStartTime] = useState(0);
+    const [waterVisible, setWaterVisible] = useState(false);
+    const [bubblesVisible, setBubblesVisible] = useState(false);
+    const [steamVisible, setSteamVisible] = useState(false);
+    const [gameMessage, setGameMessage] = useState("");
+    const [showCelebration, setShowCelebration] = useState(false);
+
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const celebrationTimeoutRefs = useRef<NodeJS.Timeout[]>([]);
+
+    const clearTimeouts = useCallback(() => {
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
         }
-    }
-};
 
-const cascadeIconAnimation = {
-    hidden: { opacity: 0 },
-    visible: (custom: number) => ({
-        opacity: 1,
-        transition: {
-            delay: custom * 0.15 + 1.2,
-            duration: 0.5
-        }
-    })
-};
-
-const cascadeGlowKeyframes = `
-@keyframes cascadeGlow {
-    0% { text-shadow: 0 0 0px rgba(94, 234, 212, 0); }
-    25% { text-shadow: 0 0 5px rgba(94, 234, 212, 0.5); }
-    50% { text-shadow: 0 0 10px rgba(94, 234, 212, 0.3); }
-    75% { text-shadow: 0 0 5px rgba(94, 234, 212, 0.5); }
-    100% { text-shadow: 0 0 0px rgba(94, 234, 212, 0); }
-}
-
-@keyframes iconGlow {
-    0% { filter: drop-shadow(0 0 0 rgba(94, 234, 212, 0)); }
-    50% { filter: drop-shadow(0 0 3px rgba(94, 234, 212, 0.5)); }
-    100% { filter: drop-shadow(0 0 0 rgba(94, 234, 212, 0)); }
-}
-`;
-
-interface Waterfall {
-    id: number;
-    name: string;
-    country: string;
-    location: string;
-    description: string;
-    experience: string;
-    personalNotes: string;
-    rating: 1 | 2 | 3 | 4 | 5;
-    visitDate: string;
-    height: string;
-    flowRate: string;
-    hikingDifficulty: "Easy" | "Moderate" | "Hard";
-    bestTimeToVisit: string;
-    transportation: string;
-    accommodation: string;
-    costs: string;
-    image: string;
-    gallery: string[];
-    tips: string[];
-    mood: string;
-}
-
-interface TabButtonProps {
-    active: boolean;
-    children: React.ReactNode;
-    onClick: () => void;
-}
-
-interface BlogDialogProps {
-    waterfall: Waterfall | null;
-    isOpen: boolean;
-    onClose: () => void;
-}
-
-interface CreateBlogDialogProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onAdd: (waterfall: Waterfall) => void;
-}
-
-const TabButton = ({ active, children, onClick }: TabButtonProps) => (
-    <button
-        onClick={onClick}
-        className={`px-4 py-2 whitespace-nowrap text-sm md:text-base font-medium cursor-pointer ${
-            active
-                ? "text-blue-400 border-b-2 border-blue-400"
-                : "text-gray-400 hover:text-gray-300 border-b-2 border-transparent hover:border-gray-600"
-        } transition-colors`}
-    >
-        {children}
-    </button>
-);
-
-const BlogDialog = ({ waterfall, isOpen, onClose }: BlogDialogProps) => {
-    const [activeTab, setActiveTab] = useState("experience");
+        celebrationTimeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
+        celebrationTimeoutRefs.current = [];
+    }, []);
 
     useEffect(() => {
-        if (isOpen) {
-            setActiveTab("experience");
+        const savedBestTime = localStorage.getItem("showerGameBestTime");
+        if (savedBestTime) {
+            setBestTime(parseInt(savedBestTime, 10));
         }
-    }, [isOpen, waterfall?.id]);
+    }, []);
 
-    if (!waterfall) return null;
+    useEffect(() => {
+        setIsMounted(true);
 
-    return (
-        <AnimatePresence mode="wait">
-            {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-center justify-center p-4"
-                    onClick={onClose}
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="dialog-title"
-                >
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20, transition: { duration: 0.2 } }}
-                        transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
-                        className="bg-gray-950 max-w-4xl w-full max-h-[calc(100vh-4rem)] flex flex-col rounded-xl overflow-hidden border border-gray-800 shadow-2xl glass-card"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="flex-shrink-0 px-4 py-3 md:px-6 md:py-4 flex justify-between items-center border-b border-gray-800/50 bg-gray-900/50 z-20">
-                            <button
-                                onClick={onClose}
-                                className="bg-gray-800/60 backdrop-blur-sm text-gray-200 px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-gray-700 transition-all flex items-center gap-2 group border border-gray-700 cursor-pointer"
-                                aria-label="Back to wanderings"
-                            >
-                                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                                <span className={`${poppins.className} text-xs md:text-sm`}>Back</span>
-                            </button>
-                            <button
-                                onClick={onClose}
-                                className="bg-gray-800/60 backdrop-blur-sm p-2 rounded-full hover:bg-gray-700 transition-all group border border-gray-700 cursor-pointer"
-                                aria-label="Close dialog"
-                            >
-                                <X className="w-5 h-5 group-hover:rotate-90 transition-transform" />
-                            </button>
-                        </div>
-                        <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500 scrollbar-track-gray-800/50">
-                            <div className="relative flex-shrink-0">
-                                <div className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] max-h-[500px] p-3 sm:p-4 bg-gray-900">
-                                    <div className="h-full w-full relative rounded-lg overflow-hidden border-4 md:border-8 border-gray-100 shadow-xl transform -rotate-1">
-                                        <img
-                                            src={waterfall.image}
-                                            alt={waterfall.name}
-                                            className="absolute inset-0 w-full h-full object-cover filter saturate-110"
-                                            loading="eager"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
-                                    </div>
-
-                                    <div
-                                        className={`${poppins.className} absolute top-4 right-4 sm:top-6 sm:right-6 transform rotate-6 glass-card px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm z-10`}
-                                    >
-                                        <div className="text-blue-300 text-on-glass">Mood</div>
-                                        <div className="text-lg sm:text-xl md:text-2xl text-gray-200 text-on-glass">{waterfall.mood}</div>
-                                    </div>
-
-                                    <div
-                                        className={`${poppins.className} absolute bottom-4 left-4 sm:bottom-6 sm:left-6 transform -rotate-3 text-base sm:text-lg md:text-xl text-gray-300 bg-black/30 px-2 py-1 rounded z-10`}
-                                    >
-                                        📍 {waterfall.location}
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="p-6 md:p-8 lg:p-10 bg-gradient-to-b from-gray-900 to-gray-950">
-                                <div className="relative mb-8 md:mb-10">
-                                    <div className="relative">
-                                        <div className={`${poppins.className} text-blue-300/80 text-xs sm:text-sm mb-1 md:mb-2`}>
-                                            <FileText className="inline-block w-4 h-4 mr-1" /> Entry #{waterfall.id} • Visited:{" "}
-                                            {waterfall.visitDate}
-                                        </div>
-                                        <h1
-                                            id="dialog-title"
-                                            className={`${lora.className} text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 tracking-tight md:tracking-wide`}
-                                        >
-                                            {waterfall.name}
-                                        </h1>
-                                        <div className="flex items-center gap-2 sm:gap-3 mt-3 md:mt-4">
-                                            <div className={`${poppins.className} text-sm text-gray-400`}>My Rating:</div>
-                                            <div className="flex gap-0.5 sm:gap-1">
-                                                {[...Array(5)].map((_, i) => (
-                                                    <Star
-                                                        key={i}
-                                                        className={`h-5 w-5 sm:h-6 sm:w-6 ${
-                                                            i < waterfall.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-600"
-                                                        }`}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="sticky top-0 z-10 -mx-6 md:-mx-8 lg:-mx-10 mb-6 md:mb-8 border-b border-gray-700 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-900/80 backdrop-blur-sm">
-                                    <div className="flex gap-1 sm:gap-2 px-6 md:px-8 lg:px-10 overflow-x-auto scrollbar-hide">
-                                        <TabButton active={activeTab === "experience"} onClick={() => setActiveTab("experience")}>
-                                            My Experience
-                                        </TabButton>
-                                        <TabButton active={activeTab === "gallery"} onClick={() => setActiveTab("gallery")}>
-                                            Photo Gallery
-                                        </TabButton>
-                                        <TabButton active={activeTab === "info"} onClick={() => setActiveTab("info")}>
-                                            Travel Info
-                                        </TabButton>
-                                    </div>
-                                </div>
-                                <div className={`${lora.className} space-y-6 md:space-y-8 leading-relaxed text-gray-300`}>
-                                    {activeTab === "experience" && (
-                                        <>
-                                            <div className="prose prose-lg prose-invert max-w-none prose-p:text-gray-300 prose-headings:text-gray-100 prose-p:leading-relaxed">
-                                                <h3 className={`${lora.className} text-2xl font-semibold text-blue-300 mb-4`}>My Experience</h3>
-                                                <p className="text-lg md:text-xl first-letter:text-5xl md:first-letter:text-6xl first-letter:font-bold first-letter:mr-3 first-letter:float-left first-letter:text-blue-300">
-                                                    {waterfall.experience || "No experience description provided."}
-                                                </p>
-                                            </div>
-                                            <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                                                <h3 className="text-lg font-medium leading-6 text-gray-200">
-                                                    <FileText className="inline-block w-5 h-5 mr-2" /> Personal Notes
-                                                </h3>
-                                                <p className="text-base md:text-lg text-gray-400 italic">{waterfall.personalNotes}</p>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {activeTab === "gallery" && (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
-                                            {waterfall.gallery.length > 0 ? (
-                                                waterfall.gallery.map((photo, i) => (
-                                                    <div
-                                                        key={i}
-                                                        className={`relative bg-gray-800 p-2 sm:p-3 shadow-xl transform transition-transform duration-300 group hover:scale-105 border border-gray-700 rounded-lg ${
-                                                            i % 2 === 0 ? "rotate-1 sm:rotate-2" : "-rotate-1 sm:-rotate-2"
-                                                        }`}
-                                                    >
-                                                        <div className="aspect-[4/3] relative overflow-hidden rounded bg-gray-700">
-                                                            <img
-                                                                src={photo}
-                                                                alt={`${waterfall.name} memory ${i + 1}`}
-                                                                className="absolute inset-0 w-full h-full object-cover filter saturate-105 group-hover:saturate-110 transition-all duration-300"
-                                                                loading="lazy"
-                                                            />
-                                                        </div>
-                                                        <div className={`${poppins.className} text-gray-400 text-center text-xs sm:text-sm mt-2`}>
-                                                            Memory #{i + 1}
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <p className="text-gray-400 italic col-span-full text-center py-8">No gallery images added.</p>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {activeTab === "info" && (
-                                        <div className="space-y-8 md:space-y-10">
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                                                {[
-                                                    {
-                                                        label: "Height",
-                                                        value: waterfall.height,
-                                                        icon: <AlertTriangle className="w-5 h-5" />,
-                                                    },
-                                                    {
-                                                        label: "Trail",
-                                                        value: waterfall.hikingDifficulty,
-                                                        icon: <Navigation className="w-5 h-5" />,
-                                                    },
-                                                    {
-                                                        label: "Best Time",
-                                                        value: waterfall.bestTimeToVisit,
-                                                        icon: <Clock className="w-5 h-5" />,
-                                                    },
-                                                    {
-                                                        label: "Water Flow",
-                                                        value: waterfall.flowRate,
-                                                        icon: <Droplet className="w-5 h-5" />,
-                                                    },
-                                                ].map((stat, i) => (
-                                                    <div key={i} className={`${poppins.className} transform transition-transform hover:scale-105`}>
-                                                        <div className="bg-blue-900/20 rounded-lg p-3 md:p-4 border border-blue-800/30 hover:shadow-xl transition-shadow h-full flex flex-col">
-                                                            <div className="text-xl md:text-2xl mb-1">{stat.icon}</div>
-                                                            <div className="text-blue-300 text-xs sm:text-sm mb-0.5">{stat.label}</div>
-                                                            <div className="text-base md:text-lg text-gray-100 font-medium">
-                                                                {stat.value || "N/A"}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div className={`${poppins.className}`}>
-                                                <h4 className="text-lg md:text-xl text-gray-100 mb-3 md:mb-4 font-semibold">✨ General Tips</h4>
-                                                {waterfall.tips.length > 0 ? (
-                                                    <ul className="space-y-2 md:space-y-3">
-                                                        {waterfall.tips.map((tip, i) => (
-                                                            <li key={i} className="flex items-start gap-2 md:gap-3 text-base md:text-lg">
-                                                                <span className="text-blue-400 mt-1">•</span>
-                                                                <span className="text-gray-300">{tip}</span>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                ) : (
-                                                    <p className="text-gray-400 italic">No general tips provided.</p>
-                                                )}
-                                            </div>
-                                            <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                                                <h3 className="text-lg font-medium leading-6 text-gray-200">
-                                                    <Info className="inline-block w-5 h-5 mr-2" /> Specific Info
-                                                </h3>
-                                                <div className="space-y-3">
-                                                    <p>
-                                                        <Bus className="inline-block w-4 h-4 mr-2" />
-                                                        <strong className="text-gray-200 font-medium">Transportation:</strong>{" "}
-                                                        {waterfall.transportation || "Info not available."}
-                                                    </p>
-                                                    <p>
-                                                        <Bed className="inline-block w-4 h-4 mr-2" />
-                                                        <strong className="text-gray-200 font-medium">Accommodation:</strong>{" "}
-                                                        {waterfall.accommodation || "Info not available."}
-                                                    </p>
-                                                    <p>
-                                                        <DollarSign className="inline-block w-4 h-4 mr-2" />
-                                                        <strong className="text-gray-200 font-medium">Costs:</strong>{" "}
-                                                        {waterfall.costs || "Info not available."}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
-    );
-};
-
-// --- Blog Creation Dialog ---
-
-const CreateBlogDialog = ({ isOpen, onClose, onAdd }: CreateBlogDialogProps) => {
-    const initialFormData: Partial<Waterfall> = {
-        hikingDifficulty: "Easy",
-        rating: 5,
-        tips: [""],
-        name: "",
-        country: "",
-        visitDate: "",
-        location: "",
-        description: "",
-        experience: "",
-        personalNotes: "",
-        mood: "Peaceful",
-        height: "",
-        bestTimeToVisit: "",
-        flowRate: "",
-        transportation: "",
-        accommodation: "",
-        costs: "",
-        gallery: [],
-        image: "",
-    };
-    const [formData, setFormData] = useState<Partial<Waterfall>>(initialFormData);
-    const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
-    const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const mainImageInputRef = useRef<HTMLInputElement>(null);
-    const galleryInputRef = useRef<HTMLInputElement>(null);
-
-    const resetForm = () => {
-        setFormData(initialFormData);
-        setMainImagePreview(null);
-        setGalleryPreviews([]);
-        setError(null);
-    };
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleRatingChange = (rating: 1 | 2 | 3 | 4 | 5) => {
-        setFormData((prev) => ({ ...prev, rating }));
-    };
-
-    const readFileAsDataURL = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = (error) => reject(error);
-            reader.readAsDataURL(file);
-        });
-    };
-
-    const handleMainImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (file.size > 10 * 1024 * 1024) {
-                // Example: 10MB size limit
-                setError("Main image file is too large (max 10MB).");
-                e.target.value = "";
-                return;
-            }
-            try {
-                const dataUrl = await readFileAsDataURL(file);
-                setMainImagePreview(dataUrl);
-                setError(null);
-            } catch (err) {
-                console.error("Error reading main image file:", err);
-                setError("Could not read the main image file.");
-                setMainImagePreview(null);
-            }
-        }
-        e.target.value = "";
-    };
-
-    const handleGalleryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            const newFilesArray = Array.from(files);
-            const validFiles = newFilesArray.filter((file) => {
-                if (file.size > 5 * 1024 * 1024) {
-                    // Example: 5MB limit per gallery image
-                    setError(`Gallery image "${file.name}" is too large (max 5MB). Skipped.`);
-                    return false;
-                }
-                return true;
-            });
-
-            if (validFiles.length === 0) {
-                e.target.value = "";
-                return;
-            }
-
-            try {
-                const readPromises = validFiles.map((file) => readFileAsDataURL(file));
-                const dataUrls = await Promise.all(readPromises);
-                setGalleryPreviews((prev) => [...prev, ...dataUrls]);
-                // Clear error only if some files were processed successfully
-                if (error && error.startsWith("Gallery image")) setError(null);
-            } catch (err) {
-                console.error("Error reading gallery files:", err);
-                setError("Could not read one or more gallery files.");
-            }
-        }
-        e.target.value = "";
-    };
-
-    const removeGalleryImage = (indexToRemove: number) => {
-        setGalleryPreviews((prev) => prev.filter((_, index) => index !== indexToRemove));
-    };
-
-    const handleTipChange = (index: number, value: string) => {
-        const newTips = [...(formData.tips || [])];
-        newTips[index] = value;
-        setFormData((prev) => ({ ...prev, tips: newTips }));
-    };
-
-    const addTip = () => {
-        setFormData((prev) => ({ ...prev, tips: [...(prev.tips || []), ""] }));
-    };
-
-    const removeTip = (indexToRemove: number) => {
-        setFormData((prev) => ({
-            ...prev,
-            tips: prev.tips?.filter((_, index) => index !== indexToRemove) || [],
+        const particles = Array.from({ length: 20 }).map((_, i) => ({
+            width: 1 + (i % 3) * 1,
+            height: 1 + (i % 4) * 0.75,
+            top: (i * 5) % 100,
+            left: (i * 7) % 100,
+            opacity: 0.2 + (i % 5) * 0.05,
+            animation: `pulse ${2 + (i % 3) * 1}s infinite alternate ease-in-out`,
+            delay: (i * 0.1) % 2,
         }));
-    };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+        setBackgroundParticles(particles);
+    }, []);
+
+    const calculateAngle = useCallback((clientX: number, clientY: number, knobRef: React.RefObject<HTMLDivElement | null>) => {
+        if (!knobRef.current) return null;
+
+        const knobRect = knobRef.current.getBoundingClientRect();
+        const knobCenterX = knobRect.left + knobRect.width / 2;
+        const knobCenterY = knobRect.top + knobRect.height / 2;
+
+        const deltaX = clientX - knobCenterX;
+        const deltaY = clientY - knobCenterY;
+
+        // Calculate angle in degrees (0 is at the top, clockwise rotation)
+        let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+        
+        // Adjust angle to start from top (0 degrees) and go clockwise
+        angle = (angle + 90) % 360;
+        if (angle < 0) angle += 360;
+        
+        // Map the angle to a value between 0 and 100
+        // This allows for a full 360-degree rotation
+        const mappedValue = (angle / 360) * 100;
+        
+        return Math.min(100, Math.max(0, mappedValue));
+    }, []);
+
+    const handleMouseDown = useCallback((e: React.MouseEvent, knob: "hot" | "cold") => {
         e.preventDefault();
-        setError(null);
-        if (!mainImagePreview) {
-            setError("Please upload a main image.");
-            return;
-        }
-        if (!formData.name?.trim()) {
-            setError("Please enter a name.");
-            return;
-        }
-        if (!formData.country?.trim()) {
-            setError("Please enter a country.");
-            return;
-        }
-        if (!formData.location?.trim()) {
-            setError("Please enter a location.");
-            return;
-        }
-        if (!formData.visitDate?.trim()) {
-            setError("Please enter a visit date.");
-            return;
-        }
-        if (!formData.experience?.trim()) {
-            setError("Please describe your experience.");
-            return;
-        }
-        if (!formData.description?.trim()) {
-            setError("Please enter a short description.");
-            return;
-        }
+        setIsDragging(true);
+        setActiveKnob(knob);
+    }, []);
 
-        setIsSubmitting(true);
-        try {
-            await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate network delay
+    const handleMouseMove = useCallback(
+        (e: MouseEvent) => {
+            if (!isDragging || !activeKnob) return;
 
-            const newWaterfall: Waterfall = {
-                id: Date.now(),
-                name: formData.name || "Unnamed Waterfall",
-                image: mainImagePreview,
-                mood: formData.mood || "Unknown",
-                location: formData.location || "Unknown",
-                country: formData.country || "Unknown",
-                visitDate: formData.visitDate || new Date().toISOString().split("T")[0],
-                rating: formData.rating || 5,
-                description: formData.description || "",
-                experience: formData.experience || "",
-                personalNotes: formData.personalNotes || "",
-                gallery: galleryPreviews,
-                height: formData.height || "N/A",
-                hikingDifficulty: formData.hikingDifficulty || "Easy",
-                bestTimeToVisit: formData.bestTimeToVisit || "N/A",
-                flowRate: formData.flowRate || "N/A",
-                tips: formData.tips?.filter((tip) => tip.trim() !== "") || [],
-                transportation: formData.transportation || "N/A",
-                accommodation: formData.accommodation || "N/A",
-                costs: formData.costs || "N/A",
-            };
-            onAdd(newWaterfall);
-            resetForm();
-            onClose(); // Close the modal immediately after successful submission
-        } catch (err) {
-            console.error("Error submitting form:", err);
-            setError("An unexpected error occurred. Please try again.");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+            const knobRef = activeKnob === "hot" ? hotKnobRef : coldKnobRef;
+            const newValue = calculateAngle(e.clientX, e.clientY, knobRef);
 
-    if (!isOpen) return null;
-
-    return (
-        <AnimatePresence mode="wait">
-            {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-center justify-center p-4"
-                    onClick={onClose}
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="dialog-title"
-                >
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20, transition: { duration: 0.2 } }}
-                        transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
-                        className="bg-gray-900 max-w-3xl w-full max-h-[calc(100vh-4rem)] flex flex-col rounded-xl overflow-hidden border border-gray-700 shadow-2xl glass-card"
-                        onClick={(e) => e.stopPropagation()}
-                        role="document"
-                    >
-                        <div className="flex-shrink-0 px-4 py-3 md:px-6 md:py-4 flex justify-between items-center border-b border-gray-700/50 bg-gray-900/80 backdrop-blur-sm z-20">
-                            <h2 className={`${poppins.className} text-lg md:text-xl font-semibold text-gray-100`} id="dialog-title">
-                                Add New Waterfall Entry
-                            </h2>
-                            <button
-                                onClick={onClose}
-                                className="text-gray-400 hover:text-gray-200 p-1 rounded-full hover:bg-gray-700 transition-colors cursor-pointer"
-                                aria-label="Close dialog"
-                                disabled={isSubmitting}
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500 scrollbar-track-gray-800/50">
-                            <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-300">Main Image *</label>
-                                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-md">
-                                        <div className="space-y-1 text-center">
-                                            {mainImagePreview ? (
-                                                <img
-                                                    src={mainImagePreview}
-                                                    alt="Main preview"
-                                                    className="mx-auto h-32 w-auto object-contain rounded-md"
-                                                />
-                                            ) : (
-                                                <UploadCloud className="mx-auto h-12 w-12 text-gray-500" aria-hidden="true" />
-                                            )}
-                                            <div className="flex text-sm text-gray-500 justify-center">
-                                                <label
-                                                    htmlFor="main-image-upload"
-                                                    className="relative cursor-pointer bg-gray-800 rounded-md font-medium text-blue-400 hover:text-blue-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-gray-900 focus-within:ring-blue-500 px-2 py-1"
-                                                >
-                                                    <span>{mainImagePreview ? "Change file" : "Upload a file"}</span>
-                                                    <input
-                                                        id="main-image-upload"
-                                                        name="mainImageFile"
-                                                        type="file"
-                                                        className="sr-only"
-                                                        accept="image/*"
-                                                        onChange={handleMainImageChange}
-                                                        ref={mainImageInputRef}
-                                                        aria-describedby="main-image-desc"
-                                                    />
-                                                </label>
-                                            </div>
-                                            <p id="main-image-desc" className="text-xs text-gray-500">
-                                                PNG, JPG, GIF up to 10MB
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                    <div className="space-y-1">
-                                        <label htmlFor="name" className="block text-sm font-medium text-gray-300">
-                                            Name *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            id="name"
-                                            name="name"
-                                            required
-                                            autoComplete="off"
-                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                            value={formData.name}
-                                            onChange={handleInputChange}
-                                            aria-required="true"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label htmlFor="country" className="block text-sm font-medium text-gray-300">
-                                            Country *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            id="country"
-                                            name="country"
-                                            required
-                                            autoComplete="country-name"
-                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                            value={formData.country}
-                                            onChange={handleInputChange}
-                                            aria-required="true"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label htmlFor="location" className="block text-sm font-medium text-gray-300">
-                                            Location / Region *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            id="location"
-                                            name="location"
-                                            required
-                                            autoComplete="address-level2"
-                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                            value={formData.location}
-                                            onChange={handleInputChange}
-                                            aria-required="true"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label htmlFor="visitDate" className="block text-sm font-medium text-gray-300">
-                                            Visit Date *
-                                        </label>
-                                        <input
-                                            type="date"
-                                            id="visitDate"
-                                            name="visitDate"
-                                            required
-                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                            value={formData.visitDate}
-                                            onChange={handleInputChange}
-                                            aria-required="true"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label htmlFor="mood" className="block text-sm font-medium text-gray-300">
-                                            Mood
-                                        </label>
-                                        <input
-                                            type="text"
-                                            id="mood"
-                                            name="mood"
-                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                            placeholder="e.g., Majestic, Peaceful"
-                                            value={formData.mood}
-                                            onChange={handleInputChange}
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label id="rating-label" className="block text-sm font-medium text-gray-300">
-                                            Rating
-                                        </label>
-                                        <div className="flex gap-2 items-center pt-1" role="radiogroup" aria-labelledby="rating-label">
-                                            {[1, 2, 3, 4, 5].map((v) => (
-                                                <button
-                                                    key={v}
-                                                    type="button"
-                                                    onClick={() => handleRatingChange(v as 1 | 2 | 3 | 4 | 5)}
-                                                    className="focus:outline-none focus:ring-2 focus:ring-yellow-400 rounded-full p-0.5 cursor-pointer"
-                                                    role="radio"
-                                                    aria-checked={v === formData.rating}
-                                                    aria-label={`${v} star${v !== 1 ? "s" : ""}`}
-                                                >
-                                                    <Star
-                                                        className={`h-6 w-6 transition-colors ${
-                                                            v <= (formData.rating || 0)
-                                                                ? "text-yellow-400 fill-yellow-400"
-                                                                : "text-gray-600 hover:text-gray-500"
-                                                        }`}
-                                                    />
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                                    <h3 className="text-lg font-medium leading-6 text-gray-200">Details & Experience</h3>
-                                    <div className="space-y-1">
-                                        <label htmlFor="description" className="block text-sm font-medium text-gray-300">
-                                            Short Description *
-                                        </label>
-                                        <textarea
-                                            id="description"
-                                            name="description"
-                                            rows={3}
-                                            required
-                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                            placeholder="A brief summary..."
-                                            value={formData.description}
-                                            onChange={handleInputChange}
-                                            aria-required="true"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label htmlFor="experience" className="block text-sm font-medium text-gray-300">
-                                            Your Experience *
-                                        </label>
-                                        <textarea
-                                            id="experience"
-                                            name="experience"
-                                            rows={5}
-                                            required
-                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                            placeholder="Share your detailed experience..."
-                                            value={formData.experience}
-                                            onChange={handleInputChange}
-                                            aria-required="true"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label htmlFor="personalNotes" className="block text-sm font-medium text-gray-300">
-                                            Personal Notes (Optional)
-                                        </label>
-                                        <textarea
-                                            id="personalNotes"
-                                            name="personalNotes"
-                                            rows={3}
-                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                            placeholder="Private thoughts or reminders..."
-                                            value={formData.personalNotes}
-                                            onChange={handleInputChange}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                                    <h3 className="text-lg font-medium leading-6 text-gray-200">Technical Details</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-1">
-                                            <label htmlFor="height" className="block text-sm font-medium text-gray-300">
-                                                Height
-                                            </label>
-                                            <input
-                                                type="text"
-                                                id="height"
-                                                name="height"
-                                                className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                                placeholder="e.g., 100 m"
-                                                value={formData.height}
-                                                onChange={handleInputChange}
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label htmlFor="flowRate" className="block text-sm font-medium text-gray-300">
-                                                Water Flow
-                                            </label>
-                                            <input
-                                                type="text"
-                                                id="flowRate"
-                                                name="flowRate"
-                                                className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                                placeholder="e.g., Strong, Seasonal"
-                                                value={formData.flowRate}
-                                                onChange={handleInputChange}
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label htmlFor="hikingDifficulty" className="block text-sm font-medium text-gray-300">
-                                                Hiking Difficulty
-                                            </label>
-                                            <select
-                                                id="hikingDifficulty"
-                                                name="hikingDifficulty"
-                                                className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                                value={formData.hikingDifficulty}
-                                                onChange={handleInputChange}
-                                            >
-                                                <option value="Easy">Easy</option>
-                                                <option value="Moderate">Moderate</option>
-                                                <option value="Hard">Hard</option>
-                                            </select>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label htmlFor="bestTimeToVisit" className="block text-sm font-medium text-gray-300">
-                                                Best Time to Visit
-                                            </label>
-                                            <input
-                                                type="text"
-                                                id="bestTimeToVisit"
-                                                name="bestTimeToVisit"
-                                                className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                                placeholder="e.g., Spring, Year-round"
-                                                value={formData.bestTimeToVisit}
-                                                onChange={handleInputChange}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                                    <h3 className="text-lg font-medium leading-6 text-gray-200">Pro Tips (Categories)</h3>
-                                    <div className="space-y-1">
-                                        <label htmlFor="transportation" className="block text-sm font-medium text-gray-300">
-                                            Transportation
-                                        </label>
-                                        <textarea
-                                            id="transportation"
-                                            name="transportation"
-                                            rows={2}
-                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                            placeholder="How to get there..."
-                                            value={formData.transportation}
-                                            onChange={handleInputChange}
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label htmlFor="accommodation" className="block text-sm font-medium text-gray-300">
-                                            Accommodation
-                                        </label>
-                                        <textarea
-                                            id="accommodation"
-                                            name="accommodation"
-                                            rows={2}
-                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                            placeholder="Nearby places to stay..."
-                                            value={formData.accommodation}
-                                            onChange={handleInputChange}
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label htmlFor="costs" className="block text-sm font-medium text-gray-300">
-                                            Costs
-                                        </label>
-                                        <textarea
-                                            id="costs"
-                                            name="costs"
-                                            rows={2}
-                                            className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                            placeholder="Entry fees, parking..."
-                                            value={formData.costs}
-                                            onChange={handleInputChange}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                                    <label id="tips-label" className="block text-lg font-medium text-gray-200">
-                                        General Tips (List)
-                                    </label>
-                                    <div className="space-y-3" role="group" aria-labelledby="tips-label">
-                                        {formData.tips?.map((tip, i) => (
-                                            <div key={i} className="flex gap-2 items-center">
-                                                <input
-                                                    type="text"
-                                                    value={tip}
-                                                    onChange={(e) => handleTipChange(i, e.target.value)}
-                                                    className="w-full border border-gray-600 rounded-md bg-gray-800 text-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm py-2 px-3"
-                                                    placeholder="Add a helpful general tip..."
-                                                    aria-label={`General tip ${i + 1}`}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeTip(i)}
-                                                    className="text-red-500 hover:text-red-400 p-1 rounded-md hover:bg-gray-700 cursor-pointer"
-                                                    aria-label={`Remove general tip ${i + 1}`}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                        <button
-                                            type="button"
-                                            onClick={addTip}
-                                            className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-sm font-medium p-1 rounded-md hover:bg-gray-800 cursor-pointer"
-                                            aria-label="Add another general tip"
-                                        >
-                                            <Plus className="w-4 h-4" /> Add General Tip
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 pt-4 border-t border-gray-700/50">
-                                    <h3 className="text-lg font-medium leading-6 text-gray-200">Photo Gallery</h3>
-                                    {galleryPreviews.length > 0 && (
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                            {galleryPreviews.map((url, i) => (
-                                                <div key={i} className="relative group aspect-square bg-gray-800 rounded-md border border-gray-700">
-                                                    <img
-                                                        src={url}
-                                                        alt={`Gallery preview ${i + 1}`}
-                                                        className="absolute inset-0 w-full h-full rounded-md object-cover"
-                                                        loading="lazy"
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeGalleryImage(i)}
-                                                        className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600/80 cursor-pointer"
-                                                        aria-label={`Remove gallery image ${i + 1}`}
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    <div>
-                                        <label
-                                            htmlFor="gallery-upload"
-                                            className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-800 hover:bg-gray-700"
-                                        >
-                                            <UploadCloud className="w-4 h-4" aria-hidden="true" />
-                                            <span>Add Gallery Images</span>
-                                            <input
-                                                id="gallery-upload"
-                                                name="galleryFiles"
-                                                type="file"
-                                                className="sr-only"
-                                                multiple
-                                                accept="image/*"
-                                                onChange={handleGalleryChange}
-                                                ref={galleryInputRef}
-                                                aria-describedby="gallery-desc"
-                                            />
-                                        </label>
-                                        <p id="gallery-desc" className="text-xs text-gray-500 mt-1">
-                                            Add photos from your visit (max 5MB each).
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {error && (
-                                    <div className="p-3 bg-red-900/30 border border-red-700/50 rounded-md text-red-300 text-sm" role="alert">
-                                        {error}
-                                    </div>
-                                )}
-
-                                <div className="pt-5 border-t border-gray-700/50">
-                                    <div className="flex justify-end gap-3">
-                                        <button
-                                            type="button"
-                                            onClick={onClose}
-                                            disabled={isSubmitting}
-                                            className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            disabled={isSubmitting}
-                                            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors cursor-pointer"
-                                        >
-                                            {isSubmitting ? (
-                                                <>
-                                                    <svg
-                                                        className="animate-spin h-4 w-4 text-white"
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <circle
-                                                            className="opacity-25"
-                                                            cx="12"
-                                                            cy="12"
-                                                            r="10"
-                                                            stroke="currentColor"
-                                                            strokeWidth="4"
-                                                        ></circle>
-                                                        <path
-                                                            className="opacity-75"
-                                                            fill="currentColor"
-                                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                                        ></path>
-                                                    </svg>
-                                                    Submitting...
-                                                </>
-                                            ) : (
-                                                "Add Entry"
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+            if (newValue !== null) {
+                if (activeKnob === "hot") {
+                    setHotValue(newValue);
+                } else {
+                    setColdValue(newValue);
+                }
+            }
+        },
+        [isDragging, activeKnob, calculateAngle]
     );
-};
 
-// --- Main Page Component ---
+    const handleMouseUp = useCallback(() => {
+        setIsDragging(false);
+        setActiveKnob(null);
+    }, []);
 
-export default function WaterfallBlog() {
-    const [selectedCountry, setSelectedCountry] = useState<string>("All");
-    const [selectedWaterfall, setSelectedWaterfall] = useState<Waterfall | null>(null);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-    const [waterfalls, setWaterfalls] = useState<Waterfall[]>([
-        {
-            id: 1,
-            name: "Rhine Falls (Rheinfall)",
-            country: "Switzerland",
-            location: "Schaffhausen",
-            description: "Europe's largest waterfall. Experience the roar and vibration of the water over one's entire body.",
-            experience:
-                "The moment I arrived at Rhine Falls, I was immediately struck by the sheer power of the cascading water. The thunderous roar filled the air as I approached the viewing platform. I spent hours just watching the water crash down, mesmerized by the rainbows that formed in the mist.",
-            personalNotes:
-                "The small café near the viewing platform serves excellent hot chocolate - perfect for warming up after getting sprayed by the falls!",
-            rating: 5,
-            visitDate: "2022-06-05",
-            height: "23 m",
-            flowRate: "High",
-            hikingDifficulty: "Easy",
-            bestTimeToVisit: "May to September",
-            transportation: "Train from Zurich",
-            accommodation: "Local B&B",
-            costs: "Entrance: Free, Boat: 20 CHF",
-            image: "https://images.unsplash.com/photo-1729506712731-9b80d00a4a0d?q=80&w=1974&auto=format&fit=crop",
-            gallery: [
-                "https://images.unsplash.com/photo-1729506712731-9b80d00a4a0d?q=80&w=800",
-                "https://images.unsplash.com/photo-1729506712731-9b80d00a4a0d?q=80&w=800",
-            ],
-            tips: ["Visit early morning", "Bring waterproof camera", "Wear good shoes"],
-            mood: "Awestruck",
-        },
-        {
-            id: 2,
-            name: "Niagara Falls",
-            country: "Canada & USA",
-            location: "Ontario & New York",
-            description: "One of the most famous waterfalls in the world, spanning the border of Canada and USA.",
-            experience:
-                "Standing before Niagara Falls was a humbling experience. The sheer volume of water passing over the falls every second is mind-boggling. The Maid of the Mist boat tour brought us incredibly close to the falls.",
-            personalNotes: "The nighttime illumination show is absolutely magical!",
-            rating: 5,
-            visitDate: "2022-07-15",
-            height: "51 m",
-            flowRate: "Very High",
-            hikingDifficulty: "Easy",
-            bestTimeToVisit: "June to August",
-            transportation: "Bus from Toronto",
-            accommodation: "Marriott Hotel",
-            costs: "Entrance: Free, Boat: 25 USD",
-            image: "https://images.unsplash.com/photo-1489447068241-b3490214e879?q=80&w=1974&auto=format&fit=crop",
-            gallery: [
-                "https://images.unsplash.com/photo-1489447068241-b3490214e879?q=80&w=800",
-                "https://images.unsplash.com/photo-1489447068241-b3490214e879?q=80&w=800",
-            ],
-            tips: ["Visit at sunset", "Book boat tour in advance", "Bring raincoat"],
-            mood: "Magnificent",
-        },
-        {
-            id: 3,
-            name: "Victoria Falls",
-            country: "Zimbabwe",
-            location: "Livingstone",
-            description: "Locally known as 'Mosi-oa-Tunya' – 'The Smoke that Thunders'. One of the Seven Natural Wonders of the World.",
-            experience:
-                "Victoria Falls truly lives up to its name. The spray creates constant rainbows and drenches you even from afar. The sheer scale is impossible to capture in photos.",
-            personalNotes: "The Devil's Pool experience during the dry season was terrifying but absolutely unforgettable!",
-            rating: 5,
-            visitDate: "2022-08-20",
-            height: "108 m",
-            flowRate: "Extreme (Wet Season)",
-            hikingDifficulty: "Moderate",
-            bestTimeToVisit: "Feb-May (Peak Flow), Sep-Nov (Low Flow/Pools)",
-            transportation: "Flight to Livingstone (LVI) or Victoria Falls (VFA)",
-            accommodation: "Various lodges and hotels nearby",
-            costs: "National Park Entry: $30-$50 USD (varies by side/nationality)",
-            image: "https://images.unsplash.com/photo-1696652697930-6c9b0a91174c?q=80&w=2070&auto=format&fit=crop",
-            gallery: [
-                "https://images.unsplash.com/photo-1696652697930-6c9b0a91174c?q=80&w=800",
-                "https://images.unsplash.com/photo-1696652697930-6c9b0a91174c?q=80&w=800",
-            ],
-            tips: ["Bring a poncho!", "Visit both Zimbabwe and Zambia sides if possible", "Consider a microlight or helicopter flight"],
-            mood: "Overwhelmed",
-        },
-        {
-            id: 4,
-            name: "Iguazu Falls",
-            country: "Brazil",
-            location: "Foz do Iguaçu",
-            description: "A massive system of hundreds of waterfalls on the Brazil-Argentina border, wider than Victoria Falls.",
-            experience:
-                "The scale of Iguazu Falls is simply overwhelming, especially the Devil's Throat section. Walkways take you incredibly close, and the sound is deafening.",
-            personalNotes:
-                "The Brazilian side offers panoramic views, while the Argentinian side offers closer trails. Both are worth visiting.",
-            rating: 5,
-            visitDate: "2022-09-10",
-            height: "up to 82 m",
-            flowRate: "Very High",
-            hikingDifficulty: "Moderate",
-            bestTimeToVisit: "March-May or Sept-Nov (avoid crowds/peak rain)",
-            transportation: "Flight to Foz do Iguaçu (IGU) or Puerto Iguazú (IGR)",
-            accommodation: "Hotels on both sides, some inside the park",
-            costs: "Park entry approx $20-25 USD per side",
-            image: "https://images.unsplash.com/photo-1538703012804-b74999aa11b9?q=80&w=1974&auto=format&fit=crop",
-            gallery: [
-                "https://images.unsplash.com/photo-1538703012804-b74999aa11b9?q=80&w=800",
-                "https://images.unsplash.com/photo-1538703012804-b74999aa11b9?q=80&w=800",
-            ],
-            tips: [
-                "Allow at least two full days",
-                "Take the boat ride under the falls (prepare to get soaked!)",
-                "Wear comfortable, quick-drying clothes",
-            ],
-            mood: "Powerful",
-        },
+    useEffect(() => {
+        if (isDragging) {
+            document.addEventListener("mousemove", handleMouseMove);
+            document.addEventListener("mouseup", handleMouseUp);
+        } else {
+            document.removeEventListener("mousemove", handleMouseMove);
+            document.removeEventListener("mouseup", handleMouseUp);
+        }
+
+        return () => {
+            document.removeEventListener("mousemove", handleMouseMove);
+            document.removeEventListener("mouseup", handleMouseUp);
+        };
+    }, [isDragging, handleMouseMove, handleMouseUp]);
+
+    const calculateTemperature = useCallback((hot: number, cold: number): number => {
+        const rawTemp = hot * 0.6 - cold * 0.3 + 50;
+        return Math.max(MIN_TEMP, Math.min(MAX_TEMP, rawTemp));
+    }, []);
+
+    useEffect(() => {
+        if (gameState === "playing" && !targetFound) {
+            timerRef.current = setInterval(() => {
+                const elapsedTime = Date.now() - startTime;
+                setTimer(elapsedTime);
+
+                // Game over if it takes too long (1 minute)
+                if (elapsedTime > 60000) {
+                    setGameState("gameOver");
+                    clearTimeouts();
+                }
+            }, 100);
+        } else {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+        }
+
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+        };
+    }, [gameState, targetFound, startTime, clearTimeouts]);
+
+    // Update temperature and check win condition
+    useEffect(() => {
+        if (gameState !== "playing") return;
+
+        const newTemp = calculateTemperature(hotValue, coldValue);
+        setTemperature(newTemp);
+
+        const newInComfortZone = newTemp >= comfortZoneMin && newTemp <= comfortZoneMax;
+        setInComfortZone(newInComfortZone);
+
+        if (newInComfortZone) {
+            setGameMessage("Perfect temperature!");
+        } else if (newTemp > comfortZoneMax) {
+            setGameMessage("Too hot!");
+        } else if (newTemp < comfortZoneMin) {
+            setGameMessage("Too cold!");
+        } else if (Math.abs(newTemp - targetTemp) < 15) {
+            setGameMessage("Getting close...");
+        } else {
+            setGameMessage("Adjust the temperature...");
+        }
+
+        setWaterVisible(hotValue > 5 || coldValue > 5);
+        setBubblesVisible(hotValue > 30 || coldValue > 30);
+        setSteamVisible(hotValue > 70 && coldValue < 30);
+
+        // Win condition
+        if (newInComfortZone && !targetFound) {
+            setTargetFound(true);
+            clearTimeouts();
+            setShowCelebration(true);
+
+            const finalTime = Date.now() - startTime;
+            setTimer(finalTime);
+
+            if (bestTime === null || finalTime < bestTime) {
+                setBestTime(finalTime);
+                localStorage.setItem("showerGameBestTime", finalTime.toString());
+            }
+
+            const timeout = setTimeout(() => {
+                setGameState("gameOver");
+            }, 1500);
+
+            celebrationTimeoutRefs.current.push(timeout);
+        }
+    }, [
+        hotValue,
+        coldValue,
+        gameState,
+        targetFound,
+        calculateTemperature,
+        comfortZoneMin,
+        comfortZoneMax,
+        clearTimeouts,
+        startTime,
+        bestTime,
+        targetTemp,
     ]);
 
-    const countries = useMemo(() => [...new Set(waterfalls.map((w) => w.country))].sort(), [waterfalls]);
+    const formatTime = useCallback((ms: number): string => {
+        const seconds = Math.floor(ms / 1000);
+        const tenths = Math.floor((ms % 1000) / 100);
+        return `${seconds}.${tenths}s`;
+    }, []);
 
-    const filteredWaterfalls = useMemo(
-        () => waterfalls.filter((w) => selectedCountry === "All" || w.country === selectedCountry),
-        [waterfalls, selectedCountry]
-    );
+    const getTemperatureColor = useCallback((temp: number): string => {
+        if (temp <= 30) return "bg-blue-600";
+        if (temp <= 45) return "bg-cyan-500";
+        if (temp <= 55) return "bg-green-500";
+        if (temp <= 70) return "bg-yellow-500";
+        return "bg-rose-600";
+    }, []);
 
-    const groupedWaterfalls = useMemo(
-        () =>
-            filteredWaterfalls.reduce((groups, waterfall) => {
-                const group = groups[waterfall.country] || [];
-                group.push(waterfall);
-                groups[waterfall.country] = group.sort((a, b) => b.rating - a.rating);
-                return groups;
-            }, {} as Record<string, Waterfall[]>),
-        [filteredWaterfalls]
-    );
+    // Helper function to get a smooth color gradient for the temperature
+    const getTemperatureGradient = useCallback((temp: number): string => {
+        // Define color stops for the temperature scale
+        const colorStops = [
+            { temp: 0, color: { r: 37, g: 99, b: 235 } },    // blue-600
+            { temp: 30, color: { r: 6, g: 182, b: 212 } },   // cyan-500
+            { temp: 45, color: { r: 34, g: 197, b: 94 } },   // green-500
+            { temp: 55, color: { r: 234, g: 179, b: 8 } },   // yellow-500
+            { temp: 70, color: { r: 225, g: 29, b: 72 } },   // rose-600
+            { temp: 100, color: { r: 190, g: 18, b: 60 } }   // rose-700
+        ];
+        
+        // Find the two color stops that the current temperature falls between
+        let lowerStop = colorStops[0];
+        let upperStop = colorStops[colorStops.length - 1];
+        
+        for (let i = 0; i < colorStops.length - 1; i++) {
+            if (temp >= colorStops[i].temp && temp <= colorStops[i + 1].temp) {
+                lowerStop = colorStops[i];
+                upperStop = colorStops[i + 1];
+                break;
+            }
+        }
+        
+        // Calculate the percentage between the two color stops
+        const range = upperStop.temp - lowerStop.temp;
+        const percentage = range === 0 ? 0 : (temp - lowerStop.temp) / range;
+        
+        // Interpolate between the two colors
+        const r = Math.round(lowerStop.color.r + percentage * (upperStop.color.r - lowerStop.color.r));
+        const g = Math.round(lowerStop.color.g + percentage * (upperStop.color.g - lowerStop.color.g));
+        const b = Math.round(lowerStop.color.b + percentage * (upperStop.color.b - lowerStop.color.b));
+        
+        // Create a slightly darker version for the gradient
+        const darkerR = Math.max(0, r - 30);
+        const darkerG = Math.max(0, g - 30);
+        const darkerB = Math.max(0, b - 30);
+        
+        return `linear-gradient(135deg, rgb(${r}, ${g}, ${b}), rgb(${darkerR}, ${darkerG}, ${darkerB}))`;
+    }, []);
 
-    const sortedCountries = useMemo(() => Object.keys(groupedWaterfalls).sort(), [groupedWaterfalls]);
+    const startNewGame = useCallback(() => {
+        clearTimeouts();
 
-    const handleAddWaterfall = (newWaterfall: Waterfall) => {
-        setWaterfalls((prev) => [...prev, newWaterfall]);
-        setIsCreateModalOpen(false);
-        setShowSuccessMessage(true);
-        setTimeout(() => {
-            setShowSuccessMessage(false);
-        }, 2500);
-    };
+        const initialHot = 20;
+        const initialCold = 20;
+        const initialTemp = calculateTemperature(initialHot, initialCold);
 
-    // Effect to sort waterfalls whenever the list changes
-    useEffect(() => {
-        setWaterfalls((currentWaterfalls) =>
-            [...currentWaterfalls].sort((a, b) => {
-                // Sort primarily by country, secondarily by rating (desc)
-                const countryComparison = a.country.localeCompare(b.country);
-                if (countryComparison !== 0) {
-                    return countryComparison;
-                }
-                return b.rating - a.rating;
-            })
-        );
-    }, [waterfalls.length]); // Re-sort when a waterfall is added or removed
+        let newTarget;
+        do {
+            newTarget = Math.floor(Math.random() * 50) + 25;
+        } while (Math.abs(newTarget - initialTemp) < 15);
+
+        setGameState("playing");
+        setHotValue(initialHot);
+        setColdValue(initialCold);
+        setTargetTemp(newTarget);
+        setComfortZoneMin(newTarget - COMFORT_ZONE_WIDTH / 2);
+        setComfortZoneMax(newTarget + COMFORT_ZONE_WIDTH / 2);
+        setInComfortZone(false);
+        setTargetFound(false);
+        setShowCelebration(false);
+        setGameMessage("Adjust the temperature...");
+
+        const newStartTime = Date.now();
+        setStartTime(newStartTime);
+        setTimer(0);
+    }, [clearTimeouts, calculateTemperature]);
 
     return (
-        <div className={`min-h-screen bg-slate-900 text-gray-100 relative ${poppins.variable} ${lora.variable}`}>
-            <div className="fixed inset-0 z-0 pointer-events-none">
-                <img
-                    src="https://images.unsplash.com/photo-1455577380025-4321f1e1dca7?q=80&w=2560&auto=format&fit=crop"
-                    alt="Background"
-                    className="absolute inset-0 w-full h-full object-cover opacity-20"
-                    loading="eager"
+        <div
+            className={`fixed inset-0 w-full h-full ${montserrat.className} bg-gradient-to-b from-violet-900 via-indigo-900 to-blue-950 flex flex-col items-center justify-center overflow-hidden`}
+        >
+            {/* Global styles */}
+            <style jsx global>{`
+                @keyframes waterDrop {
+                    0% {
+                        transform: translateY(0) scale(1);
+                        opacity: 0;
+                    }
+                    10% {
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: translateY(150px) scale(0.7);
+                        opacity: 0;
+                    }
+                }
+
+                @keyframes bubbleRise {
+                    0% {
+                        transform: translateY(0) scale(0.7);
+                        opacity: 0;
+                    }
+                    20%,
+                    80% {
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: translateY(-100px) scale(1.3) rotate(20deg);
+                        opacity: 0;
+                    }
+                }
+
+                @keyframes steamRise {
+                    0% {
+                        transform: translateY(0) scale(1);
+                        opacity: 0;
+                    }
+                    20% {
+                        opacity: 0.8;
+                    }
+                    100% {
+                        transform: translateY(-60px) scale(2) rotate(10deg);
+                        opacity: 0;
+                    }
+                }
+
+                @keyframes pulse {
+                    0%,
+                    100% {
+                        transform: scale(1);
+                    }
+                    50% {
+                        transform: scale(1.05);
+                    }
+                }
+
+                @keyframes shimmer {
+                    0% {
+                        background-position: -200% 0;
+                    }
+                    100% {
+                        background-position: 200% 0;
+                    }
+                }
+
+                @keyframes float {
+                    0%,
+                    100% {
+                        transform: translateY(0);
+                    }
+                    50% {
+                        transform: translateY(-8px);
+                    }
+                }
+
+                @keyframes glow {
+                    0%,
+                    100% {
+                        box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+                    }
+                    50% {
+                        box-shadow: 0 0 20px rgba(255, 255, 255, 0.9), 0 0 30px rgba(99, 102, 241, 0.8);
+                    }
+                }
+
+                @keyframes bubbleConfetti {
+                    0% {
+                        transform: translateY(100vh) scale(0.5);
+                        opacity: 0;
+                    }
+                    10% {
+                        opacity: 1;
+                    }
+                    90% {
+                        opacity: 0.7;
+                    }
+                    100% {
+                        transform: translateY(-100px) scale(1.2) rotate(360deg);
+                        opacity: 0;
+                    }
+                }
+
+                .perfect-zone {
+                    animation: glow 2s infinite ease-in-out;
+                    box-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+                }
+
+                .celebration-bubble {
+                    position: absolute;
+                    border-radius: 50%;
+                    pointer-events: none;
+                    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.5);
+                    animation: bubbleConfetti forwards;
+                }
+            `}</style>
+
+            <div className="absolute inset-0 bg-pattern opacity-20 pointer-events-none">
+                <div
+                    className="absolute inset-0"
+                    style={{
+                        backgroundImage:
+                            "radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.05) 0%, transparent 40%), radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.05) 0%, transparent 40%)",
+                    }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-slate-900/60 via-slate-900/85 to-teal-900/10" />
             </div>
 
-            <motion.header 
-                className="relative z-10 py-16 sm:py-20"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-            >
-                <div className="max-w-7xl mx-auto px-4 text-center">
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.8, delay: 0.5 }}
-                        className={`${poppins.className} text-teal-300 text-xl sm:text-2xl mb-3 sm:mb-4`}
-                    >
-                        Welcome to my personal journal of
-                    </motion.div>
-                    <style jsx global>{cascadeGlowKeyframes}</style>
-                    <motion.h1
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.8, delay: 0.7 }}
-                        className={`${lora.className} text-4xl sm:text-5xl md:text-6xl font-bold mb-6 sm:mb-8 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-teal-200 to-emerald-300 select-none`}
-                    >
-                        <motion.span
-                            variants={cascadeAnimation}
-                            initial="hidden"
-                            animate="visible"
-                            className="inline-block"
-                        >
-                            {"Nature\u2019s Greatest Cascades".split("").map((letter, index) => (
-                                <motion.span 
-                                    key={index} 
-                                    variants={letterAnimation}
-                                    className="inline-block"
-                                    style={{ 
-                                        animation: `cascadeGlow 3s infinite ${index * 0.1}s`,
-                                    }}
-                                >
-                                    {letter === " " ? "\u00A0" : letter}
-                                </motion.span>
-                            ))}
-                        </motion.span>
-                    </motion.h1>
-                    <motion.div 
-                        className="flex justify-center gap-6 sm:gap-8 text-cyan-400/80 mb-12 sm:mb-16"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.8, delay: 0.9 }}
-                    >
-                        <motion.div custom={0} variants={cascadeIconAnimation} initial="hidden" animate="visible">
-                            <Droplets className="w-7 h-7 sm:w-8 sm:h-8" style={{ animation: 'iconGlow 3s infinite' }} />
-                        </motion.div>
-                        <motion.div custom={1} variants={cascadeIconAnimation} initial="hidden" animate="visible">
-                            <MountainSnow className="w-7 h-7 sm:w-8 sm:h-8" style={{ animation: 'iconGlow 3s infinite 0.3s' }} />
-                        </motion.div>
-                        <motion.div custom={2} variants={cascadeIconAnimation} initial="hidden" animate="visible">
-                            <Compass className="w-7 h-7 sm:w-8 sm:h-8" style={{ animation: 'iconGlow 3s infinite 0.6s' }} />
-                        </motion.div>
-                        <motion.div custom={3} variants={cascadeIconAnimation} initial="hidden" animate="visible">
-                            <Cloud className="w-7 h-7 sm:w-8 sm:h-8" style={{ animation: 'iconGlow 3s infinite 0.9s' }} />
-                        </motion.div>
-                    </motion.div>
+            {isMounted && (
+                <div className="absolute inset-0 pointer-events-none">
+                    {backgroundParticles.map((particle, i) => (
+                        <div
+                            key={`particle-${i}`}
+                            className="absolute rounded-full bg-white opacity-20"
+                            style={{
+                                width: particle.width + "px",
+                                height: particle.height + "px",
+                                top: particle.top + "%",
+                                left: particle.left + "%",
+                                animation: particle.animation,
+                                animationDelay: `${particle.delay}s`,
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
 
-                    <motion.div 
-                        className="flex flex-col sm:flex-row justify-center items-center sm:items-end gap-4 mt-8"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 1.2 }}
-                    >
-                        <div className="relative inline-block group">
-                            <label
-                                htmlFor="country-filter"
-                                className="absolute -top-6 left-0 right-0 text-center text-teal-400 text-sm sr-only sm:not-sr-only"
+            {/* Main game content */}
+            {gameState === "playing" && (
+                <div className="w-full h-full flex flex-col items-center justify-center z-10 px-4">
+                    <div className="w-full max-w-md flex flex-wrap justify-between items-center mb-2">
+                        <h1 className={`text-2xl font-bold text-sky-300 ${satisfy.className} whitespace-nowrap mr-2`}>Shower Temperature Game</h1>
+
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1 bg-indigo-900/60 py-1 px-3 rounded-full min-w-[80px] justify-center">
+                                <Clock className="w-4 h-4 text-indigo-300 flex-shrink-0" />
+                                <span className="text-sm text-indigo-200 font-semibold">{formatTime(timer)}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1 bg-amber-900/60 py-1 px-3 rounded-full min-w-[80px] justify-center">
+                                <Trophy className="w-4 h-4 text-amber-300 flex-shrink-0" />
+                                <span className="text-sm text-amber-200 font-semibold">{bestTime ? formatTime(bestTime) : "--"}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-indigo-950 rounded-2xl p-5 w-full max-w-md shadow-2xl">
+                        <div className="relative mb-4">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-xs font-medium text-blue-300 flex items-center gap-1">
+                                    <Droplets className="w-3 h-3" /> Cold
+                                </span>
+                                <span className="text-xs font-medium text-emerald-300 flex items-center gap-1">
+                                    <Thermometer className="w-3 h-3" /> Perfect
+                                </span>
+                                <span className="text-xs font-medium text-rose-300 flex items-center gap-1">
+                                    Hot <Droplets className="w-3 h-3" />
+                                </span>
+                            </div>
+
+                            <div className="relative h-7 bg-indigo-900/50 rounded-full overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-emerald-500 to-rose-600 opacity-90" />
+
+                                <div
+                                    className={`absolute h-full ${inComfortZone ? "perfect-zone" : ""}`}
+                                    style={{
+                                        left: `${comfortZoneMin}%`,
+                                        width: `${COMFORT_ZONE_WIDTH}%`,
+                                        backgroundColor: "rgba(255, 255, 255, 0.2)",
+                                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                                    }}
+                                />
+
+                                <div
+                                    className={`absolute h-full w-2 transition-all duration-300 ease-out ${getTemperatureColor(
+                                        temperature
+                                    )}`}
+                                    style={{
+                                        left: `${temperature}%`,
+                                        transform: "translateX(-50%)",
+                                        boxShadow: inComfortZone ? "0 0 10px rgba(255, 255, 255, 0.8)" : "none",
+                                    }}
+                                />
+                            </div>
+
+                            <div className="mt-1 flex justify-between px-1">
+                                <span className="text-xs text-indigo-300">{Math.floor(MIN_TEMP)}°</span>
+                                <span className="text-xs text-indigo-300">{Math.floor(MAX_TEMP)}°</span>
+                            </div>
+
+                            <div className="absolute left-1/2 transform -translate-x-1/2 top-full mb-4 z-10">
+                                <span className="text-xs text-emerald-300 bg-indigo-950 px-2 py-1 rounded-full shadow-md">
+                                    {Math.floor(targetTemp)}° Target
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="relative h-32 flex justify-center mb-4 mt-10">
+                            <div className="absolute top-3 w-full flex justify-center">
+                                <div className="w-36 h-8 bg-blue-400 rounded-t-lg flex justify-center items-end shadow-lg">
+                                    <div className="w-5 h-10 bg-blue-500 absolute -top-8 rounded-t-md shadow-md" />
+                                    <div className="w-full h-5 bg-blue-500 flex justify-around items-center px-4 shadow-inner">
+                                        {Array.from({ length: 6 }).map((_, i) => (
+                                            <div key={i} className="w-1 h-1 rounded-full bg-blue-800" />
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {isMounted && (
+                                <div className="absolute top-8 w-36 h-full overflow-hidden pointer-events-none">
+                                    {waterVisible && (
+                                        <>
+                                            {Array.from({ length: 5 }).map((_, i) => (
+                                                <WaterDrop key={`drop-${i}`} index={i} isHot={hotValue > coldValue} />
+                                            ))}
+
+                                            {bubblesVisible &&
+                                                Array.from({ length: 3 }).map((_, i) => <Bubble key={`bubble-${i}`} index={i} />)}
+
+                                            {steamVisible &&
+                                                Array.from({ length: 2 }).map((_, i) => <Steam key={`steam-${i}`} index={i} />)}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            <div
+                                className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 h-12 px-6 whitespace-nowrap rounded-xl text-center flex items-center justify-center ${
+                                    inComfortZone
+                                        ? "bg-emerald-600"
+                                        : temperature > comfortZoneMax
+                                        ? "bg-rose-600"
+                                        : temperature < comfortZoneMin
+                                        ? "bg-blue-600"
+                                        : "bg-indigo-600"
+                                }`}
                             >
-                                Filter by country
-                            </label>
-                            <div className="relative">
-                                <select
-                                    id="country-filter"
-                                    value={selectedCountry}
-                                    onChange={(e) => setSelectedCountry(e.target.value)}
-                                    className="appearance-none bg-slate-800/60 text-gray-100 px-6 py-2.5 pr-12 rounded-full border border-teal-600/30 backdrop-blur-sm hover:bg-slate-700/70 transition-all cursor-pointer min-w-[240px] focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 group-hover:border-teal-500/50 text-center sm:text-left text-sm font-medium"
+                                <span className="text-white font-bold text-lg">{gameMessage}</span>
+                                
+                                {inComfortZone && (
+                                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                                        {Array.from({ length: 15 }).map((_, i) => (
+                                            <CelebrationBubble key={`message-confetti-${i}`} index={i} total={15} />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between gap-4 mt-2">
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs font-semibold text-blue-300 mb-1">COLD</span>
+                                <div
+                                    ref={coldKnobRef}
+                                    className="relative w-28 h-28 cursor-pointer shadow-lg rounded-full"
+                                    onClick={(e) => {
+                                        const newValue = calculateAngle(e.clientX, e.clientY, coldKnobRef);
+                                        if (newValue !== null) setColdValue(newValue);
+                                    }}
+                                    onMouseDown={(e) => handleMouseDown(e, "cold")}
                                 >
-                                    <option value="All">All Countries ({waterfalls.length})</option>
-                                    {countries.map((c) => (
-                                        <option key={c} value={c}>
-                                            {c} ({waterfalls.filter((w) => w.country === c).length})
-                                        </option>
-                                    ))}
-                                </select>
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-teal-500/10 flex items-center justify-center transition-all group-hover:bg-teal-500/20 pointer-events-none">
-                                    <ChevronDown className="w-4 h-4 text-teal-300" />
+                                    <div className="absolute inset-0 rounded-full bg-gradient-to-b from-blue-400 to-blue-600"></div>
+
+                                    <div
+                                        className="absolute inset-0 rounded-full opacity-30"
+                                        style={{
+                                            background:
+                                                "linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.3) 20%, rgba(255,255,255,0) 50%)",
+                                        }}
+                                    ></div>
+
+                                    <div
+                                        className="absolute inset-0 rounded-full"
+                                        style={{
+                                            background: "radial-gradient(circle at center, rgba(0,0,0,0) 60%, rgba(0,0,0,0.2) 100%)",
+                                        }}
+                                    ></div>
+
+                                    <div
+                                        className="absolute inset-0 rounded-full overflow-hidden"
+                                        style={{
+                                            clipPath: `polygon(48% 0%, 52% 0%, 52% 30%, 48% 30%)`,
+                                            transform: `rotate(${coldValue * 3.6}deg)`,
+                                        }}
+                                    >
+                                        <div className="w-full h-full bg-blue-800"></div>
+                                    </div>
+
+                                    <div
+                                        className="absolute inset-3.5 rounded-full bg-blue-500 flex items-center justify-center shadow-inner"
+                                        style={{
+                                            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.3), 0 -1px 2px rgba(255,255,255,0.2)",
+                                        }}
+                                    >
+                                        <span className="text-white font-bold text-3xl drop-shadow-sm">{Math.round(coldValue)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs font-semibold text-rose-300 mb-1">HOT</span>
+                                <div
+                                    ref={hotKnobRef}
+                                    className="relative w-28 h-28 cursor-pointer shadow-lg rounded-full"
+                                    onClick={(e) => {
+                                        const newValue = calculateAngle(e.clientX, e.clientY, hotKnobRef);
+                                        if (newValue !== null) setHotValue(newValue);
+                                    }}
+                                    onMouseDown={(e) => handleMouseDown(e, "hot")}
+                                >
+                                    <div className="absolute inset-0 rounded-full bg-gradient-to-b from-rose-400 to-rose-600"></div>
+
+                                    <div
+                                        className="absolute inset-0 rounded-full opacity-30"
+                                        style={{
+                                            background:
+                                                "linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.3) 20%, rgba(255,255,255,0) 50%)",
+                                        }}
+                                    ></div>
+
+                                    <div
+                                        className="absolute inset-0 rounded-full"
+                                        style={{
+                                            background: "radial-gradient(circle at center, rgba(0,0,0,0) 60%, rgba(0,0,0,0.2) 100%)",
+                                        }}
+                                    ></div>
+
+                                    <div
+                                        className="absolute inset-0 rounded-full overflow-hidden"
+                                        style={{
+                                            clipPath: `polygon(48% 0%, 52% 0%, 52% 30%, 48% 30%)`,
+                                            transform: `rotate(${hotValue * 3.6}deg)`,
+                                        }}
+                                    >
+                                        <div className="w-full h-full bg-rose-800"></div>
+                                    </div>
+
+                                    <div
+                                        className="absolute inset-3.5 rounded-full bg-rose-500 flex items-center justify-center shadow-inner"
+                                        style={{
+                                            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.3), 0 -1px 2px rgba(255,255,255,0.2)",
+                                        }}
+                                    >
+                                        <span className="text-white font-bold text-3xl drop-shadow-sm">{Math.round(hotValue)}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <button
-                            onClick={() => setIsCreateModalOpen(true)}
-                            className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white px-5 py-2.5 rounded-full flex items-center gap-2 transition-all duration-500 ease-in-out text-sm font-medium shadow-lg shadow-teal-900/20 hover:shadow-teal-900/30 sm:mt-0 cursor-pointer"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>Add New Entry</span>
-                        </button>
-                    </motion.div>
-                </div>
-            </motion.header>
-
-            <motion.main 
-                className="relative z-10 max-w-5xl mx-auto py-8 px-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8, delay: 1.4 }}
-            >
-                <div className="space-y-12">
-                    {sortedCountries.length > 0 ? (
-                        sortedCountries.map((country) => (
-                            <section
-                                key={country}
-                                className="space-y-4"
-                                aria-labelledby={`country-heading-${country.replace(/\s+/g, "-")}`}
+                        <div className="mt-3 text-center">
+                            <div 
+                                style={{
+                                    background: getTemperatureGradient(temperature),
+                                    transition: "background 0.3s ease-in-out"
+                                }}
+                                className="text-sm py-2 px-4 rounded-lg inline-flex items-center gap-2 shadow-md border border-opacity-20 text-white border-white/20"
                             >
-                                <div className="flex items-center gap-4 mt-6 mb-6">
-                                    <h2
-                                        id={`country-heading-${country.replace(/\s+/g, "-")}`}
-                                        className={`${lora.className} text-3xl text-blue-300`}
-                                    >
-                                        {country}
-                                    </h2>
-                                    <div className="h-px flex-1 bg-blue-500/20" />
-                                    <span className={`${poppins.className} text-lg sm:text-xl text-blue-300/80`}>
-                                        {groupedWaterfalls[country].length} {groupedWaterfalls[country].length === 1 ? "entry" : "entries"}
-                                    </span>
-                                </div>
+                                <Thermometer className="w-4 h-4" />
+                                Current Temperature: <span className="font-semibold text-base ml-1">{Math.round(temperature)}°</span>
+                            </div>
+                        </div>
+                    </div>
 
-                                <div className="space-y-8 pl-4 border-l-2 border-blue-500/10">
-                                    {groupedWaterfalls[country].map((waterfall, index) => (
-                                        <motion.article
-                                            key={waterfall.id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ 
-                                                duration: 0.4, 
-                                                delay: index * 0.1 + 1.6, // Add base delay for page load
-                                                type: "spring",
-                                                stiffness: 100,
-                                                damping: 15 
-                                            }}
-                                            whileHover={{ scale: 1.02 }}
-                                            className="glass-card rounded-xl overflow-hidden border border-gray-700/50 hover:border-gray-600/80 transition-all duration-300 shadow-lg hover:shadow-2xl group cursor-pointer"
-                                            onClick={() => setSelectedWaterfall(waterfall)}
-                                            aria-labelledby={`waterfall-title-${waterfall.id}`}
-                                        >
-                                            <div className="flex flex-col md:flex-row bg-gradient-to-br from-gray-900/30 to-gray-800/20">
-                                                <div className="md:w-2/5 lg:w-1/3 relative flex-shrink-0">
-                                                    <div className="relative w-full aspect-[16/9] md:aspect-[4/3] bg-gray-800 overflow-hidden md:rounded-l-xl md:rounded-r-none rounded-t-xl">
-                                                        <img
-                                                            src={waterfall.image}
-                                                            alt=""
-                                                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                                            loading="lazy"
-                                                        />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent md:bg-gradient-to-r" />
-                                                    </div>
-                                                    <div
-                                                        className={`${poppins.className} absolute bottom-3 left-3 text-xs bg-black/60 px-2.5 py-1 rounded-full backdrop-blur-sm z-10`}
-                                                    >
-                                                        Visited:{" "}
-                                                        {new Date(waterfall.visitDate).toLocaleDateString("en-US", {
-                                                            year: "numeric",
-                                                            month: "short",
-                                                            day: "numeric",
-                                                        })}
-                                                    </div>
-                                                </div>
-                                                <div className="flex-1 p-5 sm:p-6 md:p-8 relative flex flex-col justify-between">
-                                                    <div>
-                                                        <div className="flex items-start justify-between gap-4 mb-2">
-                                                            <h3
-                                                                id={`waterfall-title-${waterfall.id}`}
-                                                                className={`text-xl sm:text-2xl font-bold ${lora.className} mr-auto text-gray-100 group-hover:text-white transition-colors`}
-                                                            >
-                                                                {waterfall.name}
-                                                            </h3>
-                                                            <div className="flex gap-1 flex-shrink-0 mt-1">
-                                                                {[...Array(5)].map((_, i) => (
-                                                                    <Star
-                                                                        key={i}
-                                                                        className={`h-4 w-4 ${
-                                                                            i < waterfall.rating
-                                                                                ? "text-yellow-400 fill-yellow-400"
-                                                                                : "text-gray-600"
-                                                                        }`}
-                                                                    />
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-400 mb-4">
-                                                            <MapPin className="h-4 w-4 flex-shrink-0" />
-                                                            <span>
-                                                                {waterfall.location}, {waterfall.country}
-                                                            </span>
-                                                        </div>
-                                                        <p
-                                                            className={`text-gray-300 text-on-glass mb-5 sm:mb-6 line-clamp-3 ${lora.className} text-sm sm:text-base leading-relaxed`}
-                                                        >
-                                                            {waterfall.description}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-700/30">
-                                                        <div className="flex items-center gap-2 text-blue-400 group-hover:text-blue-300 transition-colors text-sm font-medium">
-                                                            <span>View Details</span>
-                                                            <ArrowLeft className="w-4 h-4 transform rotate-180 transition-transform group-hover:translate-x-1" />
-                                                        </div>
-                                                        <div className={`${poppins.className} text-xs text-gray-500 italic`}>
-                                                            Entry #{waterfall.id}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </motion.article>
-                                    ))}
+                    <div className="mt-3 bg-indigo-800/80 p-3 rounded-xl max-w-md w-full text-center">
+                        <div className="text-sm text-indigo-200">
+                            <p className="font-medium">Drag to turn the knobs and find the perfect shower temperature.</p>
+                            <p className="text-xs opacity-90">Find the white zone on the temperature bar!</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Title screen */}
+            {gameState === "title" && (
+                <div className="fixed inset-0 bg-indigo-950/80 backdrop-blur-md flex items-center justify-center z-20 px-4">
+                    <div className="bg-indigo-900/80 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl border border-indigo-700/50 animate-[float_4s_ease-in-out_infinite]">
+                        <h1
+                            className={`text-4xl font-bold mb-6 bg-gradient-to-r from-sky-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent ${satisfy.className}`}
+                        >
+                            Shower Temperature Game
+                        </h1>
+
+                        <div className="mb-10 relative h-40 overflow-hidden">
+                            <div className="absolute inset-0 flex justify-center items-center">
+                                <div className="w-28 h-28 bg-gradient-to-b from-indigo-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                                    <div className="w-20 h-20 bg-gradient-to-b from-indigo-600 to-blue-800 rounded-full flex items-center justify-center shadow-inner">
+                                        <div className="w-14 h-14 bg-gradient-to-b from-indigo-700 to-indigo-900 rounded-full shadow-inner flex items-center justify-center">
+                                            <Droplets className="w-8 h-8 text-indigo-200" />
+                                        </div>
+                                    </div>
                                 </div>
-                            </section>
-                        ))
-                    ) : (
-                        <div className="text-center py-16 text-gray-400">
-                            <p className="text-xl mb-4">No entries match the current filter.</p>
-                            <button onClick={() => setSelectedCountry("All")} className="text-blue-400 hover:underline font-medium cursor-pointer">
-                                Show all entries
+                            </div>
+
+                            {/* Water drops animation */}
+                            {isMounted &&
+                                Array.from({ length: 5 }).map((_, i) => <WaterDrop key={`intro-drop-${i}`} index={i} isHot={false} />)}
+                        </div>
+
+                        {bestTime && (
+                            <div className="mb-8 py-3 px-6 bg-indigo-800/50 rounded-xl inline-block shadow-inner border border-indigo-700/50">
+                                <p className="text-sm text-indigo-300 mb-1">Your best time:</p>
+                                <p className="text-2xl text-amber-300 font-bold">{formatTime(bestTime)}</p>
+                            </div>
+                        )}
+
+                        <div className="flex flex-col gap-4">
+                            <button
+                                onClick={startNewGame}
+                                className="bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-semibold py-3.5 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-indigo-500/30 transform hover:scale-105 active:scale-95 border border-indigo-400/30 w-full cursor-pointer"
+                            >
+                                Start Game
+                            </button>
+
+                            <button
+                                onClick={() => setShowInstructions(true)}
+                                className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white font-medium py-3 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-indigo-500/20 transform hover:scale-105 active:scale-95 border border-indigo-500/30 w-full cursor-pointer"
+                            >
+                                How to Play
                             </button>
                         </div>
-                    )}
+                    </div>
                 </div>
-            </motion.main>
+            )}
 
-            <motion.footer 
-                className="relative z-10 text-center py-10 mt-16 border-t border-gray-800/50"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8, delay: 2.0 }}
-            >
-                <p className={`${poppins.className} text-sm text-gray-500`}>Waterfall Wanderings © {new Date().getFullYear()}</p>
-            </motion.footer>
+            {showInstructions && (
+                <div
+                    className="fixed inset-0 bg-indigo-950/90 backdrop-blur-md flex items-center justify-center z-30 px-4"
+                    onClick={() => setShowInstructions(false)}
+                >
+                    <div className="bg-indigo-800 rounded-xl p-6 max-w-md shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-5">
+                            <h3 className={`text-2xl font-semibold text-indigo-200 ${satisfy.className}`}>How to Play</h3>
+                            <button onClick={() => setShowInstructions(false)} className="text-indigo-300 hover:text-white cursor-pointer">
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                        </div>
 
-            <BlogDialog waterfall={selectedWaterfall} isOpen={selectedWaterfall !== null} onClose={() => setSelectedWaterfall(null)} />
-            <CreateBlogDialog isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onAdd={handleAddWaterfall} />
-            
-            <AnimatePresence mode="wait">
-                {showSuccessMessage && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 50, transition: { duration: 0.3 } }}
-                        transition={{ duration: 0.3, type: "spring", stiffness: 200, damping: 20 }}
-                        className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-xl z-30 flex items-center gap-2"
-                        role="alert"
-                        aria-live="polite"
-                    >
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clipRule="evenodd"
-                            />
-                        </svg>
-                        Entry added successfully!
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                        <ul className="text-indigo-200 text-sm space-y-6 mb-6">
+                            <li className="flex items-center">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3 text-white font-bold">
+                                    1
+                                </div>
+                                <span>
+                                    Turn the <span className="text-rose-300 font-medium">HOT</span> and{" "}
+                                    <span className="text-blue-300 font-medium">COLD</span> knobs by dragging them clockwise or
+                                    counter-clockwise
+                                </span>
+                            </li>
+                            <li className="flex items-center">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3 text-white font-bold">
+                                    2
+                                </div>
+                                <span>Find the perfect shower temperature (white zone on the temperature bar) as quickly as possible</span>
+                            </li>
+                            <li className="flex items-center">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3 text-white font-bold">
+                                    3
+                                </div>
+                                <span>
+                                    The <span className="text-rose-300 font-medium">HOT</span> knob increases temperature, while the{" "}
+                                    <span className="text-blue-300 font-medium">COLD</span> knob decreases it
+                                </span>
+                            </li>
+                            <li className="flex items-center">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3 text-white font-bold">
+                                    4
+                                </div>
+                                <span>Try to beat your best time each round!</span>
+                            </li>
+                        </ul>
+
+                        <button
+                            onClick={() => setShowInstructions(false)}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 cursor-pointer"
+                        >
+                            Got it!
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Game over screen */}
+            {gameState === "gameOver" && (
+                <div className="fixed inset-0 bg-indigo-950/90 backdrop-blur-md flex items-center justify-center z-20 transition-opacity duration-300 px-4">
+                    <div className="bg-gradient-to-b from-indigo-800 to-indigo-950 rounded-xl p-8 max-w-md w-full text-center shadow-2xl border border-indigo-600/50 relative overflow-hidden">
+                        {targetFound && (
+                            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                                {Array.from({ length: 50 }).map((_, i) => (
+                                    <CelebrationBubble key={`confetti-${i}`} index={i} total={50} isGameOver={true} />
+                                ))}
+                            </div>
+                        )}
+                        
+                        <h3 className="text-3xl font-bold mb-6 flex justify-center items-center gap-2">
+                            {targetFound ? (
+                                <span
+                                    className={`bg-gradient-to-r from-emerald-300 to-teal-200 bg-clip-text text-transparent ${satisfy.className}`}
+                                >
+                                    Perfect Temperature!
+                                </span>
+                            ) : (
+                                <span
+                                    className={`bg-gradient-to-r from-rose-300 to-pink-200 bg-clip-text text-transparent ${satisfy.className}`}
+                                >
+                                    Game Over!
+                                </span>
+                            )}
+                        </h3>
+
+                        {targetFound ? (
+                            <div className="mb-8 py-5 px-8 bg-indigo-800/50 rounded-xl inline-block border border-indigo-700/50 shadow-inner">
+                                <p className="text-indigo-200 mb-3">You found the perfect temperature in:</p>
+                                <p className="text-3xl font-bold text-emerald-400 mb-1">{formatTime(timer)}</p>
+
+                                {bestTime === timer && (
+                                    <div className="text-amber-300 flex items-center justify-center gap-1 mt-3 py-1.5 px-4 bg-amber-900/30 rounded-full border border-amber-700/50 inline-flex">
+                                        <Trophy className="w-4 h-4" />
+                                        <span className="font-medium">New Best Time!</span>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-indigo-200 mb-8 bg-indigo-800/50 p-4 rounded-lg border border-indigo-700/50">
+                                You couldn&apos;t find the perfect temperature in time. Try adjusting the knobs more carefully!
+                            </p>
+                        )}
+
+                        <div className="flex flex-col gap-4">
+                            <button
+                                onClick={startNewGame}
+                                className="bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-medium py-3.5 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-indigo-500/30 flex items-center justify-center gap-2 transform hover:scale-105 active:scale-95 border border-indigo-400/30 cursor-pointer"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                                <span>Play Again</span>
+                            </button>
+
+                            <button
+                                onClick={() => setGameState("title")}
+                                className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white font-medium py-3 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-indigo-500/20 flex items-center justify-center gap-2 transform hover:scale-105 active:scale-95 border border-indigo-500/30 cursor-pointer"
+                            >
+                                <Home className="w-4 h-4" />
+                                <span>Main Menu</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
-}
+};
+
+export default ShowerGame;
