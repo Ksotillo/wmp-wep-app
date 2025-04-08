@@ -1,1225 +1,961 @@
 "use client";
+import { useEffect, useRef, useState } from "react";
+import {
+    ThumbsUp,
+    ThumbsDown,
+    MessageSquare,
+    Upload,
+    ChevronDown,
+    Send,
+    Hash,
+    TrendingUp,
+    Search,
+    Flame,
+    Clock,
+    Menu,
+    Bell,
+    User,
+    Settings,
+    LogOut,
+    BookmarkPlus,
+    Share,
+    MoreHorizontal,
+    Filter,
+    Zap,
+    Monitor,
+    Smile,
+    Music,
+    GamepadIcon,
+    Newspaper,
+    Brush,
+    Beaker,
+} from "lucide-react";
+import { Toaster, toast } from "sonner";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { XCircle, RefreshCw, Trophy, Home, Clock, Droplets, Thermometer } from "lucide-react";
-import { Satisfy, Montserrat } from "next/font/google";
+type Mood = "all" | "funny" | "sad" | "angry" | "happy" | "confused";
+type Channel = "general" | "tech" | "memes" | "science" | "gaming" | "news" | "art" | "music";
 
-const satisfy = Satisfy({ weight: "400", subsets: ["latin"] });
-const montserrat = Montserrat({ subsets: ["latin"] });
+const moods: { value: Mood; label: string; emoji: string }[] = [
+    { value: "happy", label: "Happy", emoji: "😊" },
+    { value: "funny", label: "Funny", emoji: "😂" },
+    { value: "sad", label: "Sad", emoji: "😢" },
+    { value: "angry", label: "Angry", emoji: "😠" },
+    { value: "confused", label: "Confused", emoji: "🤔" },
+];
 
-// Temperature calculation constants
-const MIN_TEMP = 0;
-const MAX_TEMP = 100;
-const COMFORT_ZONE_WIDTH = 8;
+const channels: { id: Channel; name: string; description: string; color: string; icon: any }[] = [
+    { id: "general", name: "General", description: "Discuss any topic in this general channel", color: "bg-blue-500", icon: Zap },
+    { id: "tech", name: "Technology", description: "Latest tech news and discussions", color: "bg-indigo-500", icon: Monitor },
+    { id: "memes", name: "Memes", description: "Funny posts and entertaining content", color: "bg-yellow-500", icon: Smile },
+    { id: "science", name: "Science", description: "Scientific discoveries and interesting facts", color: "bg-green-500", icon: Beaker },
+    { id: "gaming", name: "Gaming", description: "Discussions about video games", color: "bg-purple-500", icon: GamepadIcon },
+    { id: "news", name: "News", description: "Current events and news", color: "bg-red-500", icon: Newspaper },
+    { id: "art", name: "Art", description: "Art, design, and creative content", color: "bg-pink-500", icon: Brush },
+    { id: "music", name: "Music", description: "Music recommendations and discussions", color: "bg-teal-500", icon: Music },
+];
 
-interface WaterDropProps {
-    index: number;
-    isHot: boolean;
-}
-
-interface BubbleProps {
-    index: number;
-}
-
-interface SteamProps {
-    index: number;
-}
-
-interface CelebrationBubbleProps {
-    index: number;
-    total: number;
-    isGameOver?: boolean;
-}
-
-interface IceParticleProps {
-    index: number;
-}
-
-const WaterDrop = ({ index, isHot }: WaterDropProps) => {
-    const left = 40 + Math.sin(index * 0.5) * 20;
-    const delay = index * 0.2;
-    const size = 0.8 + (index % 5) * 0.1;
-    const opacity = 0.6 + (index % 4) * 0.1;
-
-    return (
-        <div
-            className="absolute rounded-full"
-            style={{
-                left: `${left}%`,
-                width: `${size * 10}px`,
-                height: `${size * 15}px`,
-                opacity,
-                background: isHot
-                    ? "radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(255, 180, 180, 0.8))"
-                    : "radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(180, 220, 255, 0.8))",
-                boxShadow: isHot ? "0 0 10px rgba(255, 100, 100, 0.5)" : "0 0 10px rgba(100, 150, 255, 0.5)",
-                animation: `waterDrop 1.5s infinite`,
-                animationDelay: `${delay}s`,
-            }}
-        />
-    );
+type Post = {
+    id: string;
+    content: string;
+    mood: Mood;
+    channel: Channel;
+    votes: number;
+    timestamp: Date;
+    replies: Reply[];
+    bookmarked?: boolean;
+    author?: string;
+    awards?: number;
 };
 
-const Bubble = ({ index }: BubbleProps) => {
-    const left = 30 + (index % 4) * 10;
-    const delay = index * 0.3 + (index % 5) * 0.1;
-    const size = 0.5 + (index % 3) * 0.5;
-    const duration = 2 + (index % 4) * 0.5;
-
-    return (
-        <div
-            className="absolute rounded-full"
-            style={{
-                left: `${left}%`,
-                bottom: "0",
-                width: `${size * 10}px`,
-                height: `${size * 10}px`,
-                background: "radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.2))",
-                boxShadow: "0 0 5px rgba(255, 255, 255, 0.3)",
-                animation: `bubbleRise ${duration}s infinite`,
-                animationDelay: `${delay}s`,
-            }}
-        />
-    );
+type Reply = {
+    id: string;
+    content: string;
+    votes: number;
+    timestamp: Date;
+    author?: string;
 };
 
-const Steam = ({ index }: SteamProps) => {
-    const left = 35 + (index % 6) * 5;
-    const delay = index * 0.2;
-    const size = 1 + (index % 3) * 0.5;
-    const duration = 2 + (index % 5) * 0.2;
+const initialPosts: Post[] = [
+    {
+        id: "1",
+        content: "This is my first post. I can't believe I'm doing this! Please like it",
+        mood: "funny",
+        channel: "general",
+        votes: 42,
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+        replies: [
+            {
+                id: "1-1",
+                content: "Great post, looking forward to more!",
+                votes: 12,
+                timestamp: new Date(Date.now() - 1000 * 60 * 30),
+                author: "AnonymousUser123",
+            },
+        ],
+        bookmarked: true,
+        author: "TechGuru",
+        awards: 2,
+    },
+    {
+        id: "2",
+        content: "I'm feeling very sad today. What should I do?",
+        mood: "sad",
+        channel: "general",
+        votes: 89,
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
+        replies: [
+            {
+                id: "2-1",
+                content: "Sending you a virtual hug. It will get better with time.",
+                votes: 24,
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3),
+                author: "HelpfulFriend42",
+            },
+            {
+                id: "2-2",
+                content: "I'm in the same situation. It's the worst feeling.",
+                votes: 18,
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+            },
+        ],
+        awards: 5,
+    },
+    {
+        id: "3",
+        content: "Just got promoted at work! Feeling amazing!",
+        mood: "happy",
+        channel: "news",
+        votes: 65,
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8),
+        replies: [
+            {
+                id: "3-1",
+                content: "Congratulations! You earned it with your hard work!",
+                votes: 15,
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 7),
+                author: "SupportiveUser",
+            },
+        ],
+        awards: 3,
+    },
+    {
+        id: "4",
+        content: "It's been such a long day. I just want to go home and sleep.",
+        mood: "angry",
+        channel: "general",
+        votes: 103,
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12),
+        replies: [
+            {
+                id: "4-1",
+                content: "Revenge is best served cold, I'm with you!!",
+                votes: 32,
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 10),
+            },
+            {
+                id: "4-2",
+                content: "I'll handle the rest, don't worry",
+                votes: 28,
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 9),
+                author: "RevengeExpert",
+            },
+        ],
+        author: "TiredWorker",
+    },
+    {
+        id: "5",
+        content: "What do you think about the new PS6? Isn't it too expensive?",
+        mood: "confused",
+        channel: "gaming",
+        votes: 75,
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+        replies: [
+            {
+                id: "5-1",
+                content: "The price is high but the features are worth it in my opinion.",
+                votes: 20,
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 20),
+                author: "GamerPro",
+            },
+        ],
+        awards: 1,
+    },
+    {
+        id: "6",
+        content: "I want to share the funniest thing I saw today: My coworker fell asleep during a meeting and started snoring!",
+        mood: "funny",
+        channel: "memes",
+        votes: 210,
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 18),
+        replies: [
+            {
+                id: "6-1",
+                content: "Haha! That happened to me once. So embarrassing!",
+                votes: 45,
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 17),
+            },
+        ],
+        bookmarked: true,
+    },
+    {
+        id: "7",
+        content: "Finals are coming up and I haven't studied at all. Help!",
+        mood: "sad",
+        channel: "general",
+        votes: 55,
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 10),
+        replies: [
+            {
+                id: "7-1",
+                content: "It's never too late to make a study plan. I can help!",
+                votes: 8,
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 9),
+                author: "StudyExpert",
+            },
+        ],
+    },
+];
 
-    return (
-        <div
-            className="absolute rounded-full"
-            style={{
-                left: `${left}%`,
-                top: "10%",
-                width: `${size * 10}px`,
-                height: `${size * 10}px`,
-                background: "radial-gradient(circle at center, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0))",
-                animation: `steamRise ${duration}s infinite`,
-                animationDelay: `${delay}s`,
-            }}
-        />
-    );
+const formatTimeAgo = (date: Date) => {
+    const timestamp = date.toISOString();
+    return new Intl.RelativeTimeFormat("tr").format(-Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60)), "hour");
 };
 
-const CelebrationBubble = ({ index, total, isGameOver = false }: CelebrationBubbleProps & { isGameOver?: boolean }) => {
-    // Faster animation for game over screen
-    const animationDuration = isGameOver 
-        ? 1.5 + Math.random() * 2  // 1.5-3.5s for game over screen
-        : 3 + Math.random() * 4;   // 3-7s for in-game celebration
-    
-    const delay = isGameOver
-        ? Math.random() * 0.8      // 0-0.8s delay for game over screen
-        : Math.random() * 2;       // 0-2s delay for in-game celebration
-    
-    const size = 10 + Math.random() * 30;
-    const left = (index / total) * 100 + (Math.random() * 10 - 5);
-    
-    // Create a variety of colors for the bubbles
-    const colors = [
-        "rgba(34, 211, 238, 0.8)", // cyan
-        "rgba(34, 197, 94, 0.8)",  // green
-        "rgba(168, 85, 247, 0.8)",  // purple
-        "rgba(59, 130, 246, 0.8)",  // blue
-        "rgba(249, 115, 22, 0.8)",  // orange
-        "rgba(236, 72, 153, 0.8)",  // pink
-    ];
-    
-    const colorIndex = index % colors.length;
-    const color = colors[colorIndex];
-    
-    // Different paths for different bubbles
-    const horizontalMovement = Math.random() * 60 - 30; // -30px to +30px
-    
-    return (
-        <div
-            className="celebration-bubble"
-            style={{
-                width: `${size}px`,
-                height: `${size}px`,
-                left: `${left}%`,
-                bottom: `-${size}px`,
-                background: `radial-gradient(circle at 30% 30%, ${color.replace('0.8', '0.9')}, ${color.replace('0.8', '0.3')})`,
-                animationDuration: `${animationDuration}s`,
-                animationDelay: `${delay}s`,
-                animationTimingFunction: "cubic-bezier(0.1, 0.8, 0.8, 1)",
-                transform: `translateX(0)`,
-                opacity: 0
-            }}
-            onAnimationStart={(e) => {
-                // Add a bit of horizontal drift using CSS transform
-                const keyframes = [
-                    { transform: `translateX(0) translateY(0) scale(0.5)`, opacity: 0 },
-                    { transform: `translateX(0) translateY(0) scale(0.7)`, opacity: 1, offset: 0.1 },
-                    { transform: `translateX(${horizontalMovement}px) translateY(-${window.innerHeight/2}px) scale(1.0)`, opacity: 0.7, offset: 0.7 },
-                    { transform: `translateX(${horizontalMovement*1.5}px) translateY(-${window.innerHeight}px) scale(1.2) rotate(${Math.random() * 360}deg)`, opacity: 0 }
-                ];
-                
-                e.currentTarget.animate(keyframes, {
-                    duration: animationDuration * 1000,
-                    delay: delay * 1000,
-                    fill: "forwards"
-                });
-            }}
-        />
-    );
+const moodEmojiMap: Record<Mood, string> = {
+    funny: "😂",
+    sad: "😢",
+    angry: "😠",
+    happy: "😊",
+    confused: "🤔",
+    all: "",
 };
 
-const IntenseSteam = ({ index }: SteamProps) => {
-    const left = 25 + (index % 8) * 7;
-    const delay = index * 0.15;
-    const size = 1.5 + (index % 4) * 0.7;
-    const duration = 1.8 + (index % 3) * 0.4;
+const getMoodEmoji = (mood: Mood) => moodEmojiMap[mood];
 
-    return (
-        <div
-            className="absolute rounded-full"
-            style={{
-                left: `${left}%`,
-                top: "-5%",
-                width: `${size * 12}px`,
-                height: `${size * 12}px`,
-                background: "radial-gradient(circle at center, rgba(255, 200, 200, 0.9), rgba(255, 180, 180, 0))",
-                animation: `steamRise ${duration}s infinite`,
-                animationDelay: `${delay}s`,
-                filter: "blur(2px)",
-                zIndex: 5
-            }}
-        />
-    );
-};
-
-const IceParticle = ({ index }: IceParticleProps) => {
-    const left = 20 + (index % 10) * 6;
-    const delay = index * 0.2;
-    const size = 1 + (index % 5) * 0.4;
-    const duration = 2 + (index % 4) * 0.5;
-    const opacity = 0.7 + (index % 3) * 0.1;
-
-    // Choose between different ice shapes
-    const shapes = [
-        "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)", // diamond
-        "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)", // hexagon
-        "polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%)" // octagon
-    ];
-    const shape = shapes[index % shapes.length];
-
-    return (
-        <div
-            className="absolute"
-            style={{
-                left: `${left}%`,
-                top: "10%",
-                width: `${size * 10}px`,
-                height: `${size * 10}px`,
-                background: `radial-gradient(circle at center, rgba(210, 240, 255, ${opacity}), rgba(180, 220, 255, ${opacity * 0.6}))`,
-                boxShadow: `0 0 8px rgba(140, 210, 255, ${opacity})`,
-                animation: `iceFall ${duration}s infinite`,
-                animationDelay: `${delay}s`,
-                clipPath: shape,
-                transform: `rotate(${index * 45}deg)`,
-                zIndex: 5
-            }}
-        />
-    );
-};
-
-const ShowerGame = () => {
-    const [gameState, setGameState] = useState<"title" | "playing" | "gameOver">("title");
-    const [hotValue, setHotValue] = useState(20);
-    const [coldValue, setColdValue] = useState(20);
-    const [isMounted, setIsMounted] = useState(false);
-    const [isDragging, setIsDragging] = useState(false);
-    const [activeKnob, setActiveKnob] = useState<"hot" | "cold" | null>(null);
-
-    const coldKnobRef = useRef<HTMLDivElement>(null);
-    const hotKnobRef = useRef<HTMLDivElement>(null);
-
-    const [backgroundParticles, setBackgroundParticles] = useState<
-        Array<{
-            width: number;
-            height: number;
-            top: number;
-            left: number;
-            opacity: number;
-            animation: string;
-            delay: number;
-        }>
-    >([]);
-
-    const [temperature, setTemperature] = useState(50);
-    const [targetTemp, setTargetTemp] = useState(50);
-    const [comfortZoneMin, setComfortZoneMin] = useState(0);
-    const [comfortZoneMax, setComfortZoneMax] = useState(0);
-    const [inComfortZone, setInComfortZone] = useState(false);
-    const [targetFound, setTargetFound] = useState(false);
-    const [timer, setTimer] = useState(0);
-    const [bestTime, setBestTime] = useState<number | null>(null);
-    const [showInstructions, setShowInstructions] = useState<boolean>(false);
-    const [startTime, setStartTime] = useState(0);
-    const [waterVisible, setWaterVisible] = useState(false);
-    const [bubblesVisible, setBubblesVisible] = useState(false);
-    const [steamVisible, setSteamVisible] = useState(false);
-    const [gameMessage, setGameMessage] = useState("");
-    const [showCelebration, setShowCelebration] = useState(false);
-    const [extremeHotVisible, setExtremeHotVisible] = useState(false);
-    const [extremeColdVisible, setExtremeColdVisible] = useState(false);
-
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const celebrationTimeoutRefs = useRef<NodeJS.Timeout[]>([]);
-
-    const clearTimeouts = useCallback(() => {
-        if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-        }
-
-        celebrationTimeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
-        celebrationTimeoutRefs.current = [];
-    }, []);
+function App() {
+    const [posts, setPosts] = useState<Post[]>(initialPosts);
+    const [currentMood, setCurrentMood] = useState<Mood>("all");
+    const [currentChannel, setCurrentChannel] = useState<Channel>("general");
+    const [sortBy, setSortBy] = useState<"latest" | "top" | "hot">("top");
+    const [newPostContent, setNewPostContent] = useState("");
+    const [newPostMood, setNewPostMood] = useState<Mood>("happy");
+    const [replyContents, setReplyContents] = useState<Record<string, string>>({});
+    const [replyingTo, setReplyingTo] = useState<string | null>(null);
+    const [moodOpen, setMoodOpen] = useState(false);
+    const [channelOpen, setChannelOpen] = useState(false);
+    const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [notification] = useState(3);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const channelDropdownRef = useRef<HTMLDivElement>(null);
+    const notificationMenuRef = useRef<HTMLDivElement>(null);
+    const userMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const savedBestTime = localStorage.getItem("showerGameBestTime");
-        if (savedBestTime) {
-            setBestTime(parseInt(savedBestTime, 10));
-        }
-    }, []);
-
-    useEffect(() => {
-        setIsMounted(true);
-
-        const particles = Array.from({ length: 20 }).map((_, i) => ({
-            width: 1 + (i % 3) * 1,
-            height: 1 + (i % 4) * 0.75,
-            top: (i * 5) % 100,
-            left: (i * 7) % 100,
-            opacity: 0.2 + (i % 5) * 0.05,
-            animation: `pulse ${2 + (i % 3) * 1}s infinite alternate ease-in-out`,
-            delay: (i * 0.1) % 2,
-        }));
-
-        setBackgroundParticles(particles);
-    }, []);
-
-    const calculateAngle = useCallback((clientX: number, clientY: number, knobRef: React.RefObject<HTMLDivElement | null>) => {
-        if (!knobRef.current) return null;
-
-        const knobRect = knobRef.current.getBoundingClientRect();
-        const knobCenterX = knobRect.left + knobRect.width / 2;
-        const knobCenterY = knobRect.top + knobRect.height / 2;
-
-        const deltaX = clientX - knobCenterX;
-        const deltaY = clientY - knobCenterY;
-
-        // Calculate angle in degrees (0 is at the top, clockwise rotation)
-        let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-        
-        // Adjust angle to start from top (0 degrees) and go clockwise
-        angle = (angle + 90) % 360;
-        if (angle < 0) angle += 360;
-        
-        // Map the angle to a value between 0 and 100
-        // This allows for a full 360-degree rotation
-        const mappedValue = (angle / 360) * 100;
-        
-        return Math.min(100, Math.max(0, mappedValue));
-    }, []);
-
-    const handleMouseDown = useCallback((e: React.MouseEvent, knob: "hot" | "cold") => {
-        e.preventDefault();
-        setIsDragging(true);
-        setActiveKnob(knob);
-    }, []);
-
-    const handleMouseMove = useCallback(
-        (e: MouseEvent) => {
-            if (!isDragging || !activeKnob) return;
-
-            const knobRef = activeKnob === "hot" ? hotKnobRef : coldKnobRef;
-            const newValue = calculateAngle(e.clientX, e.clientY, knobRef);
-
-            if (newValue !== null) {
-                if (activeKnob === "hot") {
-                    setHotValue(newValue);
-                } else {
-                    setColdValue(newValue);
-                }
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setMoodOpen(false);
             }
-        },
-        [isDragging, activeKnob, calculateAngle]
-    );
-
-    const handleMouseUp = useCallback(() => {
-        setIsDragging(false);
-        setActiveKnob(null);
-    }, []);
-
-    useEffect(() => {
-        if (isDragging) {
-            document.addEventListener("mousemove", handleMouseMove);
-            document.addEventListener("mouseup", handleMouseUp);
-        } else {
-            document.removeEventListener("mousemove", handleMouseMove);
-            document.removeEventListener("mouseup", handleMouseUp);
-        }
-
-        return () => {
-            document.removeEventListener("mousemove", handleMouseMove);
-            document.removeEventListener("mouseup", handleMouseUp);
-        };
-    }, [isDragging, handleMouseMove, handleMouseUp]);
-
-    const calculateTemperature = useCallback((hot: number, cold: number): number => {
-        const rawTemp = hot * 0.6 - cold * 0.3 + 50;
-        return Math.max(MIN_TEMP, Math.min(MAX_TEMP, rawTemp));
-    }, []);
-
-    useEffect(() => {
-        if (gameState === "playing" && !targetFound) {
-            timerRef.current = setInterval(() => {
-                const elapsedTime = Date.now() - startTime;
-                setTimer(elapsedTime);
-
-                // Game over if it takes too long (1 minute)
-                if (elapsedTime > 60000) {
-                    setGameState("gameOver");
-                    clearTimeouts();
-                }
-            }, 100);
-        } else {
-            if (timerRef.current) {
-                clearInterval(timerRef.current);
-                timerRef.current = null;
+            if (channelDropdownRef.current && !channelDropdownRef.current.contains(e.target as Node)) {
+                setChannelOpen(false);
             }
-        }
-
-        return () => {
-            if (timerRef.current) {
-                clearInterval(timerRef.current);
-                timerRef.current = null;
+            if (notificationMenuRef.current && !notificationMenuRef.current.contains(e.target as Node)) {
+                setNotificationMenuOpen(false);
+            }
+            if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+                setUserMenuOpen(false);
             }
         };
-    }, [gameState, targetFound, startTime, clearTimeouts]);
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
-    // Update temperature and check win condition
-    useEffect(() => {
-        if (gameState !== "playing") return;
+    const topPost = [...posts].sort((a, b) => b.votes - a.votes)[0];
 
-        const newTemp = calculateTemperature(hotValue, coldValue);
-        setTemperature(newTemp);
-
-        const newInComfortZone = newTemp >= comfortZoneMin && newTemp <= comfortZoneMax;
-        setInComfortZone(newInComfortZone);
-
-        if (newInComfortZone) {
-            setGameMessage("Perfect temperature!");
-        } else if (newTemp > comfortZoneMax) {
-            setGameMessage("Too hot!");
-        } else if (newTemp < comfortZoneMin) {
-            setGameMessage("Too cold!");
-        } else if (Math.abs(newTemp - targetTemp) < 15) {
-            setGameMessage("Getting close...");
-        } else {
-            setGameMessage("Adjust the temperature...");
-        }
-
-        // Update visibility of water effects
-        setWaterVisible(hotValue > 5 || coldValue > 5);
-        setBubblesVisible(hotValue > 30 || coldValue > 30);
-        setSteamVisible(hotValue > 70 && coldValue < 30);
-        
-        // Add extreme temperature effects
-        setExtremeHotVisible(newTemp >= 80);
-        setExtremeColdVisible(newTemp <= 25);
-
-        // Win condition
-        if (newInComfortZone && !targetFound) {
-            setTargetFound(true);
-            clearTimeouts();
-            setShowCelebration(true);
-
-            const finalTime = Date.now() - startTime;
-            setTimer(finalTime);
-
-            if (bestTime === null || finalTime < bestTime) {
-                setBestTime(finalTime);
-                localStorage.setItem("showerGameBestTime", finalTime.toString());
+    const filteredPosts = posts
+        .filter(
+            (post) =>
+                (currentMood === "all" || post.mood === currentMood) &&
+                post.channel === currentChannel &&
+                (searchQuery === "" || post.content.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
+        .sort((a, b) => {
+            if (sortBy === "latest") {
+                return b.timestamp.getTime() - a.timestamp.getTime();
+            } else if (sortBy === "hot") {
+                const aScore = a.votes * ((1 / (Date.now() - a.timestamp.getTime())) * 10000000000);
+                const bScore = b.votes * ((1 / (Date.now() - b.timestamp.getTime())) * 10000000000);
+                return bScore - aScore;
+            } else {
+                return b.votes - a.votes;
             }
+        });
 
-            const timeout = setTimeout(() => {
-                setGameState("gameOver");
-            }, 1500);
+    const handleAddPost = () => {
+        if (!newPostContent.trim()) return;
 
-            celebrationTimeoutRefs.current.push(timeout);
-        }
-    }, [
-        hotValue,
-        coldValue,
-        gameState,
-        targetFound,
-        calculateTemperature,
-        comfortZoneMin,
-        comfortZoneMax,
-        clearTimeouts,
-        startTime,
-        bestTime,
-        targetTemp,
-    ]);
+        const newPost: Post = {
+            id: Date.now().toString(),
+            content: newPostContent,
+            mood: newPostMood,
+            channel: currentChannel,
+            votes: 0,
+            timestamp: new Date(),
+            replies: [],
+        };
 
-    const formatTime = useCallback((ms: number): string => {
-        const seconds = Math.floor(ms / 1000);
-        const tenths = Math.floor((ms % 1000) / 100);
-        return `${seconds}.${tenths}s`;
-    }, []);
+        setPosts([newPost, ...posts]);
+        toast.success("Post created!");
+        setNewPostContent("");
+    };
 
-    const getTemperatureColor = useCallback((temp: number): string => {
-        if (temp <= 30) return "bg-blue-600";
-        if (temp <= 45) return "bg-cyan-500";
-        if (temp <= 55) return "bg-green-500";
-        if (temp <= 70) return "bg-yellow-500";
-        return "bg-rose-600";
-    }, []);
+    const handleVote = (postId: string, value: number) => {
+        setPosts(posts.map((post) => (post.id === postId ? { ...post, votes: post.votes + value } : post)));
+    };
 
-    // Helper function to get a smooth color gradient for the temperature
-    const getTemperatureGradient = useCallback((temp: number): string => {
-        // Define color stops for the temperature scale
-        const colorStops = [
-            { temp: 0, color: { r: 37, g: 99, b: 235 } },    // blue-600
-            { temp: 30, color: { r: 6, g: 182, b: 212 } },   // cyan-500
-            { temp: 45, color: { r: 34, g: 197, b: 94 } },   // green-500
-            { temp: 55, color: { r: 234, g: 179, b: 8 } },   // yellow-500
-            { temp: 70, color: { r: 225, g: 29, b: 72 } },   // rose-600
-            { temp: 100, color: { r: 190, g: 18, b: 60 } }   // rose-700
-        ];
-        
-        // Find the two color stops that the current temperature falls between
-        let lowerStop = colorStops[0];
-        let upperStop = colorStops[colorStops.length - 1];
-        
-        for (let i = 0; i < colorStops.length - 1; i++) {
-            if (temp >= colorStops[i].temp && temp <= colorStops[i + 1].temp) {
-                lowerStop = colorStops[i];
-                upperStop = colorStops[i + 1];
-                break;
-            }
-        }
-        
-        // Calculate the percentage between the two color stops
-        const range = upperStop.temp - lowerStop.temp;
-        const percentage = range === 0 ? 0 : (temp - lowerStop.temp) / range;
-        
-        // Interpolate between the two colors
-        const r = Math.round(lowerStop.color.r + percentage * (upperStop.color.r - lowerStop.color.r));
-        const g = Math.round(lowerStop.color.g + percentage * (upperStop.color.g - lowerStop.color.g));
-        const b = Math.round(lowerStop.color.b + percentage * (upperStop.color.b - lowerStop.color.b));
-        
-        // Create a slightly darker version for the gradient
-        const darkerR = Math.max(0, r - 30);
-        const darkerG = Math.max(0, g - 30);
-        const darkerB = Math.max(0, b - 30);
-        
-        return `linear-gradient(135deg, rgb(${r}, ${g}, ${b}), rgb(${darkerR}, ${darkerG}, ${darkerB}))`;
-    }, []);
+    const handleReplyVote = (postId: string, replyId: string, value: number) => {
+        setPosts(
+            posts.map((post) =>
+                post.id === postId
+                    ? {
+                          ...post,
+                          replies: post.replies.map((reply) => (reply.id === replyId ? { ...reply, votes: reply.votes + value } : reply)),
+                      }
+                    : post
+            )
+        );
+    };
 
-    const startNewGame = useCallback(() => {
-        clearTimeouts();
+    const handleAddReply = (postId: string) => {
+        const replyContent = replyContents[postId];
+        if (!replyContent?.trim()) return;
 
-        const initialHot = 20;
-        const initialCold = 20;
-        const initialTemp = calculateTemperature(initialHot, initialCold);
+        const newReply: Reply = {
+            id: `${postId}-${Date.now()}`,
+            content: replyContent,
+            votes: 0,
+            timestamp: new Date(),
+        };
 
-        let newTarget;
-        do {
-            newTarget = Math.floor(Math.random() * 50) + 25;
-        } while (Math.abs(newTarget - initialTemp) < 15);
+        setPosts(posts.map((post) => (post.id === postId ? { ...post, replies: [...post.replies, newReply] } : post)));
 
-        setGameState("playing");
-        setHotValue(initialHot);
-        setColdValue(initialCold);
-        setTargetTemp(newTarget);
-        setComfortZoneMin(newTarget - COMFORT_ZONE_WIDTH / 2);
-        setComfortZoneMax(newTarget + COMFORT_ZONE_WIDTH / 2);
-        setInComfortZone(false);
-        setTargetFound(false);
-        setShowCelebration(false);
-        setGameMessage("Adjust the temperature...");
+        toast.success("Reply added!");
 
-        const newStartTime = Date.now();
-        setStartTime(newStartTime);
-        setTimer(0);
-    }, [clearTimeouts, calculateTemperature]);
+        setReplyContents({
+            ...replyContents,
+            [postId]: "",
+        });
+        setReplyingTo(null);
+    };
+
+    const handleBookmark = (postId: string) => {
+        setPosts(posts.map((post) => (post.id === postId ? { ...post, bookmarked: !post.bookmarked } : post)));
+        toast.success("Added to collection!");
+    };
+
+    const totalPostsInChannel = posts.filter((post) => post.channel === currentChannel).length;
 
     return (
-        <div
-            className={`fixed inset-0 w-full h-full ${montserrat.className} bg-gradient-to-b from-violet-900 via-indigo-900 to-blue-950 flex flex-col items-center justify-center overflow-hidden`}
-        >
-            {/* Global styles */}
-            <style jsx global>{`
-                @keyframes waterDrop {
-                    0% {
-                        transform: translateY(0) scale(1);
-                        opacity: 0;
-                    }
-                    10% {
-                        opacity: 1;
-                    }
-                    100% {
-                        transform: translateY(150px) scale(0.7);
-                        opacity: 0;
-                    }
-                }
-
-                @keyframes bubbleRise {
-                    0% {
-                        transform: translateY(0) scale(0.7);
-                        opacity: 0;
-                    }
-                    20%,
-                    80% {
-                        opacity: 1;
-                    }
-                    100% {
-                        transform: translateY(-100px) scale(1.3) rotate(20deg);
-                        opacity: 0;
-                    }
-                }
-
-                @keyframes steamRise {
-                    0% {
-                        transform: translateY(0) scale(1);
-                        opacity: 0;
-                    }
-                    20% {
-                        opacity: 0.8;
-                    }
-                    100% {
-                        transform: translateY(-60px) scale(2) rotate(10deg);
-                        opacity: 0;
-                    }
-                }
-
-                @keyframes iceFall {
-                    0% {
-                        transform: translateY(-20px) scale(0.5);
-                        opacity: 0;
-                    }
-                    20% {
-                        opacity: 0.9;
-                    }
-                    100% {
-                        transform: translateY(60px) scale(0.8) rotate(180deg);
-                        opacity: 0;
-                    }
-                }
-
-                @keyframes pulse {
-                    0%,
-                    100% {
-                        transform: scale(1);
-                    }
-                    50% {
-                        transform: scale(1.05);
-                    }
-                }
-
-                @keyframes shimmer {
-                    0% {
-                        background-position: -200% 0;
-                    }
-                    100% {
-                        background-position: 200% 0;
-                    }
-                }
-
-                @keyframes float {
-                    0%,
-                    100% {
-                        transform: translateY(0);
-                    }
-                    50% {
-                        transform: translateY(-8px);
-                    }
-                }
-
-                @keyframes glow {
-                    0%,
-                    100% {
-                        box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
-                    }
-                    50% {
-                        box-shadow: 0 0 20px rgba(255, 255, 255, 0.9), 0 0 30px rgba(99, 102, 241, 0.8);
-                    }
-                }
-
-                @keyframes bubbleConfetti {
-                    0% {
-                        transform: translateY(100vh) scale(0.5);
-                        opacity: 0;
-                    }
-                    10% {
-                        opacity: 1;
-                    }
-                    90% {
-                        opacity: 0.7;
-                    }
-                    100% {
-                        transform: translateY(-100px) scale(1.2) rotate(360deg);
-                        opacity: 0;
-                    }
-                }
-
-                .perfect-zone {
-                    animation: glow 2s infinite ease-in-out;
-                    box-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
-                }
-
-                .celebration-bubble {
-                    position: absolute;
-                    border-radius: 50%;
-                    pointer-events: none;
-                    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.5);
-                    animation: bubbleConfetti forwards;
-                }
-            `}</style>
-
-            <div className="absolute inset-0 bg-pattern opacity-20 pointer-events-none">
-                <div
-                    className="absolute inset-0"
-                    style={{
-                        backgroundImage:
-                            "radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.05) 0%, transparent 40%), radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.05) 0%, transparent 40%)",
-                    }}
-                />
-            </div>
-
-            {isMounted && (
-                <div className="absolute inset-0 pointer-events-none">
-                    {backgroundParticles.map((particle, i) => (
-                        <div
-                            key={`particle-${i}`}
-                            className="absolute rounded-full bg-white opacity-20"
-                            style={{
-                                width: particle.width + "px",
-                                height: particle.height + "px",
-                                top: particle.top + "%",
-                                left: particle.left + "%",
-                                animation: particle.animation,
-                                animationDelay: `${particle.delay}s`,
-                            }}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {/* Main game content */}
-            {gameState === "playing" && (
-                <div className="w-full h-full flex flex-col items-center justify-center z-10 px-4">
-                    <div className="w-full max-w-md flex flex-wrap justify-between items-center mb-2">
-                        <h1 className={`text-2xl font-bold text-sky-300 ${satisfy.className} whitespace-nowrap mr-2`}>Shower Temperature Game</h1>
-
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1 bg-indigo-900/60 py-1 px-3 rounded-full min-w-[80px] justify-center">
-                                <Clock className="w-4 h-4 text-indigo-300 flex-shrink-0" />
-                                <span className="text-sm text-indigo-200 font-semibold">{formatTime(timer)}</span>
-                            </div>
-
-                            <div className="flex items-center gap-1 bg-amber-900/60 py-1 px-3 rounded-full min-w-[80px] justify-center">
-                                <Trophy className="w-4 h-4 text-amber-300 flex-shrink-0" />
-                                <span className="text-sm text-amber-200 font-semibold">{bestTime ? formatTime(bestTime) : "--"}</span>
-                            </div>
-                        </div>
+        <div className="w-full min-h-screen bg-gradient-to-br from-violet-50 to-indigo-100 dark:from-indigo-950 dark:to-violet-950 font-sans">
+            <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-violet-200 dark:border-violet-900 shadow-md">
+                <div className="container mx-auto flex items-center justify-between h-16 px-4">
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent dark:from-violet-400 dark:to-indigo-400">
+                            AnonPost
+                        </h1>
                     </div>
 
-                    <div className="bg-indigo-950 rounded-2xl p-5 w-full max-w-md shadow-2xl">
-                        <div className="relative mb-4">
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-xs font-medium text-blue-300 flex items-center gap-1">
-                                    <Droplets className="w-3 h-3" /> Cold
-                                </span>
-                                <span className="text-xs font-medium text-emerald-300 flex items-center gap-1">
-                                    <Thermometer className="w-3 h-3" /> Perfect
-                                </span>
-                                <span className="text-xs font-medium text-rose-300 flex items-center gap-1">
-                                    Hot <Droplets className="w-3 h-3" />
-                                </span>
-                            </div>
+                    <div className="relative max-w-md w-full mx-4 hidden md:block">
+                        <input
+                            type="text"
+                            placeholder="Search posts..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full py-2.5 px-4 pl-10 rounded-full border border-violet-200 dark:border-violet-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        />
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-violet-500 dark:text-violet-400" />
+                    </div>
 
-                            <div className="relative h-7 bg-indigo-900/50 rounded-full overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-emerald-500 to-rose-600 opacity-90" />
-
-                                <div
-                                    className={`absolute h-full ${inComfortZone ? "perfect-zone" : ""}`}
-                                    style={{
-                                        left: `${comfortZoneMin}%`,
-                                        width: `${COMFORT_ZONE_WIDTH}%`,
-                                        backgroundColor: "rgba(255, 255, 255, 0.2)",
-                                        border: "1px solid rgba(255, 255, 255, 0.3)",
-                                    }}
-                                />
-
-                                <div
-                                    className={`absolute h-full w-2 transition-all duration-300 ease-out ${getTemperatureColor(
-                                        temperature
-                                    )}`}
-                                    style={{
-                                        left: `${temperature}%`,
-                                        transform: "translateX(-50%)",
-                                        boxShadow: inComfortZone ? "0 0 10px rgba(255, 255, 255, 0.8)" : "none",
-                                    }}
-                                />
-                            </div>
-
-                            <div className="mt-1 flex justify-between px-1">
-                                <span className="text-xs text-indigo-300">{Math.floor(MIN_TEMP)}°</span>
-                                <span className="text-xs text-indigo-300">{Math.floor(MAX_TEMP)}°</span>
-                            </div>
-
-                            <div className="absolute left-1/2 transform -translate-x-1/2 top-full mb-4 z-10">
-                                <span className="text-xs text-emerald-300 bg-indigo-950 px-2 py-1 rounded-full shadow-md">
-                                    {Math.floor(targetTemp)}° Target
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="relative h-32 flex justify-center mb-4 mt-10">
-                            <div className="absolute top-3 w-full flex justify-center">
-                                <div 
-                                    className={`w-36 h-8 bg-blue-400 rounded-t-lg flex justify-center items-end shadow-lg relative ${
-                                        extremeHotVisible 
-                                            ? "transition-all duration-300" 
-                                            : extremeColdVisible 
-                                            ? "transition-all duration-300" 
-                                            : ""
-                                    }`}
-                                    style={{
-                                        boxShadow: extremeHotVisible 
-                                            ? "0 0 15px rgba(239, 68, 68, 0.7)" 
-                                            : extremeColdVisible 
-                                            ? "0 0 15px rgba(59, 130, 246, 0.7)" 
-                                            : "0 5px 15px rgba(0, 0, 0, 0.2)"
-                                    }}
-                                >
-                                    <div 
-                                        className={`w-5 h-10 absolute -top-8 rounded-t-md shadow-md transition-colors duration-300 ${
-                                            extremeHotVisible 
-                                                ? "bg-red-500" 
-                                                : extremeColdVisible 
-                                                ? "bg-blue-600" 
-                                                : "bg-blue-500"
-                                        }`}
-                                        style={{
-                                            boxShadow: extremeHotVisible 
-                                                ? "0 0 10px rgba(239, 68, 68, 0.5)" 
-                                                : extremeColdVisible 
-                                                ? "0 0 10px rgba(59, 130, 246, 0.5)" 
-                                                : "none"
-                                        }}
-                                    />
-                                    <div 
-                                        className={`w-full h-5 flex justify-around items-center px-4 shadow-inner transition-colors duration-300 ${
-                                            extremeHotVisible 
-                                                ? "bg-red-500" 
-                                                : extremeColdVisible 
-                                                ? "bg-blue-600" 
-                                                : "bg-blue-500"
-                                        }`}
-                                    >
-                                        {Array.from({ length: 6 }).map((_, i) => (
-                                            <div 
-                                                key={i} 
-                                                className={`w-1 h-1 rounded-full ${
-                                                    extremeHotVisible 
-                                                        ? "bg-red-800" 
-                                                        : extremeColdVisible 
-                                                        ? "bg-blue-900" 
-                                                        : "bg-blue-800"
-                                                }`} 
-                                            />
-                                        ))}
+                    <div className="flex items-center gap-4">
+                        <div className="relative" ref={notificationMenuRef}>
+                            <button
+                                onClick={() => setNotificationMenuOpen(!notificationMenuOpen)}
+                                className="text-gray-500 hover:text-violet-600 dark:text-gray-400 dark:hover:text-violet-400 relative p-1"
+                            >
+                                <Bell className="h-6 w-6" />
+                                {notification > 0 && (
+                                    <span className="absolute top-0 right-0 -mt-0.5 -mr-0.5 bg-pink-500 text-white text-xs font-medium rounded-full w-4 h-4 flex items-center justify-center">
+                                        {notification}
+                                    </span>
+                                )}
+                            </button>
+                            {notificationMenuOpen && (
+                                <div className="absolute right-0 mt-3 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-violet-100 dark:border-violet-900 z-20 py-1 overflow-hidden">
+                                    <div className="px-4 py-2 border-b border-violet-100 dark:border-violet-900">
+                                        <h3 className="font-medium text-violet-800 dark:text-violet-300">Notifications</h3>
                                     </div>
-                                    
-                                    {extremeHotVisible && (
-                                        <div className="absolute -bottom-1 left-0 right-0 h-1 flex justify-around">
-                                            {Array.from({ length: 8 }).map((_, i) => (
-                                                <div 
-                                                    key={`hot-indicator-${i}`} 
-                                                    className="w-1 h-1 bg-red-500 rounded-full animate-pulse" 
-                                                    style={{ 
-                                                        animationDelay: `${i * 0.1}s`,
-                                                        boxShadow: "0 0 5px rgba(239, 68, 68, 0.8)"
-                                                    }} 
-                                                />
-                                            ))}
+                                    <div className="max-h-56 overflow-y-auto">
+                                        <div className="px-4 py-3 hover:bg-violet-50 dark:hover:bg-gray-700 cursor-pointer">
+                                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                                Your post got 5 new likes
+                                            </p>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">5 minutes ago</span>
                                         </div>
-                                    )}
-                                    
-                                    {extremeColdVisible && (
-                                        <div className="absolute -bottom-1 left-0 right-0 h-1 flex justify-around">
-                                            {Array.from({ length: 8 }).map((_, i) => (
-                                                <div 
-                                                    key={`cold-indicator-${i}`} 
-                                                    className="w-1 h-1 bg-blue-300 rounded-full animate-pulse" 
-                                                    style={{ 
-                                                        animationDelay: `${i * 0.1}s`,
-                                                        boxShadow: "0 0 5px rgba(59, 130, 246, 0.8)"
-                                                    }} 
-                                                />
-                                            ))}
+                                        <div className="px-4 py-3 hover:bg-violet-50 dark:hover:bg-gray-700 cursor-pointer">
+                                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                                Someone replied to your comment
+                                            </p>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">1 hour ago</span>
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {isMounted && (
-                                <div className="absolute top-8 w-36 h-full overflow-hidden pointer-events-none">
-                                    {waterVisible && (
-                                        <>
-                                            {Array.from({ length: 5 }).map((_, i) => (
-                                                <WaterDrop key={`drop-${i}`} index={i} isHot={hotValue > coldValue} />
-                                            ))}
-
-                                            {bubblesVisible &&
-                                                Array.from({ length: 3 }).map((_, i) => <Bubble key={`bubble-${i}`} index={i} />)}
-
-                                            {steamVisible &&
-                                                Array.from({ length: 2 }).map((_, i) => <Steam key={`steam-${i}`} index={i} />)}
-                                                
-                                            {extremeHotVisible &&
-                                                Array.from({ length: 6 }).map((_, i) => <IntenseSteam key={`intense-steam-${i}`} index={i} />)}
-                                                
-                                            {extremeColdVisible &&
-                                                Array.from({ length: 8 }).map((_, i) => <IceParticle key={`ice-${i}`} index={i} />)}
-                                        </>
-                                    )}
+                                    </div>
+                                    <div className="px-4 py-2 text-center border-t border-violet-100 dark:border-violet-900">
+                                        <button className="text-sm font-medium text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300">
+                                            See all
+                                        </button>
+                                    </div>
                                 </div>
                             )}
+                        </div>
 
-                            <div
-                                className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 h-12 px-6 whitespace-nowrap rounded-xl text-center flex items-center justify-center ${
-                                    inComfortZone
-                                        ? "bg-emerald-600"
-                                        : temperature > comfortZoneMax
-                                        ? "bg-rose-600"
-                                        : temperature < comfortZoneMin
-                                        ? "bg-blue-600"
-                                        : "bg-indigo-600"
+                        <div className="relative" ref={userMenuRef}>
+                            <button
+                                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                                className="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                            >
+                                <div className="h-9 w-9 bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-500 dark:to-indigo-500 rounded-full flex items-center justify-center text-white shadow-md">
+                                    <User className="h-4 w-4" />
+                                </div>
+                                <ChevronDown className={`h-4 w-4 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
+                            </button>
+
+                            {userMenuOpen && (
+                                <div className="absolute right-0 mt-3 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-violet-100 dark:border-violet-900 z-20 overflow-hidden">
+                                    <button className="w-full text-left px-4 py-3 hover:bg-violet-50 dark:hover:bg-gray-700 flex items-center gap-3">
+                                        <User className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                                        <span className="font-medium text-gray-800 dark:text-gray-200">Profile</span>
+                                    </button>
+                                    <button className="w-full text-left px-4 py-3 hover:bg-violet-50 dark:hover:bg-gray-700 flex items-center gap-3">
+                                        <BookmarkPlus className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                                        <span className="font-medium text-gray-800 dark:text-gray-200">Collections</span>
+                                    </button>
+                                    <button className="w-full text-left px-4 py-3 hover:bg-violet-50 dark:hover:bg-gray-700 flex items-center gap-3">
+                                        <Settings className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                                        <span className="font-medium text-gray-800 dark:text-gray-200">Settings</span>
+                                    </button>
+                                    <div className="border-t border-violet-100 dark:border-violet-900 my-1"></div>
+                                    <button className="w-full text-left px-4 py-3 text-red-600 dark:text-red-400 hover:bg-violet-50 dark:hover:bg-gray-700 flex items-center gap-3">
+                                        <LogOut className="h-4 w-4" />
+                                        <span className="font-medium">Log Out</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main className="container mx-auto px-4 py-8 grid grid-cols-12 gap-6">
+                <div className="col-span-12 md:col-span-3 lg:col-span-2 space-y-6">
+                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-5 border border-violet-100 dark:border-violet-900">
+                        <h2 className="font-heading font-bold text-xl mb-4 text-violet-800 dark:text-violet-300">Channels</h2>
+                        <nav className="space-y-2">
+                            {channels.map((channel) => {
+                                const Icon = channel.icon;
+                                return (
+                                    <button
+                                        key={channel.id}
+                                        onClick={() => setCurrentChannel(channel.id)}
+                                        className={`flex items-center w-full px-4 py-2.5 rounded-lg text-sm transition-colors ${
+                                            currentChannel === channel.id
+                                                ? "bg-violet-100 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300 font-medium"
+                                                : "hover:bg-violet-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                                        }`}
+                                    >
+                                        <Icon
+                                            className={`h-4 w-4 mr-3 ${
+                                                currentChannel === channel.id
+                                                    ? "text-violet-600 dark:text-violet-400"
+                                                    : "text-gray-500 dark:text-gray-400"
+                                            }`}
+                                        />
+                                        <span>{channel.name}</span>
+                                    </button>
+                                );
+                            })}
+                        </nav>
+                    </div>
+                </div>
+
+                <div className="col-span-12 md:col-span-6 lg:col-span-7 space-y-6">
+                    <Toaster richColors position="top-right" />
+
+                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-md border border-violet-100 dark:border-violet-900 p-5">
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="flex items-center gap-3">
+                                <h2 className="text-xl font-heading font-bold text-gray-900 dark:text-white">
+                                    {channels.find((c) => c.id === currentChannel)?.name || "Channel"}
+                                </h2>
+                                <span className="bg-violet-100 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300 text-xs font-medium px-2.5 py-1 rounded-full">
+                                    {totalPostsInChannel} posts
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setSortBy("hot")}
+                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg ${
+                                        sortBy === "hot"
+                                            ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
+                                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    }`}
+                                >
+                                    <Flame className="h-3.5 w-3.5" /> Hot
+                                </button>
+                                <button
+                                    onClick={() => setSortBy("top")}
+                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg ${
+                                        sortBy === "top"
+                                            ? "bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400"
+                                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    }`}
+                                >
+                                    <TrendingUp className="h-3.5 w-3.5" /> Top
+                                </button>
+                                <button
+                                    onClick={() => setSortBy("latest")}
+                                    className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg ${
+                                        sortBy === "latest"
+                                            ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    }`}
+                                >
+                                    <Clock className="h-3.5 w-3.5" /> New
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 border border-violet-100 dark:border-violet-900/40">
+                            <textarea
+                                placeholder="Share your thoughts anonymously..."
+                                value={newPostContent}
+                                onChange={(e) => setNewPostContent(e.target.value)}
+                                className="w-full min-h-[120px] p-4 border border-violet-200 dark:border-violet-900 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm"
+                            />
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4">
+                                <div className="relative w-full sm:w-48" ref={dropdownRef}>
+                                    <button
+                                        onClick={() => setMoodOpen((prev) => !prev)}
+                                        className="w-full flex items-center justify-between gap-3 rounded-lg border border-violet-200 dark:border-violet-800 bg-white dark:bg-gray-900 px-4 py-2.5 text-left text-gray-900 dark:text-gray-100 hover:shadow transition"
+                                    >
+                                        <span className="flex items-center gap-2 text-sm">
+                                            <span className="text-lg">{moods.find((m) => m.value === newPostMood)?.emoji}</span>
+                                            <span className="font-medium">{moods.find((m) => m.value === newPostMood)?.label}</span>
+                                        </span>
+                                        <ChevronDown
+                                            size={16}
+                                            className={`transition-transform text-violet-500 dark:text-violet-400 ${
+                                                moodOpen ? "rotate-180" : ""
+                                            }`}
+                                        />
+                                    </button>
+
+                                    {moodOpen && (
+                                        <div className="absolute z-50 mt-2 w-full rounded-lg border border-violet-200 dark:border-violet-800 bg-white dark:bg-gray-900 shadow-lg overflow-hidden">
+                                            {moods.map((mood) => (
+                                                <div
+                                                    key={mood.value}
+                                                    onClick={() => {
+                                                        setNewPostMood(mood.value);
+                                                        setMoodOpen(false);
+                                                    }}
+                                                    className="px-4 py-3 cursor-pointer hover:bg-violet-50 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 flex items-center gap-3 transition"
+                                                >
+                                                    <span className="text-lg">{mood.emoji}</span>
+                                                    <span className="font-medium text-sm">{mood.label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={handleAddPost}
+                                    disabled={!newPostContent || !newPostMood}
+                                    className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
+                                >
+                                    <span>Share</span> <Upload size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto pb-2">
+                        <div className="flex gap-2 items-center min-w-max">
+                            <span className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+                                <Filter className="h-3.5 w-3.5" /> Filter by Mood:
+                            </span>
+                            <button
+                                onClick={() => setCurrentMood("all")}
+                                className={`px-4 py-2 text-xs font-medium rounded-full transition-colors ${
+                                    currentMood === "all"
+                                        ? "bg-violet-600 text-white shadow-sm"
+                                        : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-violet-200 dark:border-violet-800 hover:bg-violet-50 dark:hover:bg-gray-800"
                                 }`}
                             >
-                                <span className="text-white font-bold text-lg">{gameMessage}</span>
-                                
-                                {inComfortZone && (
-                                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                                        {Array.from({ length: 15 }).map((_, i) => (
-                                            <CelebrationBubble key={`message-confetti-${i}`} index={i} total={15} />
-                                        ))}
-                                    </div>
-                                )}
+                                All Moods
+                            </button>
+                            {moods.map((mood) => (
+                                <button
+                                    key={mood.value}
+                                    onClick={() => setCurrentMood(mood.value)}
+                                    className={`px-4 py-2 text-xs font-medium rounded-full transition-colors flex items-center gap-1.5 ${
+                                        currentMood === mood.value
+                                            ? "bg-violet-600 text-white shadow-sm"
+                                            : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-violet-200 dark:border-violet-800 hover:bg-violet-50 dark:hover:bg-gray-800"
+                                    }`}
+                                >
+                                    <span className="text-base">{mood.emoji}</span> {mood.label}
+                                </button>
+                            ))}
+                            <div className="relative md:hidden ml-1">
+                                <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-28 py-2 px-3 pl-8 rounded-full border border-violet-200 dark:border-violet-800 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                />
+                                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-violet-500 dark:text-violet-400" />
                             </div>
                         </div>
+                    </div>
 
-                        <div className="flex justify-between gap-4 mt-2">
-                            <div className="flex flex-col items-center">
-                                <span className="text-xs font-semibold text-blue-300 mb-1">COLD</span>
-                                <div
-                                    ref={coldKnobRef}
-                                    className="relative w-28 h-28 cursor-pointer shadow-lg rounded-full"
-                                    onClick={(e) => {
-                                        const newValue = calculateAngle(e.clientX, e.clientY, coldKnobRef);
-                                        if (newValue !== null) setColdValue(newValue);
-                                    }}
-                                    onMouseDown={(e) => handleMouseDown(e, "cold")}
-                                >
-                                    <div className="absolute inset-0 rounded-full bg-gradient-to-b from-blue-400 to-blue-600"></div>
-
-                                    <div
-                                        className="absolute inset-0 rounded-full opacity-30"
-                                        style={{
-                                            background:
-                                                "linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.3) 20%, rgba(255,255,255,0) 50%)",
-                                        }}
-                                    ></div>
-
-                                    <div
-                                        className="absolute inset-0 rounded-full"
-                                        style={{
-                                            background: "radial-gradient(circle at center, rgba(0,0,0,0) 60%, rgba(0,0,0,0.2) 100%)",
-                                        }}
-                                    ></div>
-
-                                    <div
-                                        className="absolute inset-0 rounded-full overflow-hidden"
-                                        style={{
-                                            clipPath: `polygon(48% 0%, 52% 0%, 52% 30%, 48% 30%)`,
-                                            transform: `rotate(${coldValue * 3.6}deg)`,
-                                        }}
-                                    >
-                                        <div className="w-full h-full bg-blue-800"></div>
-                                    </div>
-
-                                    <div
-                                        className="absolute inset-3.5 rounded-full bg-blue-500 flex items-center justify-center shadow-inner"
-                                        style={{
-                                            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.3), 0 -1px 2px rgba(255,255,255,0.2)",
-                                        }}
-                                    >
-                                        <span className="text-white font-bold text-3xl drop-shadow-sm">{Math.round(coldValue)}</span>
-                                    </div>
+                    {topPost && (
+                        <div className="bg-gradient-to-r from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30 rounded-xl p-6 border border-violet-200 dark:border-violet-800 shadow-md">
+                            <div className="pb-3 mb-1">
+                                <div className="flex justify-between items-center flex-wrap gap-2">
+                                    <h2 className="text-xl font-heading font-bold flex items-center gap-2 text-violet-800 dark:text-violet-300">
+                                        <Flame className="h-5 w-5 text-orange-500" /> Top Post of the Day
+                                    </h2>
+                                    <span className="text-xs font-medium px-3 py-1.5 bg-white/80 dark:bg-gray-800/80 text-gray-800 dark:text-gray-200 rounded-full shadow-sm">
+                                        {formatTimeAgo(topPost.timestamp)}
+                                    </span>
                                 </div>
                             </div>
-
-                            <div className="flex flex-col items-center">
-                                <span className="text-xs font-semibold text-rose-300 mb-1">HOT</span>
-                                <div
-                                    ref={hotKnobRef}
-                                    className="relative w-28 h-28 cursor-pointer shadow-lg rounded-full"
-                                    onClick={(e) => {
-                                        const newValue = calculateAngle(e.clientX, e.clientY, hotKnobRef);
-                                        if (newValue !== null) setHotValue(newValue);
-                                    }}
-                                    onMouseDown={(e) => handleMouseDown(e, "hot")}
-                                >
-                                    <div className="absolute inset-0 rounded-full bg-gradient-to-b from-rose-400 to-rose-600"></div>
-
-                                    <div
-                                        className="absolute inset-0 rounded-full opacity-30"
-                                        style={{
-                                            background:
-                                                "linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.3) 20%, rgba(255,255,255,0) 50%)",
-                                        }}
-                                    ></div>
-
-                                    <div
-                                        className="absolute inset-0 rounded-full"
-                                        style={{
-                                            background: "radial-gradient(circle at center, rgba(0,0,0,0) 60%, rgba(0,0,0,0.2) 100%)",
-                                        }}
-                                    ></div>
-
-                                    <div
-                                        className="absolute inset-0 rounded-full overflow-hidden"
-                                        style={{
-                                            clipPath: `polygon(48% 0%, 52% 0%, 52% 30%, 48% 30%)`,
-                                            transform: `rotate(${hotValue * 3.6}deg)`,
-                                        }}
+                            <div className="flex gap-4 items-start">
+                                <div className="flex flex-col items-center gap-1.5 pt-1">
+                                    <button
+                                        className="text-gray-500 cursor-pointer dark:text-gray-400 dark:hover:text-white hover:text-violet-700 p-1.5 hover:bg-violet-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                                        onClick={() => handleVote(topPost.id, 1)}
+                                        aria-label="Like"
                                     >
-                                        <div className="w-full h-full bg-rose-800"></div>
-                                    </div>
-
-                                    <div
-                                        className="absolute inset-3.5 rounded-full bg-rose-500 flex items-center justify-center shadow-inner"
-                                        style={{
-                                            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.3), 0 -1px 2px rgba(255,255,255,0.2)",
-                                        }}
+                                        <ThumbsUp className="h-5 w-5" />
+                                    </button>
+                                    <span className="font-medium text-sm text-gray-900 dark:text-white">{topPost.votes}</span>
+                                    <button
+                                        className="text-gray-500 cursor-pointer dark:text-gray-400 dark:hover:text-white hover:text-violet-700 p-1.5 hover:bg-violet-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                                        onClick={() => handleVote(topPost.id, -1)}
+                                        aria-label="Dislike"
                                     >
-                                        <span className="text-white font-bold text-3xl drop-shadow-sm">{Math.round(hotValue)}</span>
+                                        <ThumbsDown className="h-5 w-5" />
+                                    </button>
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-lg font-medium text-gray-900 dark:text-white mb-3">{topPost.content}</p>
+                                    <div className="flex flex-wrap gap-2 mt-3">
+                                        <span className="text-xs font-medium px-3 py-1.5 bg-white/80 dark:bg-gray-800/80 text-gray-800 dark:text-gray-200 rounded-full flex items-center gap-1.5 shadow-sm">
+                                            <span className="text-base">{getMoodEmoji(topPost.mood)}</span>{" "}
+                                            <span className="capitalize">{topPost.mood}</span>
+                                        </span>
+                                        <span className="text-xs font-medium px-3 py-1.5 bg-white/80 dark:bg-gray-800/80 text-gray-800 dark:text-gray-200 rounded-full flex items-center gap-1.5 shadow-sm">
+                                            <Hash className="h-3.5 w-3.5" />{" "}
+                                            {channels.find((c) => c.id === topPost.channel)?.name || topPost.channel}
+                                        </span>
+                                        <span className="text-xs font-medium px-3 py-1.5 bg-white/80 dark:bg-gray-800/80 text-gray-800 dark:text-gray-200 rounded-full flex items-center gap-1.5 shadow-sm">
+                                            <MessageSquare className="h-3.5 w-3.5" /> {topPost.replies.length} replies
+                                        </span>
+                                        {topPost.awards && (
+                                            <span className="text-xs font-medium px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full flex items-center gap-1.5 shadow-sm">
+                                                🏆 {topPost.awards} Awards
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    )}
 
-                        <div className="mt-3 text-center">
-                            <div 
-                                style={{
-                                    background: getTemperatureGradient(temperature),
-                                    transition: "background 0.3s ease-in-out"
-                                }}
-                                className="text-sm py-2 px-4 rounded-lg inline-flex items-center gap-2 shadow-md border border-opacity-20 text-white border-white/20"
+                    <div className="space-y-5">
+                        {filteredPosts.map((post) => (
+                            <div
+                                key={post.id}
+                                className="bg-white dark:bg-gray-900 rounded-xl shadow-md border border-violet-100 dark:border-violet-900 overflow-hidden transition-all hover:shadow-lg"
                             >
-                                <Thermometer className="w-4 h-4" />
-                                Current Temperature: <span className="font-semibold text-base ml-1">{Math.round(temperature)}°</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-3 bg-indigo-800/80 p-3 rounded-xl max-w-md w-full text-center">
-                        <div className="text-sm text-indigo-200">
-                            <p className="font-medium">Drag to turn the knobs and find the perfect shower temperature.</p>
-                            <p className="text-xs opacity-90">Find the white zone on the temperature bar!</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Title screen */}
-            {gameState === "title" && (
-                <div className="fixed inset-0 bg-indigo-950/80 backdrop-blur-md flex items-center justify-center z-20 px-4">
-                    <div className="bg-indigo-900/80 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl border border-indigo-700/50 animate-[float_4s_ease-in-out_infinite]">
-                        <h1
-                            className={`text-4xl font-bold mb-6 bg-gradient-to-r from-sky-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent ${satisfy.className}`}
-                        >
-                            Shower Temperature Game
-                        </h1>
-
-                        <div className="mb-10 relative h-40 overflow-hidden">
-                            <div className="absolute inset-0 flex justify-center items-center">
-                                <div className="w-28 h-28 bg-gradient-to-b from-indigo-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                                    <div className="w-20 h-20 bg-gradient-to-b from-indigo-600 to-blue-800 rounded-full flex items-center justify-center shadow-inner">
-                                        <div className="w-14 h-14 bg-gradient-to-b from-indigo-700 to-indigo-900 rounded-full shadow-inner flex items-center justify-center">
-                                            <Droplets className="w-8 h-8 text-indigo-200" />
+                                <div className="p-5">
+                                    <div className="flex gap-4 items-start">
+                                        <div className="flex flex-col items-center gap-1.5 pt-1">
+                                            <button
+                                                className="text-gray-500 cursor-pointer dark:text-gray-400 hover:text-violet-700 dark:hover:text-violet-400 p-1.5 hover:bg-violet-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                                                onClick={() => handleVote(post.id, 1)}
+                                                aria-label="Like"
+                                            >
+                                                <ThumbsUp className="h-5 w-5" />
+                                            </button>
+                                            <span className="font-medium text-sm text-gray-900 dark:text-white">{post.votes}</span>
+                                            <button
+                                                className="text-gray-500 cursor-pointer dark:text-gray-400 hover:text-violet-700 dark:hover:text-violet-400 p-1.5 hover:bg-violet-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                                                onClick={() => handleVote(post.id, -1)}
+                                                aria-label="Dislike"
+                                            >
+                                                <ThumbsDown className="h-5 w-5" />
+                                            </button>
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    {post.author && (
+                                                        <div className="text-xs text-violet-600 dark:text-violet-400 mb-1.5 flex items-center gap-1.5 font-medium">
+                                                            <User className="h-3.5 w-3.5" /> {post.author}
+                                                        </div>
+                                                    )}
+                                                    <p className="text-gray-900 dark:text-white font-medium">{post.content}</p>
+                                                </div>
+                                                <span className="text-xs whitespace-nowrap px-3 py-1.5 bg-gray-100 dark:bg-gray-800 font-medium rounded-full text-gray-800 dark:text-gray-200">
+                                                    {formatTimeAgo(post.timestamp)}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 mt-3">
+                                                <span className="text-xs px-3 py-1.5 bg-violet-100 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 rounded-full flex items-center gap-1.5 font-medium">
+                                                    <span className="text-base">{getMoodEmoji(post.mood)}</span>{" "}
+                                                    <span className="capitalize">{post.mood}</span>
+                                                </span>
+                                                <span className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center gap-1.5 font-medium text-gray-800 dark:text-gray-200">
+                                                    <Hash className="h-3.5 w-3.5" /> {channels.find((c) => c.id === post.channel)?.name}
+                                                </span>
+                                                <button
+                                                    className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full flex items-center gap-1.5 transition-colors font-medium text-gray-800 dark:text-gray-200"
+                                                    onClick={() => setReplyingTo(replyingTo === post.id ? null : post.id)}
+                                                >
+                                                    <MessageSquare className="h-3.5 w-3.5" />
+                                                    {post.replies.length > 0 ? `${post.replies.length} replies` : "Reply"}
+                                                </button>
+                                                {post.awards && (
+                                                    <span className="text-xs px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full flex items-center gap-1.5 font-medium">
+                                                        🏆 {post.awards} Awards
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
+
+                                    <div className="flex items-center gap-3 mt-4 ml-12 border-t border-violet-100 dark:border-violet-900/30 pt-3">
+                                        <button
+                                            onClick={() => setReplyingTo(replyingTo === post.id ? null : post.id)}
+                                            className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-violet-700 dark:hover:text-violet-400 py-1.5 px-3 rounded-lg hover:bg-violet-50 dark:hover:bg-gray-800"
+                                        >
+                                            <MessageSquare className="h-4 w-4" /> Reply
+                                        </button>
+                                        <button
+                                            onClick={() => handleBookmark(post.id)}
+                                            className={`flex items-center gap-1.5 text-xs font-medium py-1.5 px-3 rounded-lg hover:bg-violet-50 dark:hover:bg-gray-800 ${
+                                                post.bookmarked
+                                                    ? "text-violet-700 dark:text-violet-400"
+                                                    : "text-gray-600 dark:text-gray-400 hover:text-violet-700 dark:hover:text-violet-400"
+                                            }`}
+                                        >
+                                            <BookmarkPlus className="h-4 w-4" /> Save
+                                        </button>
+                                        <button className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-violet-700 dark:hover:text-violet-400 py-1.5 px-3 rounded-lg hover:bg-violet-50 dark:hover:bg-gray-800">
+                                            <Share className="h-4 w-4" /> Share
+                                        </button>
+                                        <button className="ml-auto flex items-center text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-violet-700 dark:hover:text-violet-400 py-1.5 px-3 rounded-lg hover:bg-violet-50 dark:hover:bg-gray-800">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </button>
+                                    </div>
+
+                                    {(post.replies.length > 0 || replyingTo === post.id) && (
+                                        <div className="mt-5 pl-7 sm:pl-12 border-l-2 border-violet-200 dark:border-violet-800 space-y-4">
+                                            {replyingTo === post.id && (
+                                                <div className="flex flex-col sm:flex-row gap-3">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Write a reply..."
+                                                        value={replyContents[post.id] || ""}
+                                                        onChange={(e) =>
+                                                            setReplyContents({
+                                                                ...replyContents,
+                                                                [post.id]: e.target.value,
+                                                            })
+                                                        }
+                                                        className="flex-1 px-4 py-2.5 border border-violet-200 dark:border-violet-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                                    />
+                                                    <button
+                                                        onClick={() => handleAddReply(post.id)}
+                                                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-colors shadow-sm hover:shadow"
+                                                    >
+                                                        <span>Reply</span> <Send size={16} />
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            <div
+                                                className={`space-y-4 ${
+                                                    post.replies.length > 3
+                                                        ? "max-h-[250px] overflow-y-auto pr-3 scrollbar-thin scrollbar-thumb-violet-300 dark:scrollbar-thumb-violet-700 scrollbar-track-transparent"
+                                                        : ""
+                                                }`}
+                                            >
+                                                {post.replies.map((reply) => (
+                                                    <div
+                                                        key={reply.id}
+                                                        className="flex gap-3 items-start border-b border-violet-100 dark:border-violet-900/30 pb-4 last:border-0"
+                                                    >
+                                                        <div className="flex gap-1.5 items-center">
+                                                            <button
+                                                                className="text-gray-500 cursor-pointer dark:text-gray-400 hover:text-violet-700 dark:hover:text-violet-400 p-1 hover:bg-violet-50 dark:hover:bg-gray-800 rounded-full"
+                                                                onClick={() => handleReplyVote(post.id, reply.id, 1)}
+                                                                aria-label="Like reply"
+                                                            >
+                                                                <ThumbsUp className="h-3.5 w-3.5" />
+                                                            </button>
+                                                            <span className="text-xs font-medium text-gray-900 dark:text-white">
+                                                                {reply.votes}
+                                                            </span>
+                                                            <button
+                                                                className="text-gray-500 cursor-pointer dark:text-gray-400 hover:text-violet-700 dark:hover:text-violet-400 p-1 hover:bg-violet-50 dark:hover:bg-gray-800 rounded-full"
+                                                                onClick={() => handleReplyVote(post.id, reply.id, -1)}
+                                                                aria-label="Dislike reply"
+                                                            >
+                                                                <ThumbsDown className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                                                                {reply.author && (
+                                                                    <p className="text-xs text-violet-600 dark:text-violet-400 mb-1 font-medium">
+                                                                        {reply.author}
+                                                                    </p>
+                                                                )}
+                                                                <p className="text-sm text-gray-900 dark:text-white">{reply.content}</p>
+                                                                <span className="text-xs text-gray-500 dark:text-gray-300 mt-1 sm:mt-0">
+                                                                    {formatTimeAgo(reply.timestamp)}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
+                        ))}
 
-                            {/* Water drops animation */}
-                            {isMounted &&
-                                Array.from({ length: 5 }).map((_, i) => <WaterDrop key={`intro-drop-${i}`} index={i} isHot={false} />)}
-                        </div>
-
-                        {bestTime && (
-                            <div className="mb-8 py-3 px-6 bg-indigo-800/50 rounded-xl inline-block shadow-inner border border-indigo-700/50">
-                                <p className="text-sm text-indigo-300 mb-1">Your best time:</p>
-                                <p className="text-2xl text-amber-300 font-bold">{formatTime(bestTime)}</p>
+                        {filteredPosts.length === 0 && (
+                            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-md text-center py-16 px-4 border border-violet-100 dark:border-violet-900">
+                                <p className="text-gray-500 dark:text-gray-400 mb-3 font-medium">No posts found matching these filters</p>
+                                <button
+                                    onClick={() => {
+                                        setCurrentMood("all");
+                                        setSearchQuery("");
+                                    }}
+                                    className="text-sm font-medium text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 hover:underline"
+                                >
+                                    Clear filters
+                                </button>
                             </div>
                         )}
-
-                        <div className="flex flex-col gap-4">
-                            <button
-                                onClick={startNewGame}
-                                className="bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-semibold py-3.5 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-indigo-500/30 transform hover:scale-105 active:scale-95 border border-indigo-400/30 w-full cursor-pointer"
-                            >
-                                Start Game
-                            </button>
-
-                            <button
-                                onClick={() => setShowInstructions(true)}
-                                className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white font-medium py-3 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-indigo-500/20 transform hover:scale-105 active:scale-95 border border-indigo-500/30 w-full cursor-pointer"
-                            >
-                                How to Play
-                            </button>
-                        </div>
                     </div>
                 </div>
-            )}
 
-            {showInstructions && (
-                <div
-                    className="fixed inset-0 bg-indigo-950/90 backdrop-blur-md flex items-center justify-center z-30 px-4"
-                    onClick={() => setShowInstructions(false)}
-                >
-                    <div className="bg-indigo-800 rounded-xl p-6 max-w-md shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-5">
-                            <h3 className={`text-2xl font-semibold text-indigo-200 ${satisfy.className}`}>How to Play</h3>
-                            <button onClick={() => setShowInstructions(false)} className="text-indigo-300 hover:text-white cursor-pointer">
-                                <XCircle className="w-5 h-5" />
-                            </button>
+                <div className="hidden lg:block col-span-3 space-y-6">
+                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-5 border border-violet-100 dark:border-violet-900">
+                        <h3 className="font-heading font-bold text-xl mb-4 text-violet-800 dark:text-violet-300">Channel Information</h3>
+                        <div className="space-y-4">
+                            {(() => {
+                                const currentChannelInfo = channels.find((c) => c.id === currentChannel);
+                                const Icon = currentChannelInfo?.icon || Zap;
+                                return (
+                                    <>
+                                        <div className="flex items-center gap-3">
+                                            <span className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg">
+                                                <Icon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                                            </span>
+                                            <h4 className="font-medium text-lg text-gray-900 dark:text-white">
+                                                {currentChannelInfo?.name}
+                                            </h4>
+                                        </div>
+                                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                            {currentChannelInfo?.description}
+                                        </p>
+                                    </>
+                                );
+                            })()}
+                            <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-300 mt-4 pt-4 border-t border-violet-100 dark:border-violet-900/30">
+                                <div className="flex items-center gap-1.5">
+                                    <User className="h-4 w-4 text-violet-500 dark:text-violet-400" />{" "}
+                                    <span className="font-medium">1000 members</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <MessageSquare className="h-4 w-4 text-violet-500 dark:text-violet-400" />{" "}
+                                    <span className="font-medium">{totalPostsInChannel} posts</span>
+                                </div>
+                            </div>
                         </div>
+                    </div>
 
-                        <ul className="text-indigo-200 text-sm space-y-6 mb-6">
-                            <li className="flex items-center">
-                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3 text-white font-bold">
-                                    1
-                                </div>
-                                <span>
-                                    Turn the <span className="text-rose-300 font-medium">HOT</span> and{" "}
-                                    <span className="text-blue-300 font-medium">COLD</span> knobs by dragging them clockwise or
-                                    counter-clockwise
-                                </span>
-                            </li>
-                            <li className="flex items-center">
-                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3 text-white font-bold">
-                                    2
-                                </div>
-                                <span>Find the perfect shower temperature (white zone on the temperature bar) as quickly as possible</span>
-                            </li>
-                            <li className="flex items-center">
-                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3 text-white font-bold">
-                                    3
-                                </div>
-                                <span>
-                                    The <span className="text-rose-300 font-medium">HOT</span> knob increases temperature, while the{" "}
-                                    <span className="text-blue-300 font-medium">COLD</span> knob decreases it
-                                </span>
-                            </li>
-                            <li className="flex items-center">
-                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3 text-white font-bold">
-                                    4
-                                </div>
-                                <span>Try to beat your best time each round!</span>
-                            </li>
-                        </ul>
+                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-5 border border-violet-100 dark:border-violet-900">
+                        <h3 className="font-heading font-bold text-xl mb-4 text-violet-800 dark:text-violet-300">Popular Tags</h3>
+                        <div className="flex flex-wrap gap-2">
+                            <span className="text-xs font-medium px-3 py-1.5 bg-violet-100 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 rounded-full">
+                                #technology
+                            </span>
+                            <span className="text-xs font-medium px-3 py-1.5 bg-pink-100 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 rounded-full">
+                                #trending
+                            </span>
+                            <span className="text-xs font-medium px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-full">
+                                #gaming
+                            </span>
+                            <span className="text-xs font-medium px-3 py-1.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full">
+                                #programming
+                            </span>
+                            <span className="text-xs font-medium px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-full">
+                                #design
+                            </span>
+                            <span className="text-xs font-medium px-3 py-1.5 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-full">
+                                #health
+                            </span>
+                            <span className="text-xs font-medium px-3 py-1.5 bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded-full">
+                                #economy
+                            </span>
+                            <span className="text-xs font-medium px-3 py-1.5 bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded-full">
+                                #humor
+                            </span>
+                        </div>
+                    </div>
 
-                        <button
-                            onClick={() => setShowInstructions(false)}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 cursor-pointer"
-                        >
-                            Got it!
+                    <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 rounded-xl p-6 text-white relative overflow-hidden shadow-lg">
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mt-10 -mr-10"></div>
+                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -mb-12 -ml-12"></div>
+                        <div className="absolute top-1/2 right-1/4 w-12 h-12 bg-white/10 rounded-full"></div>
+                        <h3 className="font-heading font-bold text-2xl mb-3 relative z-10">AnonPost Premium</h3>
+                        <p className="text-sm text-white/90 mb-5 relative z-10 leading-relaxed">
+                            Get premium membership for exclusive features, ad-free experience and more!
+                        </p>
+                        <button className="bg-white text-violet-700 text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-white/90 transition-colors relative z-10 shadow-md hover:shadow-lg">
+                            Go Premium
                         </button>
                     </div>
                 </div>
-            )}
+            </main>
 
-            {/* Game over screen */}
-            {gameState === "gameOver" && (
-                <div className="fixed inset-0 bg-indigo-950/90 backdrop-blur-md flex items-center justify-center z-20 transition-opacity duration-300 px-4">
-                    <div className="bg-gradient-to-b from-indigo-800 to-indigo-950 rounded-xl p-8 max-w-md w-full text-center shadow-2xl border border-indigo-600/50 relative overflow-hidden">
-                        {targetFound && (
-                            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                                {Array.from({ length: 50 }).map((_, i) => (
-                                    <CelebrationBubble key={`confetti-${i}`} index={i} total={50} isGameOver={true} />
-                                ))}
-                            </div>
-                        )}
-                        
-                        <h3 className="text-3xl font-bold mb-6 flex justify-center items-center gap-2">
-                            {targetFound ? (
-                                <span
-                                    className={`bg-gradient-to-r from-emerald-300 to-teal-200 bg-clip-text text-transparent ${satisfy.className}`}
-                                >
-                                    Perfect Temperature!
-                                </span>
-                            ) : (
-                                <span
-                                    className={`bg-gradient-to-r from-rose-300 to-pink-200 bg-clip-text text-transparent ${satisfy.className}`}
-                                >
-                                    Game Over!
-                                </span>
-                            )}
-                        </h3>
-
-                        {targetFound ? (
-                            <div className="mb-8 py-5 px-8 bg-indigo-800/50 rounded-xl inline-block border border-indigo-700/50 shadow-inner">
-                                <p className="text-indigo-200 mb-3">You found the perfect temperature in:</p>
-                                <p className="text-3xl font-bold text-emerald-400 mb-1">{formatTime(timer)}</p>
-
-                                {bestTime === timer && (
-                                    <div className="text-amber-300 flex items-center justify-center gap-1 mt-3 py-1.5 px-4 bg-amber-900/30 rounded-full border border-amber-700/50 inline-flex">
-                                        <Trophy className="w-4 h-4" />
-                                        <span className="font-medium">New Best Time!</span>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <p className="text-indigo-200 mb-8 bg-indigo-800/50 p-4 rounded-lg border border-indigo-700/50">
-                                You couldn&apos;t find the perfect temperature in time. Try adjusting the knobs more carefully!
-                            </p>
-                        )}
-
-                        <div className="flex flex-col gap-4">
-                            <button
-                                onClick={startNewGame}
-                                className="bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-medium py-3.5 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-indigo-500/30 flex items-center justify-center gap-2 transform hover:scale-105 active:scale-95 border border-indigo-400/30 cursor-pointer"
-                            >
-                                <RefreshCw className="w-4 h-4" />
-                                <span>Play Again</span>
-                            </button>
-
-                            <button
-                                onClick={() => setGameState("title")}
-                                className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white font-medium py-3 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-indigo-500/20 flex items-center justify-center gap-2 transform hover:scale-105 active:scale-95 border border-indigo-500/30 cursor-pointer"
-                            >
-                                <Home className="w-4 h-4" />
-                                <span>Main Menu</span>
-                            </button>
-                        </div>
-                    </div>
+            <footer className="bg-white dark:bg-gray-900 border-t border-violet-100 dark:border-violet-900 py-8 mt-10">
+                <div className="container mx-auto px-4 text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">© 2025 AnonPost. All rights reserved.</p>
                 </div>
-            )}
+            </footer>
         </div>
     );
-};
+}
 
-export default ShowerGame;
+export default App;
