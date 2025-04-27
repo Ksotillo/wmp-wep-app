@@ -18,7 +18,6 @@ const roboto = Roboto({
 });
 
 
-
 type Stat = {
   id: number;
   title: string;
