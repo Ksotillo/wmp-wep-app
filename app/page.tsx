@@ -1,1081 +1,1065 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { FiSearch, FiShoppingCart, FiBell, FiUser, FiBookOpen, FiCheckCircle, FiAward, FiClock, FiBookmark, FiSettings, FiLogOut, FiInfo, FiCalendar, FiTrash2, FiX, FiFacebook, FiTwitter, FiInstagram, FiLinkedin, FiChevronLeft, FiBarChart2, FiTag, FiStar } from 'react-icons/fi';
+import React, { useState, useEffect, useRef, ComponentType, useMemo } from 'react';
+import Image from 'next/image';
+import { Home, Leaf, Trophy, Music2, List, LayoutGrid, Bell, Sparkles, Clock, Play, Heart, ArrowRight, Zap, BookOpen, Dumbbell, Search, Mic, ChevronLeft, ChevronRight, Hourglass, Star, Smile, Plus, SlidersHorizontal, BedDouble, Target, AlertTriangle, CheckCircle, Angry, Frown, Meh, Laugh, MoreHorizontal, MessageSquare, Archive, MessageCircle, BrainCircuit, ArrowUp, Sun, Moon, X, Info, Coffee, Utensils, Bed } from 'lucide-react';
+import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Montserrat, Roboto } from 'next/font/google';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
-
+// Instantiate fonts
 const montserrat = Montserrat({
   subsets: ['latin'],
+  weight: ['400', '600', '700'],
   display: 'swap',
 });
 
 const roboto = Roboto({
-  weight: ['400', '500', '700'],
   subsets: ['latin'],
+  weight: ['400', '500'],
   display: 'swap',
 });
 
-
-type Stat = {
+// Define tab names type
+type TabName = 'Activity' | 'Mood' | 'Food' | 'Sleep';
+type Theme = 'light' | 'dark';
+type NavItemName = 'Home' | 'Wellness' | 'Achievements' | 'Music' | 'Activities';
+type Notification = {
   id: number;
+  type: 'success' | 'warning' | 'info';
   title: string;
-  value: string | number;
-  icon: React.ElementType;
-  iconBgColor: string;
+  message: string;
+  time: string;
 };
 
-type CourseTopicData = {
-  name: string;
-  value: number;
-  color: string;
-};
-
-
-type Review = {
-  id: number;
-  reviewerName: string;
-  rating: number; 
-  comment: string;
-  date: string;
-};
-
-type Instructor = {
-    name: string;
-    title: string;
-    imageUrl: string;
-};
-
-
-type Course = {
-  id: number;
-  title: string;
-  instructor: Instructor;
-  rating: number;
-  reviewCount: number;
-  reviews: Review[];
-  price: number;
+// Types for new component props
+type MainActivityCardProps = {
   imageUrl: string;
-  category: string;
-  lessons: number;
-  hours: number;
-  level: 'Beginner' | 'Intermediate' | 'Expert';
-  description?: string;
-};
-
-type ContinueLearningCourse = {
-  id: number;
+  icon: ComponentType<{ className?: string }>;
+  iconBgClass: string;
+  iconColorClass: string;
+  duration: string;
   title: string;
-  category: string;
-  lessonsProgress: string;
-  percentage: number;
-  imageUrl: string;
+  description: string;
+  onPlay: () => void;
 };
 
-type MyCourse = {
-  id: number;
+type FavoriteItem = {
+  id: string;
+  icon: ComponentType<{ className?: string }>;
+  iconBg: string;
+  iconColor: string;
   title: string;
-  category: string;
-  lessonsCompleted: number;
-  lessonsTotal: number;
-  status: 'Complete' | 'Ongoing';
-  level: 'Beginner' | 'Intermediate' | 'Expert';
-  imageUrl: string;
+  author: string;
+  time: string;
 };
 
-
-
-const statsData: Stat[] = [
-  { id: 1, title: 'Ongoing', value: 5, icon: FiBookOpen, iconBgColor: 'bg-blue-100 text-blue-600' },
-  { id: 2, title: 'Complete', value: 37, icon: FiCheckCircle, iconBgColor: 'bg-green-100 text-green-600' },
-  { id: 3, title: 'Certificate', value: 25, icon: FiAward, iconBgColor: 'bg-orange-100 text-orange-600' },
-  { id: 4, title: 'Hour Spent', value: 705, icon: FiClock, iconBgColor: 'bg-purple-100 text-purple-600' },
-];
-
-const courseTopicData: CourseTopicData[] = [
-  { name: 'Design', value: 40, color: '#674fff' },
-  { name: 'Code', value: 30, color: '#a896ff' },
-  { name: 'Business', value: 20, color: '#d2caff' },
-  { name: 'Data', value: 10, color: '#e0dafc' },
-];
-
-
-const sampleReviewsCourse1: Review[] = [
-  { id: 1, reviewerName: 'Michael B.', rating: 5, comment: 'Amazing course! Learned so much about Blender in a short time. Highly recommended.', date: '2024-07-20' },
-  { id: 2, reviewerName: 'Sarah K.', rating: 4, comment: 'Good content, well-explained. Some parts felt a bit rushed.', date: '2024-07-15' },
-  { id: 3, reviewerName: 'David L.', rating: 5, comment: 'Instructor is fantastic. Clear, concise, and engaging.', date: '2024-07-10' },
-];
-
-const sampleReviewsCourse2: Review[] = [
-  { id: 4, reviewerName: 'Emily R.', rating: 5, comment: 'Covered all the essential digital marketing topics. Great for beginners!', date: '2024-07-22' },
-  { id: 5, reviewerName: 'James P.', rating: 4, comment: 'Solid course, very practical examples.', date: '2024-07-18' },
-];
-
-const sampleReviewsCourse3: Review[] = [
-    { id: 6, reviewerName: 'Chris T.', rating: 5, comment: 'Tailwind is awesome, and this course made it easy to learn.', date: '2024-07-25' },
-    { id: 7, reviewerName: 'Jessica M.', rating: 4, comment: 'Well-structured course. Would love more advanced topics.', date: '2024-07-19' },
-];
-
-
-const courses: Course[] = [
-  {
-    id: 1, title: 'Create 3D With Blender',
-    instructor: { name: 'Jane Doe', title: '3D Artist & Animator', imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8dXNlciUyMHdvbWFufGVufDB8fDB8fHww&auto=format&fit=crop&w=50&q=80' },
-    rating: 4.5,
-    reviewCount: sampleReviewsCourse1.length,
-    reviews: sampleReviewsCourse1,
-    price: 400, imageUrl: 'https://images.unsplash.com/photo-1611926653458-09294b3142bf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80',
-    category: 'DESIGN', lessons: 16, hours: 48, level: 'Beginner',
-    description: 'Learn the fundamentals of 3D modeling, texturing, and rendering with Blender. Create stunning visuals from scratch.'
-  },
-  {
-    id: 2, title: 'Digital Marketing Fundamentals',
-    instructor: { name: 'John Smith', title: 'Marketing Strategist', imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8dXNlciUyMG1hbnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=50&q=80' },
-    rating: 4.8,
-    reviewCount: sampleReviewsCourse2.length,
-    reviews: sampleReviewsCourse2,
-    price: 100, imageUrl: 'https://images.unsplash.com/photo-1557862921-37829c790f19?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80',
-    category: 'BUSINESS', lessons: 30, hours: 48, level: 'Intermediate',
-    description: 'Master the core concepts of digital marketing, including SEO, social media, email marketing, and content strategy.'
-  },
-  {
-    id: 3, title: 'Slicing UI Design With Tailwind',
-    instructor: { name: 'Alice Green', title: 'Frontend Developer', imageUrl: 'https://images.unsplash.com/photo-1529688047360-8c8458510605?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8dXNlciUyMHdvbWFuJTIwcHJvZmlsZXxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=50&q=80' },
-    rating: 4.7,
-    reviewCount: sampleReviewsCourse3.length,
-    reviews: sampleReviewsCourse3,
-    price: 100, imageUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80', category: 'CODE', lessons: 30, hours: 48, level: 'Intermediate',
-    description: 'Learn how to build modern user interfaces rapidly with Tailwind CSS, covering utilities, components, and responsive design.'
-  },
-  {
-    id: 4, title: 'Python for Data Science',
-    instructor: { name: 'Robert Johnson', title: 'Data Scientist', imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8dXNlciUyMG1hbiUyMHByb2ZpbGV8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=50&q=80' },
-    rating: 4.9,
-    reviewCount: 125,
-    reviews: [],
-    price: 150, imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80', category: 'DATA', lessons: 45, hours: 72, level: 'Expert',
-    description: 'Dive into data analysis and machine learning using Python with libraries like Pandas, NumPy, and Scikit-learn.'
-  },
-  {
-    id: 5, title: 'Introduction to Cyber Security',
-    instructor: { name: 'Maria Garcia', title: 'Security Analyst', imageUrl: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8dXNlciUyMHdvbWFuJTIwcHJvZmlsZXxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=50&q=80' },
-    rating: 4.6,
-    reviewCount: 88,
-    reviews: [],
-    price: 120, imageUrl: 'https://images.unsplash.com/photo-1544890225-2f3faec4cd60?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80', category: 'CODE', lessons: 25, hours: 40, level: 'Intermediate',
-    description: 'Understand the basics of cybersecurity threats, defenses, and best practices to protect digital assets.'
-  },
-  {
-    id: 6, title: 'Mobile App Design (Figma)',
-    instructor: { name: 'David Brown', title: 'UI/UX Designer', imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fHVzZXIlMjBtYW4lMjBwcm9maWxlfGVufDB8fDB8fHww&auto=format&fit=crop&w=50&q=80' },
-    rating: 4.7,
-    reviewCount: 65,
-    reviews: [],
-    price: 90, imageUrl: 'https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80', category: 'DESIGN', lessons: 20, hours: 35, level: 'Beginner',
-    description: 'Design beautiful and intuitive mobile app interfaces using Figma, covering wireframing, prototyping, and design systems.'
-  },
-];
-
-const continueLearningData: ContinueLearningCourse[] = [
-  {
-    id: 1,
-    title: "UI/UX Design",
-    category: "DESIGN",
-    lessonsProgress: "12/16 Lessons",
-    percentage: 75,
-    imageUrl: "https://images.unsplash.com/photo-1522199755839-a2bacb67c546?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80", 
-  },
-  {
-    id: 2,
-    title: "Cyber Security",
-    category: "CODE",
-    lessonsProgress: "20/30 Lessons",
-    percentage: 60,
-    imageUrl: "https://images.unsplash.com/photo-1544890225-2f3faec4cd60?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80", 
-  },
-  {
-    id: 3,
-    title: "Learn Data Analyst",
-    category: "DATA",
-    lessonsProgress: "8/20 Lessons",
-    percentage: 40,
-    imageUrl: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80", 
-  },
-];
-
-const myCoursesData: MyCourse[] = [
-  {
-    id: 1,
-    title: "Mastering Design System",
-    category: "Design",
-    lessonsCompleted: 15,
-    lessonsTotal: 15,
-    status: "Complete",
-    level: "Intermediate",
-    imageUrl: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80", 
-  },
-  {
-    id: 2,
-    title: "UI/UX Design",
-    category: "Design",
-    lessonsCompleted: 12,
-    lessonsTotal: 15,
-    status: "Ongoing",
-    level: "Beginner",
-    imageUrl: "https://images.unsplash.com/photo-1600132806370-bf17e65e942f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80", 
-  },
-  {
-    id: 3,
-    title: "Learn Data Analyst",
-    category: "Data",
-    lessonsCompleted: 8,
-    lessonsTotal: 20,
-    status: "Ongoing",
-    level: "Expert",
-    imageUrl: "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80", 
-  },
-];
-
-const initialCartItems = [
-  { id: 1, title: 'Create 3D With Blender', price: 400, imageUrl: 'https://images.unsplash.com/photo-1611926653458-09294b3142bf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=50&q=80' },
-  { id: 3, title: 'Slicing UI Design With Tailwind', price: 100, imageUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=50&q=80' },
-];
-
-
-
-
-const StatCard: React.FC<{ stat: Stat }> = ({ stat }) => {
-  return (
-    <div className="bg-white p-4 md:p-6 rounded-lg flex items-center space-x-4 border border-gray-100">
-      <div className={`p-3 rounded-lg ${stat.iconBgColor}`}>
-        <stat.icon className="h-6 w-6" />
-      </div>
-      <div>
-        <p className="text-sm text-gray-500 mb-1">{stat.title}</p>
-        <p className={`text-2xl md:text-3xl font-bold ${montserrat.className}`}>{stat.value}</p>
-      </div>
-    </div>
-  );
+type FavoritesListProps = {
+  title: string;
+  items: FavoriteItem[];
+  onPlayFavorite: (id: string, title: string) => void;
 };
 
+type DailyMoodName = 'Good' | 'Stressed' | 'Angry' | 'Shied' | 'Meh';
 
-const CourseCard: React.FC<{
-    course: Course;
-    isBookmarked: boolean;
-    onToggleBookmark: (id: number) => void;
-    onViewCourse: (id: number) => void;
-}> = ({ course, isBookmarked, onToggleBookmark, onViewCourse }) => {
-    const handleCardClick = () => {
-        onViewCourse(course.id);
-    };
+type CheckInData = { target: number; achieved: number };
 
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-       if (event.key === 'Enter' || event.key === ' ') {
-         handleCardClick();
-       }
-     };
-
-     const handleBookmarkClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation();
-        onToggleBookmark(course.id);
-     }
-
-    const StarRating: React.FC<{ rating: number, reviewCount: number }> = ({ rating, reviewCount }) => {
-        const fullStars = Math.floor(rating);
-        const hasHalfStar = rating % 1 >= 0.5;
-        const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-
-        return (
-            <div className="flex items-center text-yellow-400">
-                {[...Array(fullStars)].map((_, i) => <FiStar key={`full-${i}`} className="w-3 h-3 fill-current" />)}
-                {hasHalfStar && (
-                    <div key="half" className="relative w-3 h-3">
-                        <FiStar className="absolute top-0 left-0 w-3 h-3 text-gray-300" />
-                        <FiStar className="absolute top-0 left-0 w-3 h-3 fill-current" style={{ clipPath: 'inset(0 50% 0 0)' }} />
-                    </div>
-                )}
-                {[...Array(emptyStars)].map((_, i) => <FiStar key={`empty-${i}`} className="w-3 h-3 text-gray-300" />)}
-                <span className="ml-1.5 text-xs text-gray-500">({reviewCount})</span>
-            </div>
-        );
-    };
-
-    return (
-      <div
-        className="bg-white rounded-lg border border-gray-100 overflow-hidden transition-transform duration-300 hover:scale-[1.02] cursor-pointer group relative flex flex-col"
-        role="link"
-        aria-label={`View details for ${course.title}`}
-        tabIndex={0}
-        onClick={handleCardClick}
-        onKeyDown={handleKeyDown}
-      >
-        <div className="relative">
-          <img src={course.imageUrl} alt={`Promotional image for ${course.title}`} className="w-full h-40 object-cover" />
-          <div className="absolute top-2 right-2 bg-white/80 backdrop-blur-sm text-[#674fff] font-semibold px-3 py-1 rounded-full text-xs ${montserrat.className}">
-              ${course.price.toFixed(0)}
-          </div>
-          <button
-              onClick={handleBookmarkClick}
-              className={`absolute top-2 left-2 bg-white/80 backdrop-blur-sm p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer ${isBookmarked ? 'text-[#674fff]' : 'text-gray-600'}`}
-              aria-label={isBookmarked ? "Remove bookmark" : "Bookmark course"}
-              title={isBookmarked ? "Remove bookmark" : "Bookmark course"}
-          >
-              <FiBookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
-          </button>
-        </div>
-
-        <div className="p-4 flex flex-col flex-grow">
-            <p className="text-xs font-medium text-[#674fff] uppercase mb-1">{course.category}</p>
-            <h3 className={`text-base font-semibold text-gray-800 mb-2 flex-grow ${montserrat.className}`}>{course.title}</h3>
-            <div className="mb-2">
-                <StarRating rating={course.rating} reviewCount={course.reviewCount} />
-            </div>
-            <p className="text-xs text-gray-500 mb-2">{course.lessons} Lessons • {course.hours} Hours</p>
-        </div>
-      </div>
-    );
+type DailyMoodLog = {
+    day: number;
+    month: string;
+    dayName: string;
+    icon: ComponentType<{ className?: string }>;
+   
+    bgColorClass?: string;
+    colorClass?: string;
+    secondary?: boolean;
 };
 
+// Main Page Component
+const MindMateDashboard = () => {
 
-const ContinueLearningCard: React.FC<{ course: ContinueLearningCourse }> = ({ course }) => {
-  const progressStyle = {
-    background: `conic-gradient(#674fff ${course.percentage * 3.6}deg, #e0dafc ${course.percentage * 3.6}deg)`,
-  };
-
-  return (
-    <div className="bg-white p-3 rounded-lg border border-gray-100 flex items-center space-x-3 transition-colors hover:bg-gray-50 cursor-pointer">
-      <img
-        src={course.imageUrl}
-        alt={`${course.title} thumbnail`}
-        className="w-12 h-12 rounded-md object-cover flex-shrink-0"
-      />
-      <div className="flex-grow overflow-hidden">
-        <p className="text-xs font-medium text-gray-400 uppercase truncate">{course.category}</p>
-        <h4 className={`text-sm font-semibold text-gray-800 truncate ${montserrat.className}`}>
-          {course.title}
-        </h4>
-        <p className="text-xs text-gray-500 truncate">{course.lessonsProgress}</p>
-      </div>
-      <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center relative" style={progressStyle}>
-        <div className="absolute w-10 h-10 rounded-full bg-white flex items-center justify-center">
-          <span className={`text-sm font-bold text-[#674fff] ${montserrat.className}`}>{course.percentage}%</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-const MyCourseCard: React.FC<{ course: MyCourse }> = ({ course }) => {
-  const progressPercentage = Math.round((course.lessonsCompleted / course.lessonsTotal) * 100);
-
-  return (
-    <div className="bg-white p-3 rounded-lg border border-gray-100 flex space-x-3 transition-colors hover:bg-gray-50 cursor-pointer">
-      <img
-        src={course.imageUrl}
-        alt={`${course.title} thumbnail`}
-        className="w-16 h-16 rounded-md object-cover flex-shrink-0"
-      />
-      <div className="flex-grow overflow-hidden">
-        <span className={`px-2 py-0.5 rounded text-xs font-medium inline-block mb-1 ${course.status === 'Complete' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700' }`}>
-          {course.status}
-        </span>
-        <h4 className={`text-sm font-semibold text-gray-800 truncate mb-1 ${montserrat.className}`}>
-          {course.title}
-        </h4>
-        <p className="text-xs text-gray-500 truncate mb-1.5">{course.category} • {course.level}</p>
-        <div className="w-full bg-gray-200 rounded-full h-1.5">
-          <div
-            className={`h-1.5 rounded-full ${course.status === 'Complete' ? 'bg-green-500' : 'bg-blue-500'}`}
-            style={{ width: `${progressPercentage}%` }}
-          ></div>
-        </div>
-         <p className="text-xs text-gray-500 mt-1 text-right">{course.lessonsCompleted}/{course.lessonsTotal} Lessons</p>
-      </div>
-    </div>
-  );
-};
-
-
-const HomePage: React.FC = () => {
-  
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-
-  
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+ 
+  const [activeTab, setActiveTab] = useState<TabName>('Activity');
+ 
+  const [theme, setTheme] = useState<Theme>('light');
+ 
+  const [activeNavItem, setActiveNavItem] = useState<NavItemName>('Home');
+ 
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+ 
+  const [selectedDailyMood, setSelectedDailyMood] = useState<DailyMoodName>('Good');
+ 
+  const [isMoodHistoryDropdownOpen, setIsMoodHistoryDropdownOpen] = useState(false);
+ 
+  const [selectedDay, setSelectedDay] = useState<number>(2);
+ 
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
 
-  
-  const [currentCartItems, setCurrentCartItems] = useState(initialCartItems);
-
-  
-  const [bookmarkedCourseIds, setBookmarkedCourseIds] = useState<Set<number>>(new Set());
-
-  
-  const [currentView, setCurrentView] = useState<'dashboard' | 'detail'>('dashboard');
-  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
-
-  
-  const notificationRef = useRef<HTMLDivElement>(null);
-  const profileRef = useRef<HTMLDivElement>(null);
-  const cartRef = useRef<HTMLDivElement>(null);
+ 
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const moodHistoryTriggerRef = useRef<HTMLButtonElement>(null);
+  const moodHistoryPanelRef = useRef<HTMLDivElement>(null);
+ 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchPanelRef = useRef<HTMLDivElement>(null);
 
-  
-  const handleToggleNotificationDropdown = () => {
-    setIsNotificationOpen(!isNotificationOpen);
-    setIsProfileOpen(false);
-    setIsCartOpen(false);
-  };
-
-  const handleToggleProfileDropdown = () => {
-    setIsProfileOpen(!isProfileOpen);
-    setIsNotificationOpen(false);
-    setIsCartOpen(false);
-  };
-
-  const handleToggleCartDropdown = () => {
-    setIsCartOpen(!isCartOpen);
-    setIsNotificationOpen(false);
-    setIsProfileOpen(false);
-  };
-
-  
-  const handleToggleSearch = () => {
-    setIsSearchOpen(!isSearchOpen);
-    if (isSearchOpen) {
-        setSearchQuery('');
+ 
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as Theme | null;
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+    setTheme(initialTheme);
+  }, []);
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
-    
-    if (!isSearchOpen) {
-        setTimeout(() => searchInputRef.current?.focus(), 0);
-    }
-  };
-
-  
-  const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setCurrentView('dashboard');
-    setSelectedCourseId(null);
-    setSearchQuery(event.target.value);
-  };
-
-  
-  const handleRemoveFromCart = (itemId: number) => {
-    setCurrentCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
-  };
-
-  
-  const handleToggleBookmark = (courseId: number) => {
-    setBookmarkedCourseIds(prevIds => {
-      const newIds = new Set(prevIds);
-      if (newIds.has(courseId)) {
-        newIds.delete(courseId);
-      } else {
-        newIds.add(courseId);
-      }
-      return newIds;
-    });
-  };
-
-  
-  const handleViewAllClick = () => {
-    setCurrentView('dashboard');
-    setSelectedCourseId(null);
-    setSearchQuery(" ");
-    setIsSearchOpen(false);
-  };
-
-  
-  const handleViewCourse = (courseId: number) => {
-    setSelectedCourseId(courseId);
-    setCurrentView('detail');
-    setSearchQuery('');
-    setIsSearchOpen(false);
-  };
-
-  
-  const handleBackToDashboard = () => {
-    setCurrentView('dashboard');
-    setSelectedCourseId(null);
-    setSearchQuery('');
-  };
-
-  
+  }, [theme]);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+     
       if (
-        notificationRef.current && !notificationRef.current.contains(event.target as Node) &&
-        profileRef.current && !profileRef.current.contains(event.target as Node) &&
-        cartRef.current && !cartRef.current.contains(event.target as Node)
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target as Node) &&
+        panelRef.current &&
+        !panelRef.current.contains(event.target as Node)
       ) {
-        setIsNotificationOpen(false);
-        setIsProfileOpen(false);
-        setIsCartOpen(false);
+        setIsNotificationsOpen(false);
       }
     };
+    if (isNotificationsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
 
-    document.addEventListener('mousedown', handleClickOutside);
-
+   
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [isNotificationsOpen]);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        moodHistoryTriggerRef.current &&
+        !moodHistoryTriggerRef.current.contains(event.target as Node) &&
+        moodHistoryPanelRef.current &&
+        !moodHistoryPanelRef.current.contains(event.target as Node)
+      ) {
+        setIsMoodHistoryDropdownOpen(false);
+      }
+    };
+    if (isMoodHistoryDropdownOpen) { document.addEventListener('mousedown', handleClickOutside); }
+    return () => { document.removeEventListener('mousedown', handleClickOutside); };
+  }, [isMoodHistoryDropdownOpen]);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node) &&
+        searchPanelRef.current &&
+        !searchPanelRef.current.contains(event.target as Node)
+      ) {
+        setIsSearchDropdownOpen(false);
+      }
+    };
+    if (isSearchDropdownOpen) { document.addEventListener('mousedown', handleClickOutside); }
+    return () => { document.removeEventListener('mousedown', handleClickOutside); };
+  }, [isSearchDropdownOpen]);
+  const iconStyle = "w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors cursor-pointer";
+  const handlePlayFavorite = (id: string, title: string) => {
+    console.log(`Playing favorite ID: ${id}, Title: ${title}`);
+  };
+  const handleAddMood = () => {
+    console.log('Add Mood button clicked');
+  };
+  const handleSaveMood = () => {
+    alert('Saving Mood for today');
+    console.log(`Saved Mood: ${selectedDailyMood}`);
+  };
+  const handleMainPlay = (title: string) => {
+    console.log(`Playing main activity: ${title}`);
+  };
+  const handleSelectMoodIcon = (moodName: DailyMoodName) => {
+    console.log(`Selected mood icon: ${moodName}`);
+    setSelectedDailyMood(moodName);
+    const icons = document.querySelectorAll('[data-mood-icon]');
+    icons.forEach(icon => icon.classList.remove('ring-2', 'ring-offset-2', 'ring-lime-400', 'dark:ring-offset-gray-800'));
+    const selected = document.querySelector(`[data-mood-icon="${moodName}"]`);
+    selected?.classList.add('ring-2', 'ring-offset-2', 'ring-lime-400', 'dark:ring-offset-gray-800');
+  };
+  const toggleNotifications = () => {
+    setIsNotificationsOpen(!isNotificationsOpen);
+  };
+  const toggleMoodHistoryDropdown = () => {
+    setIsMoodHistoryDropdownOpen(!isMoodHistoryDropdownOpen);
+  };
+  const navItems = [
+    { name: 'Home', Icon: Home },
+    { name: 'Wellness', Icon: Leaf },
+    { name: 'Achievements', Icon: Trophy },
+    { name: 'Music', Icon: Music2 },
+    { name: 'Activities', Icon: List },
+  ] as const;
 
-  
-  const filteredCourses = searchQuery === " "
-      ? courses
-      : courses.filter(course =>
-          searchQuery && course.title.toLowerCase().includes(searchQuery.toLowerCase())
+ 
+  const notificationsData: Notification[] = [
+    { id: 1, type: 'success', title: 'Goal Achieved!', message: 'You completed your 8h sleep goal.', time: '5m ago' },
+    { id: 2, type: 'warning', title: 'Low Activity', message: 'Your activity level was low yesterday.', time: '1h ago' },
+    { id: 3, type: 'info', title: 'New Meditation Available', message: 'Try the new "Ocean Waves" session.', time: '3h ago' },
+    { id: 4, type: 'success', title: 'Focus Streak', message: '3 days focus time streak!', time: '1d ago' },
+    { id: 5, type: 'info', title: 'Weekly Summary Ready', message: 'Your wellness summary is available.', time: '2d ago' },
+  ];
+  const getNotificationIcon = (type: Notification['type']) => {
+    switch (type) {
+      case 'success': return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'warning': return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
+      case 'info': return <Info className="w-5 h-5 text-blue-500" />;
+      default: return null;
+    }
+  };
+  const activityCardData: MainActivityCardProps = {
+    imageUrl: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=3020&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    icon: Sparkles, iconBgClass: "bg-white/50 dark:bg-black/30", iconColorClass: "text-pink-500 dark:text-pink-400",
+    duration: "8 min", title: "Calm the Racing Mind", description: "Immerse yourself in peace and harmony with this short meditation.",
+    onPlay: () => handleMainPlay("Calm the Racing Mind"),
+  };
+  const activityFavorites: FavoriteItem[] = [
+    { id: 'fav-act-1', icon: Zap, title: "Daily Motivation", author: "Valeria Luxor", time: "3:20/10:12", iconBg: "bg-yellow-100 dark:bg-yellow-900/50", iconColor: "text-yellow-600 dark:text-yellow-400" },
+    { id: 'fav-act-2', icon: BookOpen, title: "Book Reading Secrets", author: "Valeria Luxor", time: "3:20/10:12", iconBg: "bg-blue-100 dark:bg-blue-900/50", iconColor: "text-blue-600 dark:text-blue-400" },
+    { id: 'fav-act-3', icon: Dumbbell, title: "Physical Exercises is Must Have", author: "Valeria Luxor", time: "3:20/10:12", iconBg: "bg-green-100 dark:bg-green-900/50", iconColor: "text-green-600 dark:text-green-400" }
+  ];
+  const moodCardData: MainActivityCardProps = {
+      imageUrl:
+          "https://images.unsplash.com/photo-1535295972055-1c762f4483e5?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      icon: Smile,
+      iconBgClass: "bg-purple-100 dark:bg-purple-900/50",
+      iconColorClass: "text-purple-600 dark:text-purple-400",
+      duration: "5 min",
+      title: "Mindful Breathing",
+      description: "Focus on your breath to center yourself.",
+      onPlay: () => handleMainPlay("Mindful Breathing"),
+  };
+  const moodFavorites: FavoriteItem[] = [
+    { id: 'fav-mood-1', icon: Meh, title: "Neutral Observation", author: "Journal", time: "2 entries", iconBg: "bg-gray-100 dark:bg-gray-700", iconColor: "text-gray-500 dark:text-gray-400" },
+    { id: 'fav-mood-2', icon: Smile, title: "Gratitude Practice", author: "Guided", time: "10 min", iconBg: "bg-yellow-100 dark:bg-yellow-900/50", iconColor: "text-yellow-600 dark:text-yellow-400" },
+  ];
+  const foodCardData: MainActivityCardProps = {
+      imageUrl:
+          "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=3181&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      icon: Utensils,
+      iconBgClass: "bg-orange-100 dark:bg-orange-900/50",
+      iconColorClass: "text-orange-600 dark:text-orange-400",
+      duration: "Recipe",
+      title: "Mindful Eating Guide",
+      description: "Learn to savor your meals and listen to your body.",
+      onPlay: () => handleMainPlay("Mindful Eating Guide"),
+  };
+  const foodFavorites: FavoriteItem[] = [
+    { id: 'fav-food-1', icon: Coffee, title: "Morning Hydration", author: "Reminder", time: "Daily", iconBg: "bg-blue-100 dark:bg-blue-900/50", iconColor: "text-blue-600 dark:text-blue-400" },
+    { id: 'fav-food-2', icon: Leaf, title: "Healthy Lunch Ideas", author: "Recipe Book", time: "View", iconBg: "bg-green-100 dark:bg-green-900/50", iconColor: "text-green-600 dark:text-green-400" },
+  ];
+  const sleepCardData: MainActivityCardProps = {
+      imageUrl:
+          "https://images.unsplash.com/photo-1520206183501-b80df61043c2?q=80&w=3271&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      icon: Bed,
+      iconBgClass: "bg-indigo-100 dark:bg-indigo-900/50",
+      iconColorClass: "text-indigo-600 dark:text-indigo-400",
+      duration: "15 min",
+      title: "Progressive Relaxation",
+      description: "Relax your body from head to toe for better sleep.",
+      onPlay: () => handleMainPlay("Progressive Relaxation"),
+  };
+  const sleepFavorites: FavoriteItem[] = [
+      { id: 'fav-sleep-1', icon: Music2, title: "Calming Sleep Sounds", author: "Playlist", time: "View", iconBg: "bg-teal-100 dark:bg-teal-900/50", iconColor: "text-teal-600 dark:text-teal-400" },
+  ]; 
+  const checkInDataByDay: Record<number, CheckInData> = {
+    30: { target: 8, achieved: 7 },
+    31: { target: 8, achieved: 6 },
+    1: { target: 8, achieved: 7.5 },
+    2: { target: 8, achieved: 6.5 },
+    3: { target: 8, achieved: 8 },
+    4: { target: 8, achieved: 5.5 },
+    5: { target: 8, achieved: 7 },
+  };
+  const availableDays = [30, 31, 1, 2, 3, 4, 5];
+  const moodsForWeek: DailyMoodLog[] = [
+    { day: 30, month: 'Mar', dayName: 'Mon', icon: Angry, bgColorClass: 'bg-red-100 dark:bg-red-900/50', colorClass: 'text-red-600 dark:text-red-400' },
+    { day: 31, month: 'Mar', dayName: 'Tue', icon: Frown, secondary: true, bgColorClass: 'bg-orange-100 dark:bg-orange-900/50', colorClass: 'text-orange-600 dark:text-orange-400' },
+    { day: 1, month: 'Apr', dayName: 'Wed', icon: Meh, bgColorClass: 'bg-blue-100 dark:bg-blue-900/50', colorClass: 'text-blue-600 dark:text-blue-400' },
+    { day: 2, month: 'Apr', dayName: 'Thr', icon: Smile, secondary: true, bgColorClass: 'bg-pink-100 dark:bg-pink-900/50', colorClass: 'text-pink-600 dark:text-pink-400' },
+    { day: 3, month: 'Apr', dayName: 'Fri', icon: Smile, bgColorClass: 'bg-green-100 dark:bg-green-900/50', colorClass: 'text-green-600 dark:text-green-400' },
+    { day: 4, month: 'Apr', dayName: 'Sat', icon: Laugh, bgColorClass: 'bg-yellow-100 dark:bg-yellow-900/50', colorClass: 'text-yellow-600 dark:text-yellow-400' },
+    { day: 5, month: 'Apr', dayName: 'Sun', icon: Smile, secondary: true, bgColorClass: 'bg-purple-100 dark:bg-purple-900/50', colorClass: 'text-purple-600 dark:text-purple-400' },
+  ];
+  const mockSearchableItems = [
+    'Daily Motivation', 'Sleep Analysis', 'Mood History', 'Mindful Breathing',
+    'Add Food Entry', 'Focus Timer Settings', 'Saved Favorites', 'Profile Settings',
+    'Book Reading Secrets', 'Physical Exercises', 'Emotional Check-ins', 'Activity Suggestions'
+  ];
+
+ 
+  const currentCheckInData = useMemo(() => {
+    return checkInDataByDay[selectedDay] || { target: 8, achieved: 0 };
+  }, [selectedDay]);
+
+  const sleepMissing = Math.max(0, currentCheckInData.target - currentCheckInData.achieved);
+  const emotionalCheckinPieData = useMemo(() => {
+    const { target, achieved } = currentCheckInData;
+    const achievedValue = Math.min(achieved, target);
+    const missingValue = Math.max(0, target - achieved);
+
+   
+    const scale = 50;
+    return [
+      { name: 'Achieved', value: achievedValue * scale },
+      { name: 'Missing', value: missingValue * scale },
+      { name: 'Buffer', value: 2 * scale },
+     
+    ];
+  }, [currentCheckInData]);
+
+  const emotionalCheckinPieColors = ['#22c55e', '#facc15', '#a3e635'];
+  const MainActivityCard: React.FC<MainActivityCardProps> = ({ imageUrl, icon: Icon, iconBgClass, iconColorClass, duration, title, description, onPlay }) => {
+    return (
+      <div className="relative bg-gradient-to-br from-pink-100 to-purple-100 dark:from-pink-900/50 dark:to-purple-900/50 p-4 sm:p-6 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between h-[300px] sm:h-[250px]">
+        <div className="flex justify-between items-start z-10">
+          <div className={`p-2 ${iconBgClass} rounded-full backdrop-blur-sm bg-opacity-50 dark:bg-opacity-30`}> 
+            <Icon className={`w-5 h-5 ${iconColorClass}`} />
+          </div>
+          <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-black/40 dark:bg-black/60 rounded-full text-white text-xs sm:text-sm font-medium">
+            <Clock className="w-3.5 h-3.5" />
+            <span>{duration}</span>
+          </div>
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 z-0 opacity-40 dark:opacity-30">
+            <Image src={imageUrl} alt={`${title} background`} layout="fill" objectFit="cover" />
+          </div>
+          <button onClick={onPlay} className="relative z-10 p-3 sm:p-4 bg-white/80 dark:bg-black/60 rounded-full text-purple-600 dark:text-purple-300 hover:bg-white dark:hover:bg-black/80 transition-colors cursor-pointer backdrop-blur-sm shadow-md" aria-label={`Play ${title}`} tabIndex={0}>
+            <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
+          </button>
+        </div>
+        <div className="relative text-center z-10 pb-2">
+          <h3 className={`${montserrat.className} text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100 mb-1`}>{title}</h3>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 px-4">{description}</p>
+        </div>
+      </div>
+    );
+  };
+  const FavoritesList: React.FC<FavoritesListProps> = ({ title, items, onPlayFavorite }) => {
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-3 sm:mb-4">
+          <h2 className={`${montserrat.className} text-xl font-semibold flex items-center gap-2`}>
+            <Heart className="w-5 h-5 text-red-500 dark:text-red-400" />
+            {title}
+          </h2>
+          <ArrowRight className="w-5 h-5 text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 transition-colors" />
+        </div>
+        <div className="space-y-3">
+          {items.map((item) => (
+            <div key={item.id} className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-sm flex items-center justify-between space-x-3 sm:space-x-4 cursor-pointer hover:shadow-md transition-shadow">
+              <div className="flex items-center space-x-3 sm:space-x-4 flex-grow">
+                <div className={`p-2 sm:p-3 ${item.iconBg} rounded-lg`}>
+                  <item.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${item.iconColor}`} />
+                </div>
+                <div>
+                  <h4 className="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-100">{item.title}</h4>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{item.author}</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 sm:space-x-4 flex-shrink-0">
+                <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-mono">{item.time}</span>
+                <button
+                  onClick={() => onPlayFavorite(item.id, item.title)}
+                  className="p-1.5 sm:p-2 bg-lime-100 dark:bg-lime-900/50 rounded-full text-lime-700 dark:text-lime-500 hover:bg-lime-200 dark:hover:bg-lime-800/50 transition-colors cursor-pointer flex items-center justify-center"
+                  aria-label={`Play ${item.title}`}
+                >
+                  <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
+                </button>
+              </div>
+            </div>
+          ))}
+          {items.length === 0 && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No favorites in this category yet.</p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+ 
+  const renderTabContent = () => {
+    let cardProps: MainActivityCardProps;
+    let favProps: FavoritesListProps;
+
+    switch (activeTab) {
+      case 'Mood':
+        cardProps = moodCardData;
+        favProps = { title: 'Mood Tools', items: moodFavorites, onPlayFavorite: handlePlayFavorite };
+        break;
+      case 'Food':
+        cardProps = foodCardData;
+        favProps = { title: 'Nutrition Favorites', items: foodFavorites, onPlayFavorite: handlePlayFavorite };
+        break;
+      case 'Sleep':
+        cardProps = sleepCardData;
+        favProps = { title: 'Sleep Aids', items: sleepFavorites, onPlayFavorite: handlePlayFavorite };
+        break;
+      case 'Activity':
+      default:
+        cardProps = activityCardData;
+        favProps = { title: 'Saved & Favorites', items: activityFavorites, onPlayFavorite: handlePlayFavorite };
+        break;
+    }
+
+    return (
+      <>
+        <MainActivityCard {...cardProps} />
+        <FavoritesList {...favProps} />
+      </>
+    );
+  };
+
+ 
+  const handleSelectDay = (day: number) => {
+    if (availableDays.includes(day)) {
+        setSelectedDay(day);
+        console.log("Selected Day:", day);
+    }
+  };
+  const handlePreviousDay = () => {
+    const currentIndex = availableDays.indexOf(selectedDay);
+    if (currentIndex > 0) {
+      setSelectedDay(availableDays[currentIndex - 1]);
+    }
+  };
+  const handleNextDay = () => {
+    const currentIndex = availableDays.indexOf(selectedDay);
+    if (currentIndex < availableDays.length - 1) {
+      setSelectedDay(availableDays[currentIndex + 1]);
+    }
+  };
+
+ 
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const query = event.target.value;
+    setSearchQuery(query);
+
+    if (query.length > 0) {
+      const filtered = mockSearchableItems.filter(item =>
+        item.toLowerCase().includes(query.toLowerCase())
       );
+      setSearchSuggestions(filtered);
+      setIsSearchDropdownOpen(filtered.length > 0);
+    } else {
+      setSearchSuggestions([]);
+      setIsSearchDropdownOpen(false);
+    }
+  };
 
-  
-  const selectedCourse = courses.find(course => course.id === selectedCourseId);
-    
-    const renderDetailView = () => {
-        if (!selectedCourse) {
-             return <div className="text-center py-10 text-red-600">Error: Course not found. <button onClick={handleBackToDashboard} className="text-blue-600 underline">Go Back</button></div>;
-        }
+ 
+  const handleSelectSuggestion = (suggestion: string) => {
+    console.log("Selected search suggestion:", suggestion);
+    setSearchQuery(suggestion);
+    setIsSearchDropdownOpen(false);
+    setSearchSuggestions([]);
+   
+  };
 
-        const handleAddToCartFromDetail = () => {
-            if (!currentCartItems.some(item => item.id === selectedCourse.id)) {
-                const newItem = {
-                    id: selectedCourse.id,
-                    title: selectedCourse.title,
-                    price: selectedCourse.price,
-                    imageUrl: selectedCourse.imageUrl
-                };
-                setCurrentCartItems(prevItems => [...prevItems, newItem]);
-                 console.log(`${selectedCourse.title} added to cart.`);
-            } else {
-                console.log(`${selectedCourse.title} is already in the cart.`);
-            }
-            setIsCartOpen(true);
-            setIsNotificationOpen(false);
-            setIsProfileOpen(false);
-        };
+  return (
+    <div className={`min-h-screen ${roboto.className} bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 sm:p-6 md:p-8`}>
+      
+      <header className="flex justify-between items-center mb-6 md:mb-8">
+        
+        <div className={`${montserrat.className} text-2xl sm:text-3xl font-bold text-pink-600 dark:text-pink-400`}>MindMate</div>
 
         
-        const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
-            const fullStars = Math.floor(rating);
-            const hasHalfStar = rating % 1 >= 0.5;
-            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-
+        <nav className="hidden lg:flex items-center space-x-2 xl:space-x-4">
+          {navItems.map(({ name, Icon }) => {
+            const isActive = activeNavItem === name;
             return (
-                <div className="flex items-center text-yellow-400">
-                    {[...Array(fullStars)].map((_, i) => <FiStar key={`full-${i}`} className="w-4 h-4 fill-current" />)}
-                    {hasHalfStar && (
-                         <div key="half" className="relative w-4 h-4">
-                            <FiStar className="absolute top-0 left-0 w-4 h-4 text-gray-300" />
-                            <FiStar className="absolute top-0 left-0 w-4 h-4 fill-current" style={{ clipPath: 'inset(0 50% 0 0)' }} />
-                         </div>
-                    )}
-                    {[...Array(emptyStars)].map((_, i) => <FiStar key={`empty-${i}`} className="w-4 h-4 text-gray-300" />)}
-                    <span className="ml-2 text-sm text-gray-600">({rating.toFixed(1)})</span>
-                </div>
+              <button
+                key={name}
+                onClick={() => setActiveNavItem(name)}
+                className={`group p-2 rounded-full transition-colors duration-200 
+                   ${isActive
+                     ? 'bg-gradient-to-br from-[#dde771] to-[#f5d5d4] shadow-sm'
+                     : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                   }`}
+                aria-label={name}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <Icon
+                  className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors duration-200 
+                   ${isActive
+                     ? 'text-gray-800'
+                     : 'text-gray-600 dark:text-gray-400 group-hover:text-pink-600 dark:group-hover:text-pink-400'
+                   }`}
+                />
+              </button>
             );
-        };
+          })}
+        </nav>
 
-        return (
-            <section className="course-detail-view animate-fade-in">
-                 <button onClick={handleBackToDashboard} className="mb-6 text-sm text-[#674fff] hover:underline flex items-center cursor-pointer">
-                     <FiChevronLeft className="mr-1 h-4 w-4" /> Back to Courses
-                 </button>
+        
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden cursor-pointer relative">
+            <Image
+              src="https://randomuser.me/api/portraits/women/75.jpg"
+              alt="User Avatar"
+              layout="fill"
+              objectFit="cover"
+            />
+          </div>
+          <LayoutGrid className={iconStyle} aria-label="Apps" tabIndex={0} />
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          <div className="relative">
+            <button
+              ref={triggerRef}
+              onClick={toggleNotifications}
+              className={`group p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative ${isNotificationsOpen ? 'bg-gray-100 dark:bg-gray-800' : ''}`}
+              aria-label="Toggle Notifications"
+              aria-controls="notifications-panel"
+              aria-expanded={isNotificationsOpen}
+            >
+              <Bell className={iconStyle} />
+              
+              <span className="absolute top-1.5 right-1.5 block w-2 h-2 bg-red-500 rounded-full ring-2 ring-gray-50 dark:ring-gray-900"></span>
+            </button>
 
-                    <div className="lg:col-span-2 order-2 lg:order-1">
-                         <h1 className={`block lg:hidden text-2xl font-bold mb-4 ${montserrat.className}`}>{selectedCourse.title}</h1>
-
-                         <div className="bg-white p-6 rounded-lg border border-gray-100 mb-6">
-                             <h2 className={`text-xl font-semibold mb-3 ${montserrat.className}`}>Course Description</h2>
-                             <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                                 {selectedCourse.description || 'No description available.'}
-                             </p>
-                         </div>
-
-                          <div className="bg-white p-6 rounded-lg border border-gray-100 mb-6">
-                             <h2 className={`text-xl font-semibold mb-3 ${montserrat.className}`}>Instructor</h2>
-                              <div className="flex items-center space-x-4">
-                                 <img
-                                     src={selectedCourse.instructor.imageUrl || 'https://via.placeholder.com/50/cccccc/969696?text=?'}
-                                     alt={selectedCourse.instructor.name || 'Instructor'}
-                                     className="w-14 h-14 rounded-full object-cover flex-shrink-0"
-                                 />
-                                 <div>
-                                     <p className={`font-semibold text-gray-800 text-lg ${montserrat.className}`}>{selectedCourse.instructor.name || 'Instructor Name'}</p>
-                                     <p className="text-sm text-gray-500">{selectedCourse.instructor.title || 'Instructor Title'}</p>
-                                 </div>
-                             </div>
-
-                         </div>
-
-                          <div className="bg-white p-6 rounded-lg border border-gray-100">
-                              <div className="flex items-center justify-between mb-4">
-                                 <h2 className={`text-xl font-semibold ${montserrat.className}`}>Reviews</h2>
-                                 {selectedCourse.reviewCount > 0 && (
-                                     <div className="flex items-center">
-                                         <StarRating rating={selectedCourse.rating} /> 
-                                         <span className="ml-2 text-sm text-gray-600">({selectedCourse.reviewCount} {selectedCourse.reviewCount === 1 ? 'review' : 'reviews'})</span>
-                                     </div>
-                                 )}
-                              </div>
-
-                              {selectedCourse.reviews && selectedCourse.reviews.length > 0 ? (
-                                  <div className="space-y-5">
-                                      {selectedCourse.reviews.slice(0, 3).map((review) => {
-                                          const ReviewStars: React.FC<{ rating: number }> = ({ rating }) => (
-                                              <div className="flex text-yellow-400">
-                                                  {[...Array(5)].map((_, i) => (
-                                                      <FiStar key={i} className={`w-3.5 h-3.5 ${i < rating ? 'fill-current' : 'text-gray-300'}`} />
-                                                  ))}
-                                              </div>
-                                          );
-
-                                          return (
-                                              <div key={review.id} className="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
-                                                  <div className="flex items-center justify-between mb-1.5">
-                                                      <p className={`font-semibold text-gray-800 ${montserrat.className}`}>{review.reviewerName}</p>
-                                                      <ReviewStars rating={review.rating} />
-                                                  </div>
-                                                  <p className="text-sm text-gray-700 mb-1 leading-relaxed">{review.comment}</p>
-                                                  <p className="text-xs text-gray-400">{new Date(review.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                                              </div>
-                                          );
-                                      })} 
-                                       {selectedCourse.reviews.length > 3 && (
-                                          <button className="text-sm text-[#674fff] hover:underline mt-4 cursor-pointer">
-                                              Show all {selectedCourse.reviewCount} reviews
-                                          </button>
-                                       )}
-                                  </div>
-                              ) : (
-                                  <p className="text-gray-500 italic text-center py-4">No reviews yet for this course.</p>
-                              )}
-                          </div>
-                    </div>
-
-                    <div className="lg:col-span-1 order-1 lg:order-2">
-                         <h1 className={`hidden lg:block text-3xl font-bold mb-4 ${montserrat.className}`}>{selectedCourse.title}</h1>
-                        
-                         <div className="bg-white p-6 rounded-lg border border-gray-100 sticky top-6">
-                            
-                            <img src={selectedCourse.imageUrl} alt={`Course image for ${selectedCourse.title}`} className="w-full h-48 object-cover rounded-md mb-4" />
-
-                            
-                            <div className="flex items-center justify-between mb-4">
-                                 <p className={`text-3xl font-bold text-[#674fff] ${montserrat.className}`}>${selectedCourse.price.toFixed(2)}</p>
-                                 <StarRating rating={selectedCourse.rating} /> 
-                            </div>
-
-                            
-                             <div className="flex space-x-3 mb-5">
-                                <button
-                                     onClick={handleAddToCartFromDetail} 
-                                     className="flex-1 bg-purple-100 text-[#674fff] py-3 px-4 rounded-md hover:bg-purple-200 transition duration-200 font-semibold flex items-center justify-center cursor-pointer"
-                                >
-                                    <FiShoppingCart className="mr-2 h-5 w-5"/> Add to Cart
-                                </button>
-                                <button className="flex-1 bg-[#674fff] text-white py-3 px-4 rounded-md hover:bg-[#553ddc] transition duration-200 font-semibold cursor-pointer">
-                                    Buy Now
-                                </button>
-                            </div>
-
-                            
-                            <h3 className={`text-lg font-semibold mb-3 border-t border-gray-100 pt-4 ${montserrat.className}`}>Course Details</h3>
-                            <ul className="space-y-2.5 text-sm text-gray-700">
-                                <li className="flex items-center"><FiBookOpen className="mr-3 h-4 w-4 text-gray-500 flex-shrink-0"/> {selectedCourse.lessons} Lessons</li>
-                                <li className="flex items-center"><FiClock className="mr-3 h-4 w-4 text-gray-500 flex-shrink-0"/> Approx. {selectedCourse.hours} Hours</li>
-                                <li className="flex items-center"><FiBarChart2 className="mr-3 h-4 w-4 text-gray-500 flex-shrink-0"/> {selectedCourse.level || 'N/A'} Level</li> 
-                                <li className="flex items-center"><FiTag className="mr-3 h-4 w-4 text-gray-500 flex-shrink-0"/> Category: {selectedCourse.category}</li>
-                             </ul>
-                        </div>
-                    </div>
+            
+            {isNotificationsOpen && (
+              <div ref={panelRef} className="absolute hidden lg:block top-full right-0 mt-2 w-80 max-h-[400px] overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+                <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                  <h4 className="font-semibold text-gray-800 dark:text-gray-100">Notifications</h4>
                 </div>
-            </section>
-        );
-    };
-
-
-     return (
-        <div className={`flex flex-col min-h-screen bg-[#f6f6f6] text-[#151520] ${roboto.className}`}>
-            <header className="text-[#f1f1f1] shadow-md print:hidden 
-                           sticky top-0 z-50 bg-[#151520]/90 backdrop-blur-md 
-                           md:relative md:top-auto md:bg-[#151520] md:backdrop-blur-none 
-                           transition-all duration-300">
-                <nav className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
-                    <div className="flex items-center flex-grow min-w-0 mr-4">
-                        {!isSearchOpen && (
-                            <div className={`text-2xl font-bold text-white ${montserrat.className} transition-opacity duration-300`}>
-                                <span className="block md:hidden">QL</span>
-                                <span className="hidden md:block">QuantumLeap</span>
+                <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {notificationsData.length > 0 ? (
+                    notificationsData.map((notif) => (
+                       <div key={notif.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+                         <div className="flex items-start space-x-3">
+                            <div className="mt-1 flex-shrink-0">{getNotificationIcon(notif.type)}</div>
+                            <div className="flex-grow">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{notif.title}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.message}</p>
+                              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">{notif.time}</p>
                             </div>
-                        )}
-                        <div className={`relative w-full transition-all duration-300 ease-in-out ${isSearchOpen ? 'opacity-100 max-w-full' : 'opacity-0 max-w-0 pointer-events-none'}`}>
-                            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
-                            <input
-                                ref={searchInputRef}
-                                type="text"
-                                placeholder="Search courses..."
-                                value={searchQuery}
-                                onChange={handleSearchInputChange}
-                                className={`w-full py-2 pl-10 pr-4 rounded-md bg-[#333] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#674fff] transition-colors duration-200 ${isSearchOpen ? '' : 'invisible'}`}
-                                aria-label="Search courses input"
-                            />
-                        </div>
-                    </div> 
+                         </div>
+                       </div>
+                    ))
+                  ) : (
+                     <p className="p-4 text-sm text-center text-gray-500 dark:text-gray-400">No new notifications</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
 
-                    <div className="flex items-center space-x-6 flex-shrink-0">
-                        <button
-                            onClick={handleToggleSearch}
-                            className="text-xl hover:text-[#e0dafc] transition duration-200 cursor-pointer"
-                            aria-label={isSearchOpen ? "Close search" : "Open search"}
-                            title={isSearchOpen ? "Close search" : "Search courses"}
-                        >
-                            {isSearchOpen ? <FiX /> : <FiSearch />}
-                        </button>
-                        <div className="relative flex items-center" ref={cartRef}>
-                            <button
-                                onClick={handleToggleCartDropdown}
-                                className="relative text-xl hover:text-[#e0dafc] transition duration-200 cursor-pointer"
-                                aria-label="Shopping cart"
-                                title="Cart"
-                                aria-haspopup="true"
-                                aria-expanded={isCartOpen}
-                            >
-                                <FiShoppingCart />
-                                {currentCartItems.length > 0 && (
-                                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#674fff] text-[10px] font-bold text-white">
-                                        {currentCartItems.length}
-                                    </span>
-                                )}
-                            </button>
-                            {isCartOpen && (
-                                <div className="absolute mt-2 w-64 right-[-0.5rem] sm:right-0 sm:w-80 bg-white rounded-md shadow-md border border-gray-100 py-1 z-20 text-[#151520] top-8">
-                                    
-                                     <div className="px-4 py-2 text-sm font-semibold border-b border-gray-100">Shopping Cart</div>
-                                    <div className="max-h-60 overflow-y-auto">
-                                        {currentCartItems.length > 0 ? (
-                                            currentCartItems.map((item) => (
-                                                <div key={item.id} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                                    <img src={item.imageUrl} alt={item.title} className="w-10 h-10 rounded object-cover mr-3 flex-shrink-0" />
-                                                    <div className="flex-grow mr-2 max-w-[140px]">
-                                                        <p className="font-medium truncate">{item.title}</p>
-                                                        <p className="text-xs text-gray-500">${item.price.toFixed(2)}</p>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => handleRemoveFromCart(item.id)}
-                                                        className="text-gray-400 hover:text-red-500 ml-auto flex-shrink-0 cursor-pointer"
-                                                        aria-label={`Remove ${item.title}`}
-                                                    >
-                                                        <FiTrash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <p className="px-4 py-3 text-sm text-gray-500 text-center">Your cart is empty.</p>
-                                        )}
-                                    </div>
-                                    {currentCartItems.length > 0 && (
-                                        <a href="#" className="block px-4 py-2 text-sm text-white bg-[#674fff] hover:bg-[#553ddc] mt-1 text-center rounded-b-md font-medium transition duration-200">Checkout</a>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        <div className="relative flex items-center" ref={notificationRef}>
-                            <button
-                                onClick={handleToggleNotificationDropdown}
-                                className="relative text-xl hover:text-[#e0dafc] transition duration-200 cursor-pointer"
-                                aria-label="Notifications"
-                                title="Notifications"
-                                aria-haspopup="true"
-                                aria-expanded={isNotificationOpen}
-                            >
-                                <FiBell />
-                                <span className="absolute -top-1 -right-1 block h-2.5 w-2.5 rounded-full bg-[#674fff] ring-1 ring-[#151520]"></span>
-                            </button>
-                            {isNotificationOpen && (
-                                <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-md shadow-md border border-gray-100 py-1 z-20 text-[#151520] top-8">
-                                     <div className="px-4 py-2 text-sm font-semibold border-b border-gray-100">Notifications</div>
-                                    <div className="max-h-60 overflow-y-auto">
-                                        <a href="#" className="flex items-start px-4 py-3 text-sm text-gray-700 hover:bg-gray-100">
-                                            <FiInfo className="w-4 h-4 mr-3 mt-0.5 text-blue-500 flex-shrink-0" />
-                                            <div className="flex-grow">
-                                                <p className="font-medium">Course 'React Basics' was updated.</p>
-                                                <p className="text-xs text-gray-500">15 minutes ago</p>
-                                            </div>
-                                        </a>
-                                         <a href="#" className="flex items-start px-4 py-3 text-sm text-gray-700 hover:bg-gray-100">
-                                            <FiCalendar className="w-4 h-4 mr-3 mt-0.5 text-orange-500 flex-shrink-0" />
-                                            <div className="flex-grow">
-                                                <p>Assignment for 'Data Structures' due tomorrow.</p>
-                                                <p className="text-xs text-gray-500">1 hour ago</p>
-                                            </div>
-                                        </a>
-                                        <a href="#" className="flex items-start px-4 py-3 text-sm text-gray-700 hover:bg-gray-100">
-                                            <FiCheckCircle className="w-4 h-4 mr-3 mt-0.5 text-green-500 flex-shrink-0" />
-                                            <div className="flex-grow">
-                                                <p>You completed 'Advanced Tailwind'!</p>
-                                                <p className="text-xs text-gray-500">2 days ago</p>
-                                            </div>
-                                        </a>
-                                    </div>
-                                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100 text-center text-[#674fff] font-medium">View All Notifications</a>
-                                </div>
-                            )}
-                        </div>
-                        <div className="relative flex items-center" ref={profileRef}>
-                            <button
-                                onClick={handleToggleProfileDropdown}
-                                className="block hover:opacity-90 transition duration-200 cursor-pointer"
-                                aria-label="User profile"
-                                title="Profile"
-                                aria-haspopup="true"
-                                aria-expanded={isProfileOpen}
-                            >
-                                <div className="ring-2 ring-[#674fff] rounded-full p-0.5">
-                                    <img
-                                        src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8dXNlcnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=50&q=80"
-                                        alt="User Profile"
-                                        className="w-7 h-7 rounded-full object-cover"
-                                    />
-                                </div>
-                            </button> 
-                            {isProfileOpen && (
-                                <div className="absolute right-0 mt-2 w-52 bg-white rounded-md shadow-md border border-gray-100 py-1 z-20 text-[#151520] top-10">
-                                    <a href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                        <FiUser className="w-4 h-4 mr-3 text-gray-500" /> Your Profile
-                                    </a>
-                                    <a href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                        <FiBookOpen className="w-4 h-4 mr-3 text-gray-500" /> My Courses
-                                    </a>
-                                    <a href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                        <FiSettings className="w-4 h-4 mr-3 text-gray-500" /> Settings
-                                    </a>
-                                    <a href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100 mt-1 pt-2">
-                                        <FiLogOut className="w-4 h-4 mr-3 text-gray-500" /> Sign out
-                                    </a>
-                                </div>
-                            )}
-                        </div> 
-                    </div> 
-                </nav> 
-            </header> 
+      
+      {isNotificationsOpen && (
+         <div className="lg:hidden fixed inset-0 z-40" aria-modal="true">
+           
+           <div
+             className="fixed inset-0 bg-black/30 backdrop-blur-sm"
+             onClick={toggleNotifications}
+             aria-hidden="true"
+           ></div>
 
-
-            
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
-                {currentView === 'detail' ? (
-                    
-                    renderDetailView()
-                ) : (
-                    
-                    searchQuery !== '' ? (
-                        
-                        <section>
-                            
-                            <h1 className={`text-2xl md:text-3xl font-bold mb-6 ${montserrat.className}`}>
-                                {searchQuery === " " ? "All Courses" : `Search Results for "${searchQuery}"`}
-                            </h1>
-                            
-                             {(searchQuery === " " || filteredCourses.length > 0) ? ( 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                                    {(searchQuery === " " ? courses : filteredCourses).map((course) => (
-                                        <CourseCard
-                                            key={course.id}
-                                            course={course}
-                                            isBookmarked={bookmarkedCourseIds.has(course.id)}
-                                            onToggleBookmark={handleToggleBookmark}
-                                            onViewCourse={handleViewCourse}
-                                        />
-                                    ))}
-                                </div>
-                             ) : (
-                                 <p className="text-gray-600 text-center py-10">No courses found matching your search.</p>
-                             )}
-                        </section>
-                    ) : (
-                        
-                        <>
-                            
-                            <h1 className={`text-2xl md:text-3xl font-bold mb-6 ${montserrat.className}`}>Dashboard</h1>
-                            
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-                                {statsData.map((stat) => (
-                                    <StatCard key={stat.id} stat={stat} />
-                                ))}
-                            </div>
-                            
-                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                                <div className="lg:col-span-2 space-y-8">
-                                    <section>
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h2 className={`text-xl font-semibold ${montserrat.className}`}>Popular Course</h2>
-                                            <button
-                                                onClick={handleViewAllClick}
-                                                className="text-sm text-[#674fff] hover:underline cursor-pointer"
-                                            >
-                                                View All
-                                            </button>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-                                            {courses.slice(0, 3).map((course) => (
-                                                <CourseCard
-                                                    key={course.id}
-                                                    course={course}
-                                                    isBookmarked={bookmarkedCourseIds.has(course.id)}
-                                                    onToggleBookmark={handleToggleBookmark}
-                                                    onViewCourse={handleViewCourse}
-                                                />
-                                            ))}
-                                        </div>
-                                    </section>
-                                    <section>
-                                         <h2 className={`text-xl font-semibold mb-4 ${montserrat.className}`}>My Course</h2>
- 
-                                         <div className="block md:hidden space-y-3">
-                                             {myCoursesData.map((course) => (
-                                                 <MyCourseCard key={course.id} course={course} />
-                                             ))}
-                                         </div>
- 
-                                         
-                                         <div className="hidden md:block overflow-x-auto">
-                                             <table className="w-full min-w-[640px]">
-                                                 
-                                                 <thead className="border-b border-gray-200">
-                                                     <tr>
-                                                         <th className="p-4 text-left text-sm font-semibold text-gray-500 uppercase tracking-wider">Course Name</th>
-                                                         <th className="p-4 text-left text-sm font-semibold text-gray-500 uppercase tracking-wider">Lessons</th>
-                                                         <th className="p-4 text-left text-sm font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                                                         <th className="p-4 text-left text-sm font-semibold text-gray-500 uppercase tracking-wider">Level</th>
-                                                         <th className="p-4 text-left text-sm font-semibold text-gray-500 uppercase tracking-wider">Category</th>
-                                                     </tr>
-                                                 </thead>
-                                                  <tbody className="divide-y divide-gray-200">
-                                                     {myCoursesData.map((course) => (
-                                                         <tr key={course.id} className="hover:bg-gray-100/50 transition-colors">
-                                                             <td className="p-4 whitespace-nowrap">
-                                                                 <div className="flex items-center space-x-3">
-                                                                     <img
-                                                                         src={course.imageUrl}
-                                                                         alt={`${course.title} thumbnail`}
-                                                                         className="w-10 h-10 rounded-md object-cover flex-shrink-0"
-                                                                     />
-                                                                     <span className={`font-medium text-gray-800 ${montserrat.className}`}>{course.title}</span>
-                                                                 </div>
-                                                             </td>
-                                                             <td className="p-4 whitespace-nowrap text-sm text-gray-600">
-                                                                 {course.lessonsCompleted}/{course.lessonsTotal}
-                                                             </td>
-                                                             <td className="p-4 whitespace-nowrap">
-                                                                 <span
-                                                                     className={`px-3 py-1 rounded-full text-xs font-medium ${course.status === 'Complete' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                                                                         }`}
-                                                                 >
-                                                                     {course.status}
-                                                                 </span>
-                                                             </td>
-                                                             <td className="p-4 whitespace-nowrap text-sm text-gray-600">{course.level}</td>
-                                                             <td className="p-4 whitespace-nowrap text-sm text-gray-600">{course.category}</td>
-                                                         </tr>
-                                                     ))}
-                                                 </tbody>
-                                             </table>
-                                         </div>
-                                     </section>
-                                </div> 
-                                <div className="lg:col-span-1 space-y-8">
-                                    <section className="bg-white p-4 md:p-6 rounded-lg border border-gray-100">
-                                         <h2 className={`text-xl font-semibold mb-4 ${montserrat.className}`}>Course Topic</h2>
-                                         
-                                         <div style={{ width: '100%', height: 250 }}>
-                                            <ResponsiveContainer>
-                                                <PieChart>
-                                                    
-                                                     <Pie
-                                                        data={courseTopicData}
-                                                        cx="50%" cy="50%" innerRadius={60} outerRadius={80} fill="#8884d8" paddingAngle={5} dataKey="value"
-                                                    >
-                                                        {courseTopicData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                                                    </Pie>
-                                                    <Tooltip formatter={(value: number, name: string) => [`${value}%`, name]} />
-                                                    <Legend iconType="circle" />
-                                                </PieChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </section>
-                                    
-                                    <section>
-                                         <h2 className={`text-xl font-semibold mb-4 ${montserrat.className}`}>Continue Learning</h2>
-                                         <div className="space-y-3">
-                                            {continueLearningData.map((course) => (
-                                                <ContinueLearningCard key={course.id} course={course} />
-                                            ))}
-                                        </div>
-                                    </section>
-                                </div> 
-                             </div> 
-                        </> 
-                    ) 
-                )} 
-            </main> 
-
-
-            
-            <footer className="bg-[#151520] text-gray-300 py-8 md:py-12 print:hidden">
-                 
-                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-                         
-                         
-                         <div className="mb-6 md:mb-0">
-                            <h3 className={`text-2xl font-bold text-white mb-3 ${montserrat.className}`}>QuantumLeap</h3>
-                            <p className="text-sm text-gray-400">Unlock your potential with our expert-led online courses.</p>
-                        </div>
-                         
-                         <div>
-                            <h4 className={`text-lg font-semibold text-white mb-3 ${montserrat.className}`}>Quick Links</h4>
-                            
-                             <ul className="space-y-2">
-                                <li><a href="#" className="text-sm hover:text-white transition duration-200">All Courses</a></li>
-                                <li><a href="#" className="text-sm hover:text-white transition duration-200">About Us</a></li>
-                                <li><a href="#" className="text-sm hover:text-white transition duration-200">Blog</a></li>
-                                <li><a href="#" className="text-sm hover:text-white transition duration-200">Careers</a></li>
-                            </ul>
-                        </div>
-                         
-                         <div>
-                             <h4 className={`text-lg font-semibold text-white mb-3 ${montserrat.className}`}>Support</h4>
-                             
-                              <ul className="space-y-2">
-                                <li><a href="#" className="text-sm hover:text-white transition duration-200">Help Center</a></li>
-                                <li><a href="#" className="text-sm hover:text-white transition duration-200">Contact Us</a></li>
-                                <li><a href="#" className="text-sm hover:text-white transition duration-200">FAQ</a></li>
-                            </ul>
-                        </div>
-                         
-                         <div>
-                             <h4 className={`text-lg font-semibold text-white mb-3 ${montserrat.className}`}>Follow Us</h4>
-                             
-                             <div className="flex space-x-4">
-                                <a href="#" aria-label="Facebook" className="text-xl hover:text-white transition duration-200 cursor-pointer"><FiFacebook /></a>
-                                <a href="#" aria-label="Twitter" className="text-xl hover:text-white transition duration-200 cursor-pointer"><FiTwitter /></a>
-                                <a href="#" aria-label="Instagram" className="text-xl hover:text-white transition duration-200 cursor-pointer"><FiInstagram /></a>
-                                <a href="#" aria-label="LinkedIn" className="text-xl hover:text-white transition duration-200 cursor-pointer"><FiLinkedin /></a>
-                            </div>
-                        </div>
-                    </div> 
-                    
-                     <div className="border-t border-gray-700 pt-6 text-center text-sm text-gray-400">
-                        <p>&copy; {new Date().getFullYear()} QuantumLeap. All rights reserved.</p>
+           
+           <div
+             ref={panelRef}
+             id="notifications-panel"
+             className={`fixed top-0 right-0 bottom-0 w-full max-w-sm bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col
+               ${isNotificationsOpen ? 'translate-x-0' : 'translate-x-full'}
+             `}
+           >
+             <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+               <h4 className="font-semibold text-gray-800 dark:text-gray-100">Notifications</h4>
+               <button onClick={toggleNotifications} className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" aria-label="Close Notifications">
+                 <X className="w-5 h-5" />
+               </button>
+             </div>
+             <div className="flex-grow overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+               {notificationsData.length > 0 ? (
+                 notificationsData.map((notif) => (
+                    <div key={notif.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <div className="flex items-start space-x-3">
+                         <div className="mt-1 flex-shrink-0">{getNotificationIcon(notif.type)}</div>
+                         <div className="flex-grow">
+                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{notif.title}</p>
+                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.message}</p>
+                           <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">{notif.time}</p>
+                         </div>
+                      </div>
                     </div>
-                </div> 
-            </footer> 
-        </div> 
-    ); 
-}; 
+                 ))
+               ) : (
+                  <p className="p-4 text-sm text-center text-gray-500 dark:text-gray-400">No new notifications</p>
+               )}
+             </div>
+           </div>
+         </div>
+      )}
 
-export default HomePage;
+      
+      <main className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+        
+        <section className="space-y-6">
+          
+          <h1 className={`${montserrat.className} text-2xl sm:text-2xl font-semibold`}>Good morning, Emma ✨</h1>
+
+          
+          <div className="flex flex-wrap gap-2">
+            {(["Activity", "Mood", "Food", "Sleep"] as TabName[]).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-1.5 text-sm sm:px-5 sm:py-2 sm:text-base rounded-full font-medium cursor-pointer transition-colors duration-200 
+                   ${
+                     activeTab === tab
+                       ? "bg-lime-100 dark:bg-lime-900/70 text-lime-700 dark:text-lime-200 shadow-sm"
+                       : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                   }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          
+          {renderTabContent()}
+        </section>
+
+        
+        <section className="space-y-6">
+          
+          <div className="grid grid-cols-2 gap-4 sm:gap-6">
+            
+            <div className="bg-lime-100 dark:bg-lime-900/50 p-3 sm:p-4 rounded-2xl shadow-sm flex flex-col justify-between items-start">
+              <div className="flex justify-between items-center w-full mb-2">
+                <div className="p-1.5 bg-white/50 dark:bg-black/30 rounded-lg">
+                  <Hourglass className="w-4 h-4 sm:w-5 sm:h-5 text-lime-600 dark:text-lime-400" />
+                </div>
+                <Star className="w-4 h-4 sm:w-5 sm:h-5 text-lime-600 dark:text-lime-400 opacity-70" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-lime-800 dark:text-lime-200 mb-0.5">Focus Time</p>
+                <p className={`${montserrat.className} text-lg sm:text-xl font-semibold text-lime-900 dark:text-lime-100`}>
+                  2h 15m
+                </p>
+              </div>
+            </div>
+
+            
+            <div className="bg-pink-100 dark:bg-pink-900/50 p-3 sm:p-4 rounded-2xl shadow-sm flex flex-col justify-between items-start">
+              <div className="flex justify-between items-center w-full mb-2">
+                <div className="p-1.5 bg-white/50 dark:bg-black/30 rounded-lg">
+                  <Smile className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600 dark:text-pink-400" />
+                </div>
+                <button
+                  onClick={handleAddMood}
+                  className="p-1 bg-white/60 dark:bg-black/40 rounded-md hover:bg-white/80 dark:hover:bg-black/60 cursor-pointer transition-colors"
+                  aria-label="Add Mood Entry"
+                >
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-pink-600 dark:text-pink-400" />
+                </button>
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-pink-800 dark:text-pink-200 mb-0.5">Mood Level</p>
+                <p className={`${montserrat.className} text-lg sm:text-xl font-semibold text-pink-900 dark:text-pink-100`}>
+                  7/10
+                </p>
+              </div>
+            </div>
+          </div>
+
+          
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl shadow-sm space-y-4">
+            
+            <div className="flex justify-between items-center"> <h3 className={`${montserrat.className} text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100`}>Emotional Check-ins</h3> <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 dark:text-gray-400 cursor-pointer" /> </div>
+
+            <div className="flex flex-col sm:flex-row items-center sm:items-start sm:space-x-4">
+              
+              <div className="text-xs sm:text-sm space-y-1.5 mb-4 sm:mb-0 w-full sm:w-auto flex-shrink-0">
+                <div className="flex items-center">
+                  <span className="w-1 h-4 bg-blue-500 rounded-full mr-2"></span>
+                  <span className="text-gray-600 dark:text-gray-400">{currentCheckInData.target.toFixed(1)}h Target</span>
+                  <span className="ml-auto font-medium text-gray-800 dark:text-gray-200 pl-4">Sleep Goal</span>
+                </div>
+                 <div className="flex items-center">
+                  <span className="w-1 h-4 bg-green-500 rounded-full mr-2"></span>
+                  <span className="text-gray-600 dark:text-gray-400">{currentCheckInData.achieved.toFixed(1)}h Achieved</span>
+                   <span className="ml-auto font-medium text-gray-800 dark:text-gray-200 pl-4">Last Night</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-1 h-4 bg-yellow-500 rounded-full mr-2"></span>
+                  <span className="text-gray-600 dark:text-gray-400">{sleepMissing.toFixed(1)}h Missing</span>
+                  <span className="ml-auto font-medium text-gray-800 dark:text-gray-200 pl-4">Deficit</span>
+                </div>
+              </div>
+
+              
+              <div className="relative w-32 h-32 sm:w-36 sm:h-36 flex-shrink-0 ml-auto">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={emotionalCheckinPieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius="70%"
+                      outerRadius="100%"
+                      fill="#8884d8"
+                      paddingAngle={5}
+                      dataKey="value"
+                      cornerRadius={8}
+                      labelLine={false}
+                      label={false}
+                    >
+                      {emotionalCheckinPieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={emotionalCheckinPieColors[index % emotionalCheckinPieColors.length]} stroke="none" />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                
+                <div className="absolute top-[-5px] left-1/2 transform -translate-x-1/2 p-1 bg-pink-100 dark:bg-pink-900 rounded-full">
+                  <Leaf className="w-3 h-3 text-pink-500 dark:text-pink-400" />
+                </div>
+                <div className="absolute right-[-5px] top-1/2 transform -translate-y-1/2 p-1 bg-gray-100 dark:bg-gray-700 rounded-full">
+                  <Target className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                </div>
+                <div className="absolute bottom-[-5px] left-1/2 transform -translate-x-1/2 p-1 bg-blue-100 dark:bg-blue-900 rounded-full">
+                  <BedDouble className="w-3 h-3 text-blue-500 dark:text-blue-400" />
+                </div>
+                <div className="absolute left-[-5px] top-1/2 transform -translate-y-1/2 p-1 bg-lime-100 dark:bg-lime-900 rounded-full">
+                  <Hourglass className="w-3 h-3 text-lime-500 dark:text-lime-400" />
+                </div>
+              </div>
+            </div>
+
+            
+            <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
+              {moodsForWeek.map((mood) => {
+                 const isCurrentDay = mood.day === selectedDay;
+                 return (
+                   <div
+                     key={mood.dayName}
+                     onClick={() => handleSelectDay(mood.day)}
+                     className={`flex flex-col items-center p-1 rounded-lg cursor-pointer ${isCurrentDay ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-100/50 dark:hover:bg-gray-700/50'}`}
+                     role="button"
+                     tabIndex={0}
+                     aria-label={`Select day ${mood.day}`}
+                     aria-pressed={isCurrentDay}
+                   >
+                    <mood.icon className={`w-5 h-5 sm:w-6 sm:h-6 mb-1 ${isCurrentDay ? 'text-yellow-500' : 'text-gray-400 dark:text-gray-500'} ${mood.secondary ? 'opacity-50' : ''}`} />
+                    <span className={`text-[10px] sm:text-xs ${isCurrentDay ? 'font-semibold text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'}`}>{mood.dayName}</span>
+                  </div>
+                 );
+              })}
+            </div>
+          </div>
+
+          
+          <div className="grid grid-cols-2 gap-4 sm:gap-6">
+            
+            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-2xl shadow-sm space-y-2 sm:space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Intake</span>
+                <MessageCircle className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+              </div>
+              <p className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500">Deep Talk</p>
+              
+              <div className="grid grid-cols-6 gap-1 pt-1">
+                {[...Array(18)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-2 sm:h-2.5 rounded-sm 
+                       ${[0, 6, 12].includes(i) ? "bg-pink-300 dark:bg-pink-700" : ""}
+                       ${[1, 7, 13].includes(i) ? "bg-blue-300 dark:bg-blue-700" : ""}
+                       ${[2, 8, 14].includes(i) ? "bg-lime-300 dark:bg-lime-700" : ""}
+                       ${[3, 9, 15].includes(i) ? "bg-pink-300 dark:bg-pink-700" : ""}
+                       ${[4, 10, 16].includes(i) ? "bg-blue-300 dark:bg-blue-700" : ""}
+                       ${[5, 11, 17].includes(i) ? "bg-lime-300 dark:bg-lime-700" : ""}
+                     `}
+                  ></div>
+                ))}
+              </div>
+            </div>
+
+            
+            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-2xl shadow-sm space-y-2 sm:space-y-3 flex flex-col">
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Mental Effect</span>
+                <BrainCircuit className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+              </div>
+              <p className="text-xs sm:text-sm font-semibold text-green-600 dark:text-green-400">Very High</p>
+              
+              <div className="flex-grow mt-1 h-10 sm:h-12">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={mentalEffectData}>
+                    {" "}
+                    
+                    <Line type="monotone" dataKey="value" stroke="#22c55e" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl shadow-sm space-y-3">
+            <div className="flex justify-between items-center mb-1">
+              <h3 className={`${montserrat.className} text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100`}>
+                Activity Suggestions
+              </h3>
+              <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 dark:text-gray-400 cursor-pointer" />
+            </div>
+            <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="p-1.5 bg-black dark:bg-gray-900 rounded-md">
+                  
+                  <Zap className="w-4 h-4 text-white dark:text-gray-300" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100">Short meditation</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                    5 min &nbsp;&bull;&nbsp; 3 exercise
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
+                <span className="text-sm sm:text-base font-semibold">+20</span>
+                <ArrowUp className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        
+        <aside className="space-y-6">
+          
+          <div className="relative">
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onFocus={() => searchQuery.length > 0 && searchSuggestions.length > 0 && setIsSearchDropdownOpen(true)}
+              className="w-full pl-10 pr-10 py-2.5 sm:py-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-pink-300 dark:focus:ring-pink-700 shadow-sm placeholder-gray-400 dark:placeholder-gray-500 text-sm sm:text-base"
+            />
+            <Search className="absolute left-3 sm:left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500" />
+             <button className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 bg-lime-100 dark:bg-lime-900/50 rounded-full text-lime-600 dark:text-lime-400 hover:bg-lime-200 dark:hover:bg-lime-800/50 transition-colors cursor-pointer" aria-label="Voice Search">
+               <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
+             </button>
+
+            
+            {isSearchDropdownOpen && searchSuggestions.length > 0 && (
+              <div
+                ref={searchPanelRef}
+                className="absolute top-full left-0 right-0 mt-1.5 w-full max-h-60 overflow-y-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-30 py-1"
+              >
+                {searchSuggestions.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSelectSuggestion(suggestion)}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          
+          <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-sm flex items-center justify-between">
+            <button onClick={handlePreviousDay} className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Previous Day" disabled={availableDays.indexOf(selectedDay) === 0}>
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="flex items-center space-x-1 sm:space-x-1.5 overflow-hidden">
+              {availableDays.map(day => {
+                  const isSelected = day === selectedDay;
+                  const isToday = day === 2;
+                  return (
+                      <button
+                          key={day}
+                          onClick={() => handleSelectDay(day)}
+                          className={`px-2 py-1 rounded-lg transition-colors text-xs sm:text-sm 
+                              ${
+                                  isSelected
+                                  ? 'bg-lime-100 dark:bg-lime-900/50 text-lime-700 dark:text-lime-300 font-semibold'
+                                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                              }`}
+                      >
+                          {isToday ? `Today, ${day} Apr` : day}
+                      </button>
+                  );
+              })}
+            </div>
+             <button onClick={handleNextDay} className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Next Day" disabled={availableDays.indexOf(selectedDay) === availableDays.length - 1}>
+               <ChevronRight className="w-5 h-5" />
+             </button>
+          </div>
+
+          
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl shadow-sm space-y-3">
+             
+             <div className="flex justify-between items-center relative">
+                <h3 className={`${montserrat.className} text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100`}>Mood History</h3>
+                <button
+                  ref={moodHistoryTriggerRef}
+                  onClick={toggleMoodHistoryDropdown}
+                  className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-pointer"
+                  aria-label="Mood History Options"
+                  aria-haspopup="true"
+                  aria-expanded={isMoodHistoryDropdownOpen}
+                >
+                  <MoreHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+                {isMoodHistoryDropdownOpen && (
+                   <div
+                     ref={moodHistoryPanelRef}
+                     className="absolute top-full right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20 py-1"
+                   >
+                     <button className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">View Full History</button>
+                     <button className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Export Data</button>
+                     <button className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50">Clear Week</button>
+                   </div>
+                )}
+             </div>
+             
+             <div className="flex justify-between items-end space-x-1 sm:space-x-2">
+               {moodsForWeek.map((mood) => (
+                 <div key={`${mood.dayName}-history`} className="flex flex-col items-center space-y-1 text-center">
+                   <div className={`p-2 sm:p-2.5 rounded-lg ${mood.bgColorClass || 'bg-gray-100 dark:bg-gray-700'}`}> 
+                     <mood.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${mood.colorClass || 'text-gray-600 dark:text-gray-300'}`} />
+                   </div>
+                   <span className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400">{mood.dayName}</span>
+                 </div>
+               ))}
+             </div>
+          </div>
+
+          
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col space-y-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3
+                  className={`${montserrat.className} text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100 mb-0.5`}
+                >
+                  Daily Reflection
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">What is your mood today?</p>
+              </div>
+              <button
+                className="p-1.5 bg-purple-100 dark:bg-purple-900/50 rounded-lg text-purple-600 dark:text-purple-400 cursor-pointer"
+                aria-label="View Reflection History"
+              >
+                <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            </div>
+
+            
+            <div className="relative w-full aspect-square max-w-[250px] mx-auto my-4">
+              
+              <div className="absolute inset-[15%] sm:inset-[20%] rounded-full bg-gradient-radial from-white via-lime-50 to-yellow-100 dark:from-gray-700 dark:via-lime-900/30 dark:to-yellow-900/30 border border-gray-200 dark:border-gray-700 flex items-center justify-center">
+                <div className="text-center">
+                  <span className="text-[9px] sm:text-xs uppercase text-gray-500 dark:text-gray-400 tracking-wider">
+                    Mood
+                  </span>
+                  <p className={`${montserrat.className} text-sm sm:text-base font-semibold text-lime-700 dark:text-lime-300 uppercase`}>
+                    {selectedDailyMood}
+                  </p>
+                </div>
+              </div>
+              
+              <div onClick={() => handleSelectMoodIcon('Good')} data-mood-icon="Good" className="absolute top-[5%] left-1/2 -translate-x-1/2 p-1.5 sm:p-2 bg-lime-200 dark:bg-lime-800 rounded-full shadow-md cursor-pointer transition-all duration-200">
+                <Smile className="w-5 h-5 sm:w-6 sm:h-6 text-lime-700 dark:text-lime-300" />
+              </div>
+              <div onClick={() => handleSelectMoodIcon('Stressed')} data-mood-icon="Stressed" className="absolute top-[25%] right-[5%] p-1 sm:p-1.5 bg-yellow-200 dark:bg-yellow-800 rounded-full shadow-md cursor-pointer transition-all duration-200">
+                <Laugh className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-700 dark:text-yellow-300" />
+              </div>
+              <div onClick={() => handleSelectMoodIcon('Shied')} data-mood-icon="Shied" className="absolute bottom-[25%] right-[5%] p-1 sm:p-1.5 bg-pink-200 dark:bg-pink-800 rounded-full shadow-md cursor-pointer transition-all duration-200">
+                <Frown className="w-4 h-4 sm:w-5 sm:h-5 text-pink-700 dark:text-pink-300" />
+              </div>
+              <div onClick={() => handleSelectMoodIcon('Angry')} data-mood-icon="Angry" className="absolute bottom-[5%] left-1/2 -translate-x-1/2 p-1.5 sm:p-2 bg-red-200 dark:bg-red-800 rounded-full shadow-md cursor-pointer transition-all duration-200">
+                <Angry className="w-5 h-5 sm:w-6 sm:h-6 text-red-700 dark:text-red-300" />
+              </div>
+              <div onClick={() => handleSelectMoodIcon('Meh')} data-mood-icon="Meh" className="absolute top-[25%] left-[5%] p-1 sm:p-1.5 bg-blue-200 dark:bg-blue-800 rounded-full shadow-md cursor-pointer transition-all duration-200">
+                <Meh className="w-4 h-4 sm:w-5 sm:h-5 text-blue-700 dark:text-blue-300" />
+              </div>
+              
+              <span className="absolute top-[15%] right-[15%] text-[9px] sm:text-xs font-semibold text-yellow-600 dark:text-yellow-400 uppercase">
+                Stressed
+              </span>
+              <span className="absolute top-[15%] left-[15%] text-[9px] sm:text-xs font-semibold text-lime-600 dark:text-lime-400 uppercase">
+                Good
+              </span>
+              <span className="absolute bottom-[15%] right-[15%] text-[9px] sm:text-xs font-semibold text-pink-600 dark:text-pink-400 uppercase">
+                Shied?
+              </span>
+              <span className="absolute bottom-[15%] left-[15%] text-[9px] sm:text-xs font-semibold text-red-600 dark:text-red-400 uppercase">
+                Angry
+              </span>
+            </div>
+
+            
+            <button
+              onClick={handleSaveMood}
+              className="w-full mt-auto bg-lime-200 hover:bg-lime-300 dark:bg-lime-800 dark:hover:bg-lime-700 text-lime-800 dark:text-lime-100 font-semibold py-2.5 sm:py-3 rounded-lg flex items-center justify-center space-x-2 cursor-pointer transition-colors"
+            >
+              <Archive className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>Save Mood</span>
+            </button>
+          </div>
+        </aside>
+      </main>
+    </div>
+  );
+};
+
+
+
+const emotionalCheckinData = [
+  { name: 'Sleep Goal Area', value: 200 },
+  { name: 'Achieved', value: 162 },
+  { name: 'Missing', value: 38 }, 
+  { name: 'Buffer', value: 50 },
+];
+
+const emotionalCheckinColors = ['#ec4899', '#22c55e', '#3b82f6', '#a3e635'];
+
+
+const dailyMoodData = [
+  { day: 'Mon', icon: Angry, current: false, bgColorClass: 'bg-red-100 dark:bg-red-900/50', colorClass: 'text-red-600 dark:text-red-400' },
+  { day: 'Tue', icon: Frown, current: false, secondary: true, bgColorClass: 'bg-orange-100 dark:bg-orange-900/50', colorClass: 'text-orange-600 dark:text-orange-400' },
+  { day: 'Wed', icon: Meh, current: true, bgColorClass: 'bg-blue-100 dark:bg-blue-900/50', colorClass: 'text-blue-600 dark:text-blue-400' },
+  { day: 'Thr', icon: Smile, current: false, secondary: true, bgColorClass: 'bg-pink-100 dark:bg-pink-900/50', colorClass: 'text-pink-600 dark:text-pink-400' },
+  { day: 'Fri', icon: Smile, current: false, bgColorClass: 'bg-green-100 dark:bg-green-900/50', colorClass: 'text-green-600 dark:text-green-400' },
+  { day: 'Sat', icon: Laugh, current: false, bgColorClass: 'bg-yellow-100 dark:bg-yellow-900/50', colorClass: 'text-yellow-600 dark:text-yellow-400' },
+  { day: 'Sun', icon: Smile, current: false, secondary: true, bgColorClass: 'bg-purple-100 dark:bg-purple-900/50', colorClass: 'text-purple-600 dark:text-purple-400' },
+];
+
+
+const mentalEffectData = [
+  { name: 'Point 1', value: 10 },
+  { name: 'Point 2', value: 30 },
+  { name: 'Point 3', value: 20 },
+  { name: 'Point 4', value: 50 },
+  { name: 'Point 5', value: 40 },
+  { name: 'Point 6', value: 70 },
+  { name: 'Point 7', value: 60 },
+];
+
+export default MindMateDashboard;
