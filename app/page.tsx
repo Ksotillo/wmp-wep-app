@@ -1,1063 +1,1123 @@
-"use client";
+'use client';
 
-import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
-
+import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image'; 
+import { Montserrat, Roboto } from 'next/font/google';
+import { Bell, Users, Briefcase, BellRing, Settings, LogOut, User, CheckCircle, X, ArrowUp, ArrowDown, CalendarCheck, UserPlus, Info, ChevronDown, Search, CalendarDays, ArrowRight, Video } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-    FaTrophy,
-    FaClock,
-    FaBookOpen,
-    FaUsers,
-    FaInfoCircle,
-    FaStar,
-    FaPowerOff,
-    FaGamepad,
-    FaArrowLeft,
-    FaUndo,
-    FaRedo,
-    FaArrowUp,
-    FaArrowRight,
-    FaArrowDown,
-    FaTimes,
-} from "react-icons/fa";
-import { Oswald, Open_Sans } from "next/font/google"; 
-import { motion, AnimatePresence } from 'framer-motion'; 
+  ResponsiveContainer, 
+  XAxis, 
+  YAxis, 
+  Tooltip,
+  ComposedChart,
+  Bar,
+  Cell,
+  BarChart,
+  CartesianGrid
+} from 'recharts';
+import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
+import { SiGooglemeet } from 'react-icons/si'; 
+import { FaGithub, FaTwitter, FaLinkedin } from 'react-icons/fa'; 
 
 
-const oswald = Oswald({
-    subsets: ["latin"],
-    weight: ["700"], 
-});
-const openSans = Open_Sans({
-    subsets: ["latin"],
-    weight: ["400", "600", "700"], 
-});
-interface TileProps {
-    value: number;
-}
-const getTileStyles = (value: number): { background: string; text: string; textSize: string } => {
-    const styles: { [key: number]: { background: string; text: string; textSize: string } } = {
-        2: { background: "bg-gray-200 dark:bg-gray-300", text: "text-gray-700 dark:text-gray-800", textSize: "text-3xl" },
-        4: { background: "bg-orange-200 dark:bg-orange-300", text: "text-orange-800 dark:text-orange-900", textSize: "text-3xl" },
-        8: { background: "bg-orange-300 dark:bg-orange-400", text: "text-white dark:text-orange-950", textSize: "text-3xl" },
-        16: { background: "bg-orange-400 dark:bg-orange-500", text: "text-white dark:text-orange-950", textSize: "text-3xl" },
-        32: { background: "bg-red-400 dark:bg-red-500", text: "text-white dark:text-red-950", textSize: "text-3xl" },
-        64: { background: "bg-red-500 dark:bg-red-600", text: "text-white dark:text-red-950", textSize: "text-3xl" },
-        128: { background: "bg-yellow-300 dark:bg-yellow-400", text: "text-yellow-900 dark:text-yellow-950", textSize: "text-2xl" },
-        256: { background: "bg-yellow-400 dark:bg-yellow-500", text: "text-yellow-900 dark:text-yellow-950", textSize: "text-2xl" },
-        512: { background: "bg-yellow-500 dark:bg-yellow-600", text: "text-white dark:text-yellow-950", textSize: "text-2xl" },
-        1024: { background: "bg-purple-400 dark:bg-purple-500", text: "text-white dark:text-purple-950", textSize: "text-xl" },
-        2048: { background: "bg-purple-500 dark:bg-purple-600", text: "text-white dark:text-purple-950", textSize: "text-xl" },
-        
-    };
-    
-    const defaultStyle = { background: "bg-black", text: "text-white", textSize: "text-lg" };
-    return styles[value] || defaultStyle;
+const montserrat = Montserrat({ subsets: ['latin'], weight: ['600', '700'] }); 
+const roboto = Roboto({ subsets: ['latin'], weight: ['400', '500', '700'] }); 
+const timeRanges = ['1D', '7D', '1M', '6M', '1Y'];
+const filterOptions = ["This week", "Last Week", "Two weeks ago"]; 
+const NotificationItem: React.FC<{
+  icon: React.ElementType; 
+  text: string;
+  href?: string;
+  iconColor?: string; 
+}> = ({ icon: IconComponent, text, href = "#", iconColor }) => {
+  return (
+    <a 
+      href={href} 
+      className="flex items-start p-3 text-sm hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded-md cursor-pointer group transition-colors duration-150 ease-in-out"
+    >
+      <IconComponent 
+        className={`mr-3 h-5 w-5 flex-shrink-0 mt-0.5 group-hover:text-gray-600 dark:group-hover:text-neutral-100 ${iconColor ? iconColor : 'text-gray-500 dark:text-neutral-400'} transition-colors duration-150 ease-in-out`}
+      />
+      <span className="leading-snug">{text}</span>
+    </a>
+  );
 };
-const Tile: React.FC<TileProps> = ({ value }) => {
-    const styles = useMemo(() => getTileStyles(value), [value]);
 
-    
-    if (value === 0) return null; 
-
+const MiniBarChart: React.FC<{
+    data: number[];
+    colorClass: string;
+}> = ({ data, colorClass }) => {
+    const maxValue = Math.max(...data, 1);
     return (
-        
-        <div
-            className={`flex items-center justify-center w-full h-full rounded-md ${styles.background} ${styles.text} ${styles.textSize} font-bold ${openSans.className}`}
-            
-        >
-            {value}
+        <div className="flex items-end h-8 space-x-px">
+            {data.map((value, index) => (
+                <div
+                    key={index}
+                    className={`w-1 rounded-t-sm ${colorClass}`}
+                    style={{ height: `${Math.max((value / maxValue) * 100, 5)}%` }}
+                />
+            ))}
         </div>
     );
-};
+};interface StatCardData {
+  id: number;
+  icon: React.ElementType;
+  title: string;
+  value: string;
+  change: string;
+  changeType: 'increase' | 'decrease';
+  chartData: number[];
+  description: string;
+}
 
-
-const menuItems = [
-    { label: "Classic Mode", icon: FaGamepad, aria: "Play Classic Mode" },
-    { label: "Challenge Mode", icon: FaTrophy, aria: "Play Challenge Mode" },
-    { label: "Speed Mode", icon: FaClock, aria: "Play Speed Mode" },
-    { label: "How To Play?", icon: FaBookOpen, aria: "Learn how to play" },
-    { label: "Leader Board", icon: FaUsers, aria: "View Leaderboard" },
-    { label: "About Us", icon: FaInfoCircle, aria: "Learn about the developers" },
+const initialStatCardItems: StatCardData[] = [
+    { id: 1, title: 'TOTAL EMPLOYEES', value: '220', icon: Users, change: '2.5%', changeType: 'increase', chartData: [5, 6, 8, 7, 9, 6, 10], description: 'Total number of active employees in the company.' },
+    { id: 2, title: 'ATTENDANCE RATE', value: '98%', icon: CalendarCheck, change: '4.1%', changeType: 'decrease', chartData: [10, 9, 8, 9, 7, 6, 5], description: 'Percentage of employees marked present today.' },
+    { id: 3, title: 'NEW HIRES', value: '05', icon: UserPlus, change: '2.6%', changeType: 'decrease', chartData: [8, 7, 6, 5, 6, 4, 3], description: 'Number of employees onboarded this month.' },
+    { id: 4, title: 'ACTIVE PROJECTS', value: '143', icon: Briefcase, change: '6.2%', changeType: 'increase', chartData: [4, 5, 6, 7, 6, 8, 9], description: 'Total number of projects currently in progress.' },
 ];
-
-
-
-
-const copyBoard = (board: number[][]): number[][] => board.map((row) => [...row]);
-const slideAndMergeRow = (row: number[]): { newRow: number[]; scoreIncrease: number } => {
-    
-    let filteredRow = row.filter((tile) => tile !== 0);
-    let scoreIncrease = 0;
-    let newRow = Array(4).fill(0);
-
-    
-    for (let i = 0; i < filteredRow.length; i++) {
-        if (i < filteredRow.length - 1 && filteredRow[i] === filteredRow[i + 1]) {
-            const mergedValue = filteredRow[i] * 2;
-            filteredRow[i] = mergedValue;
-            filteredRow[i + 1] = 0;
-            scoreIncrease += mergedValue;
-        }
-    }
-
-    
-    let resultRow = filteredRow.filter((tile) => tile !== 0);
-
-    
-    for (let i = 0; i < resultRow.length; i++) {
-        newRow[i] = resultRow[i];
-    }
-
-    return { newRow, scoreIncrease };
+const initialAttendanceData: AttendanceEntry[] = [
+  { name: 'Mon', t0700: 0, t0900: 1, t1100: 1, t1300: 2, t1500: 1, t1700: 0, t1900: 0 },
+  { name: 'Tue', t0700: 1, t0900: 2, t1100: 3, t1300: 3, t1500: 2, t1700: 1, t1900: 0 },
+  { name: 'Wed', t0700: 1, t0900: 3, t1100: 3, t1300: 3, t1500: 3, t1700: 2, t1900: 0 },
+  { name: 'Thu', t0700: 0, t0900: 2, t1100: 3, t1300: 3, t1500: 2, t1700: 1, t1900: 0 },
+  { name: 'Fri', t0700: 0, t0900: 1, t1100: 2, t1300: 2, t1500: 1, t1700: 0, t1900: 0 },
+  { name: 'Sat', t0700: 0, t0900: 0, t1100: 0, t1300: 1, t1500: 0, t1700: 0, t1900: 0 },
+  { name: 'Sun', t0700: 0, t0900: 0, t1100: 0, t1300: 0, t1500: 0, t1700: 0, t1900: 0 },
+];
+const timeSlots = Object.keys(initialAttendanceData[0]).filter(k => k !== 'name');
+const initialProjectData = [
+  { day: 'Mo', inProgress: 8, completed: 15 },
+  { day: 'Tu', inProgress: 12, completed: 19 },
+  { day: 'We', inProgress: 9, completed: 12 },
+  { day: 'Th', inProgress: 15, completed: 25 },
+  { day: 'Fr', inProgress: 7, completed: 10 },
+  { day: 'Sa', inProgress: 3, completed: 5 },
+  { day: 'Su', inProgress: 2, completed: 3 },
+];
+const daysOfWeek = initialProjectData.map(d => d.day);
+const initialInProgressSum = initialProjectData.reduce((sum, item) => sum + item.inProgress, 0);
+const initialCompletedSum = initialProjectData.reduce((sum, item) => sum + item.completed, 0);
+const generateRandomChartData = (length = 7, min = 3, max = 10) => {
+  return Array.from({ length }, () => Math.floor(Math.random() * (max - min + 1)) + min);
 };
-const reverseRow = (row: number[]): number[] => [...row].reverse();
-const transposeBoard = (board: number[][]): number[][] => {
-    const size = board.length;
-    const newBoard = Array(size)
-        .fill(0)
-        .map(() => Array(size).fill(0));
-    for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
-            newBoard[c][r] = board[r][c];
-        }
-    }
-    return newBoard;
+const generateRandomStatData = (id: number): Partial<StatCardData> => {
+  const change = `${(Math.random() * 5 + 1).toFixed(1)}%`; 
+  const changeType = Math.random() > 0.5 ? 'increase' : 'decrease';
+  const chartData = generateRandomChartData();
+  let value = '';
+
+  switch (id) {
+    case 1: value = Math.floor(Math.random() * 50 + 200).toString(); break;
+    case 2: value = `${Math.floor(Math.random() * 10 + 90)}%`; break;
+    case 3: value = `0${Math.floor(Math.random() * 9 + 1)}`; break;
+    case 4: value = Math.floor(Math.random() * 50 + 100).toString(); break;
+    default: value = Math.floor(Math.random() * 100).toString();
+  }
+  return { value, change, changeType, chartData };
 };
-const checkGameOver = (board: number[][]): boolean => {
-    const size = board.length;
-    
-    for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
-            if (board[r][c] === 0) {
-                return false; 
-            }
-        }
-    }
-    
-    for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
-            
-            if (c < size - 1 && board[r][c] === board[r][c + 1]) {
-                return false;
-            }
-            
-            if (r < size - 1 && board[r][c] === board[r + 1][c]) {
-                return false;
-            }
-        }
-    }
-
-    
-    return true;
+const generateRandomAttendanceData = (): AttendanceEntry[] => {
+  return initialAttendanceData.map(entry => {
+    const newEntry: AttendanceEntry = { name: entry.name };
+    timeSlots.forEach(slot => {
+      newEntry[slot] = Math.floor(Math.random() * 4); 
+    });
+    return newEntry;
+  });
 };
+const generateRandomProjectData = () => {
+  return daysOfWeek.map(day => ({
+    day,
+    inProgress: Math.floor(Math.random() * 15) + 2,
+    completed: Math.floor(Math.random() * 25) + 5,
+  }));
+};
+const StatCard: React.FC<StatCardData> = ({ id, icon: IconComponent, title, value, change, changeType, chartData, description }) => {
+  const isIncrease = changeType === 'increase';
+  const changeColor = isIncrease ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+  const chartColor = isIncrease ? 'bg-emerald-500' : 'bg-red-500';
 
-const BEST_SCORE_STORAGE_KEY = '2048-bestScore'; 
-const LEADERBOARD_STORAGE_KEY = '2048-leaderboard';
-const LEADERBOARD_SIZE = 5; 
-const GameScreen = ({ onBack }: { onBack: () => void }) => {
-    const [score, setScore] = useState(0);
-    const [bestScore, setBestScore] = useState(0); 
-    const [board, setBoard] = useState<number[][]>([
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-    ]);
-    const [isGameOver, setIsGameOver] = useState(false);
-    const [gameActive, setGameActive] = useState(false);
-    const [history, setHistory] = useState<Array<{ board: number[][]; score: number }>>([]);
-    const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
-    const [touchStartX, setTouchStartX] = useState<number | null>(null);
-    const [touchStartY, setTouchStartY] = useState<number | null>(null);
-    const [touchEndX, setTouchEndX] = useState<number | null>(null);
-    const [touchEndY, setTouchEndY] = useState<number | null>(null);
-    const [isInitialLoad, setIsInitialLoad] = useState(true); 
-    const minSwipeDistance = 40; 
-    useEffect(() => {
-        
-        try {
-            const storedBestScore = localStorage.getItem(BEST_SCORE_STORAGE_KEY);
-            if (storedBestScore !== null) {
-                const scoreValue = parseInt(storedBestScore, 10);
-                 if (!isNaN(scoreValue)) {
-                    setBestScore(scoreValue);
-                    
-                }
-            }
-        } catch (error) {
-            console.error("Failed to load best score from localStorage:", error);
-        }
-        setIsInitialLoad(false); 
-    }, []); 
-     useEffect(() => {
-        
-        if (isInitialLoad) {
-            return; 
-        }
-        try {
-            
-            localStorage.setItem(BEST_SCORE_STORAGE_KEY, bestScore.toString());
-        } catch (error) {
-            console.error("Failed to save best score to localStorage:", error);
-        }
-    }, [bestScore, isInitialLoad]); 
-    const addNewTile = useCallback((currentBoard: number[][]): number[][] => {
-        const emptyCells: { r: number; c: number }[] = [];
+  return (
+    <div className="bg-white dark:bg-[#181818] p-5 rounded-lg shadow-sm flex flex-col justify-between min-h-[150px]"> 
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs uppercase tracking-wider font-medium text-gray-500 dark:text-neutral-400 flex items-center">
+            <IconComponent className="h-4 w-4 mr-1.5 text-gray-400 dark:text-neutral-500" />
+            {title}
+          </span>
+           <div className="relative group">
+             <Info 
+               className="h-4 w-4 text-gray-400 dark:text-neutral-500 cursor-help group-hover:text-gray-600 dark:group-hover:text-neutral-300 transition-colors"
+               aria-describedby={`tooltip-${id}`}
+             />
+             <div 
+               id={`tooltip-${id}`}
+               role="tooltip"
+               className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-hover:scale-100 
+                          absolute bottom-full left-1/2 mb-2 -translate-x-1/2 px-2 py-1 
+                          bg-gray-700 dark:bg-neutral-800 text-white text-xs 
+                          rounded shadow-lg whitespace-nowrap 
+                          transform scale-95 transition-all duration-200 ease-in-out z-10"
+            >
+               {description}
+             </div>
+          </div>
+        </div>
+        <p className={`${montserrat.className} text-3xl font-bold mb-2`}>
+          {value}
+        </p>
+      </div>
+      <div className="flex items-center justify-between mt-auto">
+        <span className={`text-xs font-medium flex items-center ${changeColor}`}>
+          {isIncrease ? (
+            <ArrowUp className="h-3 w-3 mr-1" />
+          ) : (
+            <ArrowDown className="h-3 w-3 mr-1" />
+          )}
+          {change} vs last month
+        </span>
+        <MiniBarChart data={chartData} colorClass={chartColor} />
+      </div>
+    </div>
+  );
+};
+interface AttendanceEntry {
+  name: string; 
+  
+  [key: string]: string | number; 
+}
 
-        
-        for (let r = 0; r < 4; r++) {
-            for (let c = 0; c < 4; c++) {
-                if (currentBoard[r][c] === 0) {
-                    emptyCells.push({ r, c });
-                }
-            }
-        }
 
-        
-        if (emptyCells.length === 0) {
-            return currentBoard;
-        }
-
-        
-        const randomIndex = Math.floor(Math.random() * emptyCells.length);
-        const { r, c } = emptyCells[randomIndex];
-        const newValue = Math.random() < 0.9 ? 2 : 4;
-
-        const newBoard = copyBoard(currentBoard);
-        newBoard[r][c] = newValue;
-
-        return newBoard;
-    }, []);
-    const initializeBoard = useCallback(() => {
-        
-        let newBoard = Array(4)
-            .fill(0)
-            .map(() => Array(4).fill(0));
-
-        
-        newBoard = addNewTile(newBoard);
-        newBoard = addNewTile(newBoard);
-
-        
-        setBoard(newBoard);
-        setScore(0);
-        setIsGameOver(false);
-        setGameActive(true);
-        setHistory([]);
-        
-    }, [addNewTile]);
-    const processBoard = useCallback((currentBoard: number[][]): { processedBoard: number[][]; scoreIncrease: number; moved: boolean } => {
-        let processedBoard = copyBoard(currentBoard);
-        let totalScoreIncrease = 0;
-        let changed = false;
-
-        
-        for (let r = 0; r < 4; r++) {
-            const originalRow = [...processedBoard[r]];
-            const { newRow, scoreIncrease } = slideAndMergeRow(processedBoard[r]);
-
-            
-            if (!originalRow.every((val, i) => val === newRow[i])) {
-                changed = true;
-            }
-
-            processedBoard[r] = newRow;
-            totalScoreIncrease += scoreIncrease;
-        }
-
-        return {
-            processedBoard,
-            scoreIncrease: totalScoreIncrease,
-            moved: changed,
-        };
-    }, []);
-    const saveToHistory = useCallback(() => {
-        
-        setHistory(prevHistory => [...prevHistory, { board: copyBoard(board), score }]);
-        
-    }, [board, score]);
-    const moveLeft = useCallback((): boolean => {
-        if (isGameOver) return false;
-
-        const { processedBoard, scoreIncrease, moved } = processBoard(board);
-
-        if (moved) {
-            saveToHistory();
-            setBoard(processedBoard);
-            setScore((prev) => {
-                const newScore = prev + scoreIncrease;
-                if (newScore > bestScore) {
-                    setBestScore(newScore);
-                }
-                return newScore;
-            });
-        }
-
-        return moved;
-    }, [board, isGameOver, processBoard, bestScore, saveToHistory]);
-    const moveRight = useCallback((): boolean => {
-        if (isGameOver) return false;
-
-        
-        const reversedBoard = board.map(reverseRow);
-        const { processedBoard, scoreIncrease, moved } = processBoard(reversedBoard);
-
-        if (moved) {
-            saveToHistory();
-            
-            const finalBoard = processedBoard.map(reverseRow);
-            setBoard(finalBoard);
-            setScore((prev) => {
-                const newScore = prev + scoreIncrease;
-                if (newScore > bestScore) {
-                    setBestScore(newScore);
-                }
-                return newScore;
-            });
-        }
-
-        return moved;
-    }, [board, isGameOver, processBoard, bestScore, saveToHistory]);
-    const moveUp = useCallback((): boolean => {
-        if (isGameOver) return false;
-
-        
-        const transposedBoard = transposeBoard(board);
-        const { processedBoard, scoreIncrease, moved } = processBoard(transposedBoard);
-
-        if (moved) {
-            saveToHistory();
-            
-            const finalBoard = transposeBoard(processedBoard);
-            setBoard(finalBoard);
-            setScore((prev) => {
-                const newScore = prev + scoreIncrease;
-                if (newScore > bestScore) {
-                    setBestScore(newScore);
-                }
-                return newScore;
-            });
-        }
-
-        return moved;
-    }, [board, isGameOver, processBoard, bestScore, saveToHistory]);
-    const moveDown = useCallback((): boolean => {
-        if (isGameOver) return false;
-
-        
-        const transposedBoard = transposeBoard(board);
-        const reversedTransposed = transposedBoard.map(reverseRow);
-        const { processedBoard, scoreIncrease, moved } = processBoard(reversedTransposed);
-
-        if (moved) {
-            saveToHistory();
-            
-            const unreversed = processedBoard.map(reverseRow);
-            const finalBoard = transposeBoard(unreversed);
-            setBoard(finalBoard);
-            setScore((prev) => {
-                const newScore = prev + scoreIncrease;
-                if (newScore > bestScore) {
-                    setBestScore(newScore);
-                }
-                return newScore;
-            });
-        }
-
-        return moved;
-    }, [board, isGameOver, processBoard, bestScore, saveToHistory]);
-    const handleUndo = useCallback(() => {
-        
-        if (history.length > 0) {
-            
-            const lastState = history[history.length - 1];
-            
-            setBoard(copyBoard(lastState.board)); 
-            setScore(lastState.score); 
-
-            
-            setHistory(prevHistory => prevHistory.slice(0, -1));
-
-            setIsGameOver(false); 
-        } else {
-            
-        }
-    }, [history]); 
-    const handleKeyDown = useCallback(
-        (event: KeyboardEvent) => {
-            if (!gameActive || isGameOver) {
-                
-                if (event.key === 'r' || event.key === 'R') {
-                    initializeBoard();
-                }
-                return;
-            }
-
-            let moved = false;
-
-            switch (event.key) {
-                case "ArrowUp":
-                case "w": 
-                case "W":
-                    moved = moveUp();
-                    break;
-                case "ArrowDown":
-                case "s":
-                case "S":
-                    moved = moveDown();
-                    break;
-                case "ArrowLeft":
-                case "a":
-                case "A":
-                    moved = moveLeft();
-                    break;
-                case "ArrowRight":
-                case "d":
-                case "D":
-                    moved = moveRight();
-                    break;
-                case "z": 
-                case "Z":
-                    handleUndo(); 
-                    return; 
-                case "r": 
-                case "R":
-                    initializeBoard();
-                    return; 
-                default:
-                    return; 
-            }
-
-            
-            if (moved) {
-                setTimeout(() => {
-                    setBoard((prevBoard) => {
-                        
-                        
-                        const hasEmptyCell = prevBoard.flat().some(cell => cell === 0);
-                        if (!hasEmptyCell) {
-                            
-                            if (checkGameOver(prevBoard)) {
-                                
-                                setIsGameOver(true);
-                            }
-                            return prevBoard; 
-                        }
-
-                        const nextBoard = addNewTile(prevBoard);
-
-                        
-                        
-                        if (checkGameOver(nextBoard)) {
-                            
-                            setIsGameOver(true);
-                        }
-
-                        return nextBoard; 
-                    });
-                }, 0); 
-            } else {
-                
-                
-                if (checkGameOver(board)) {
-                    
-                    setIsGameOver(true);
-                }
-            }
-        },
-        [gameActive, isGameOver, moveUp, moveDown, moveLeft, moveRight, addNewTile, board, initializeBoard, handleUndo, checkGameOver] 
-    );
-    const handleRestart = useCallback(() => {
-        initializeBoard();
-    }, [initializeBoard]);
-    useEffect(() => {
-        if (!gameActive) {
-            initializeBoard();
-        }
-
-        window.addEventListener("keydown", handleKeyDown);
-
-        return () => {
-            window.removeEventListener("keydown", handleKeyDown);
-        };
-    }, [handleKeyDown, initializeBoard, gameActive]);
-
+const getFillColor = (value: number): string => {
+  if (typeof value !== 'number') return '#1f1f1f'; 
+  switch (value) {
+    case 1: return '#3a3a3a'; 
+    case 2: return '#555555'; 
+    case 3: return '#a0a0a0'; 
+    default: return '#1f1f1f'; 
+  }
+};
+const formatTooltip = (value: ValueType, name: NameType): [string, string] | null=> {
+  if (typeof value !== 'number' || typeof name !== 'string' || value === 0) {
+    return null; 
+  }
+  const timeLabel = `${name.substring(1)}:00`;
+  const intensityLabel = `Intensity: ${value}`; 
+  return [intensityLabel, timeLabel];
+};
+const AttendanceChart = ({ data }: { data: AttendanceEntry[] }) => {
+  return (
+    <ResponsiveContainer width="100%" height={250}> 
+      <ComposedChart
+        layout="vertical" 
+        data={data}
+        margin={{ top: 5, right: 0, bottom: 5, left: -20 }} 
+        barCategoryGap={2} 
+      >
+        <XAxis type="number" hide /> 
+        <YAxis 
+          dataKey="name" 
+          type="category" 
+          axisLine={false} 
+          tickLine={false}
+          
+          tickFormatter={(name) => name.substring(0, 3)} 
+          tick={{ fontSize: 12, fill: '#a0a0a0' }} 
+          width={40} 
+        />
+        <Tooltip 
+          cursor={false} 
+          allowEscapeViewBox={{ x: true, y: true }} 
+          contentStyle={{ 
+            backgroundColor: '#2a2a2a', 
+            borderColor: '#444', 
+            borderRadius: '4px',
+            fontSize: '12px',
+            color: '#f6f6f6',
+            padding: '5px 10px'
+          }}
+          formatter={formatTooltip} 
+        />
+        {timeSlots.map((slot) => (
+          <Bar key={slot} dataKey={slot} stackId="a" barSize={20} radius={[3, 3, 3, 3]}> 
+            {data.map((entry, index) => {
+              const value = entry[slot as keyof AttendanceEntry];
+              
+              const numericValue = typeof value === 'number' ? value : 0;
+              return (
+                <Cell 
+                  key={`cell-${index}-${slot}`} 
+                  fill={getFillColor(numericValue)} 
+                  stroke={numericValue > 0 ? '#101010' : 'none'} 
+                  strokeWidth={1.5}
+                />
+              );
+            })}
+          </Bar>
+        ))}
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+};
+const projectData = [
+  { day: 'Mo', inProgress: 8, completed: 15 },
+  { day: 'Tu', inProgress: 12, completed: 19 },
+  { day: 'We', inProgress: 9, completed: 12 },
+  { day: 'Th', inProgress: 15, completed: 25 },
+  { day: 'Fr', inProgress: 7, completed: 10 },
+  { day: 'Sa', inProgress: 3, completed: 5 },
+  { day: 'Su', inProgress: 2, completed: 3 },
+];
+const formatProjectTooltip = (value: ValueType, name: NameType): [string, string] | null => {
+  if (typeof value !== 'number' || typeof name !== 'string') {
+    return null;
+  }
+  const label = name === 'inProgress' ? 'In Progress' : 'Completed';
+  return [`${value} Tasks`, label];
+};
+const ProjectChart: React.FC<{data: typeof projectData}> = ({ data }) => {
+  return (
+    <ResponsiveContainer width="100%" height={250}>
+      <BarChart data={data} margin={{ top: 5, right: 0, bottom: 5, left: -30 }} barGap={6} >
+        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#a0a0a0' }} padding={{ left: 10, right: 10 }} />
+        <YAxis hide={true} type="number" />
+        <Tooltip
+           cursor={{ fill: '#d8ff3b80' }}
+           contentStyle={{
+            backgroundColor: '#2a2a2a',
+            borderColor: '#444',
+            borderRadius: '4px',
+            fontSize: '12px',
+            color: '#f6f6f6',
+            padding: '5px 10px'
+          }}
+          formatter={formatProjectTooltip}
+        />
+        <Bar dataKey="inProgress" stackId="a" fill="#555555" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="completed" stackId="a" fill="#a0a0a0" radius={[4, 4, 0, 0]}>
+          {data.map((entry, index) => (
+             <Cell key={`cell-${index}`} fill={entry.day === 'Th' ? '#d8ff3b' : '#a0a0a0'} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+};
+interface EmployeeAttendance {
+  id: string;
+  name: string;
+  employeeId: string;
+  avatarUrl: string;
+  department: string;
+  status: 'Attend' | 'Day off';
+  checkInTime: string | null;
+  checkOutTime: string | null;
+}
+interface ScheduleItem {
+  id: string;
+  title: string;
+  date: string;
+  timeRange: string;
+  meetingType: 'Google Meet' | 'Zoom Meeting';
+  participants: string[]; 
+  participantCount?: number; 
+  type: 'Meeting' | 'Event';
+}
+const DashboardPage = () => {
+  const [selectedTimeRange, setSelectedTimeRange] = useState('1M');
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [currentStatCardData, setCurrentStatCardData] = useState<StatCardData[]>(initialStatCardItems);
+  const [currentAttendanceData, setCurrentAttendanceData] = useState<AttendanceEntry[]>(initialAttendanceData);
+  const [currentProjectData, setCurrentProjectData] = useState(initialProjectData);
+  const [isAttendanceFilterOpen, setIsAttendanceFilterOpen] = useState(false);
+  const [selectedAttendanceFilter, setSelectedAttendanceFilter] = useState(filterOptions[0]);
+  const [isProjectFilterOpen, setIsProjectFilterOpen] = useState(false);
+  const [selectedProjectFilter, setSelectedProjectFilter] = useState(filterOptions[0]);
+  const [currentAttendancePercent, setCurrentAttendancePercent] = useState(98);
+  const [currentAttendanceChangeText, setCurrentAttendanceChangeText] = useState("+2.5% vs last week");
+  const [currentProjectInProgressCount, setCurrentProjectInProgressCount] = useState(initialInProgressSum);
+  const [currentProjectCompletedCount, setCurrentProjectCompletedCount] = useState(initialCompletedSum);
+  const [attendanceSearchTerm, setAttendanceSearchTerm] = useState('');
+  const [isMobileTimeFilterOpen, setIsMobileTimeFilterOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const attendanceFilterRef = useRef<HTMLDivElement>(null);
+  const projectFilterRef = useRef<HTMLDivElement>(null);
+  const mobileTimeFilterRef = useRef<HTMLDivElement>(null);
+  const handleTimeRangeSelect = (range: string) => {
+    if (range === selectedTimeRange) {
+      setIsMobileTimeFilterOpen(false); 
+      return; 
+    }
+    setSelectedTimeRange(range);
+    setIsMobileTimeFilterOpen(false); 
     
-    const gameContainerRef = useRef<HTMLDivElement>(null);
+    const newData = currentStatCardData.map(card => ({ ...card, ...generateRandomStatData(card.id) }));
+    setCurrentStatCardData(newData);
+  };
 
+  const toggleNotifications = () => { setIsNotificationsOpen(!isNotificationsOpen); setIsProfileOpen(false); };
+  const toggleProfile = () => { setIsProfileOpen(!isProfileOpen); setIsNotificationsOpen(false); };
+  const updateAttendanceData = (filterPeriod: string = "last week") => {
+    const newChartData = generateRandomAttendanceData();
     
-    useEffect(() => {
-        if (gameContainerRef.current) {
-            gameContainerRef.current.focus();
-        }
-    }, []);
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        
-        if (e.touches.length !== 1) return;
-        setTouchEndX(null); 
-        setTouchEndY(null);
-        setTouchStartX(e.touches[0].clientX);
-        setTouchStartY(e.touches[0].clientY);
-        
-    }, []);
-    const handleTouchMove = useCallback((e: React.TouchEvent) => {
-        if (e.touches.length !== 1 || !touchStartX || !touchStartY) return;
-        setTouchEndX(e.touches[0].clientX);
-        setTouchEndY(e.touches[0].clientY);
-        
-    }, [touchStartX, touchStartY]);
-    const handleTouchEnd = useCallback(() => {
-        if (!touchStartX || !touchStartY || !touchEndX || !touchEndY) {
-             
-             setTouchStartX(null);
-             setTouchStartY(null);
-             setTouchEndX(null);
-             setTouchEndY(null);
-            return;
-        }
-
-        const distanceX = touchEndX - touchStartX;
-        const distanceY = touchEndY - touchStartY;
-        const absDistanceX = Math.abs(distanceX);
-        const absDistanceY = Math.abs(distanceY);
-
-        
-
-        let moved = false;
-
-        
-        if (Math.max(absDistanceX, absDistanceY) < minSwipeDistance) {
-            
-            
-            setTouchStartX(null);
-            setTouchStartY(null);
-            setTouchEndX(null);
-            setTouchEndY(null);
-            return; 
-        }
-
-        
-        if (absDistanceX > absDistanceY) {
-            
-            if (distanceX < 0) {
-                
-                moved = moveLeft();
-            } else {
-                
-                moved = moveRight();
-            }
-        } else {
-            
-            if (distanceY < 0) {
-                
-                moved = moveUp();
-            } else {
-                
-                moved = moveDown();
-            }
-        }
-
-        
-        if (moved) {
-            setTimeout(() => {
-                setBoard((prevBoard) => {
-                    const hasEmptyCell = prevBoard.flat().some(cell => cell === 0);
-                    if (!hasEmptyCell) {
-                        if (checkGameOver(prevBoard)) {
-                            setIsGameOver(true);
-                        }
-                        return prevBoard;
-                    }
-                    const nextBoard = addNewTile(prevBoard);
-                    if (checkGameOver(nextBoard)) {
-                        setIsGameOver(true);
-                    }
-                    return nextBoard; 
-                });
-            }, 0);
-        }
-        
-        
-        setTouchStartX(null);
-        setTouchStartY(null);
-        setTouchEndX(null);
-        setTouchEndY(null);
-
-    }, [touchStartX, touchStartY, touchEndX, touchEndY, moveLeft, moveRight, moveUp, moveDown, addNewTile, checkGameOver]); 
-
+    const newPercentValue = Math.floor(Math.random() * 11) + 90;
+    const changePercent = (Math.random() * 5 + 1).toFixed(1);
+    const positiveChange = Math.random() > 0.4;
+    const changeSign = positiveChange ? '+' : '-';
+    const newComparisonText = `${changeSign}${changePercent}% vs ${filterPeriod.toLowerCase().replace("this ","")}`;
     
-    useEffect(() => {
-        if (isGameOver && score > 0) {
-            
-            try {
-                const storedLeaderboard = localStorage.getItem(LEADERBOARD_STORAGE_KEY);
-                let leaderboard: Array<{ score: number, date: number }> = [];
-
-                if (storedLeaderboard) {
-                    try {
-                        leaderboard = JSON.parse(storedLeaderboard);
-                        
-                        if (!Array.isArray(leaderboard)) {
-                            leaderboard = [];
-                        }
-                    } catch (parseError) {
-                        console.error("Failed to parse leaderboard from localStorage:", parseError);
-                        leaderboard = []; 
-                    }
-                }
-
-                
-                leaderboard.push({ score, date: Date.now() });
-
-                
-                leaderboard.sort((a, b) => b.score - a.score);
-
-                
-                const updatedLeaderboard = leaderboard.slice(0, LEADERBOARD_SIZE);
-
-                
-                localStorage.setItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(updatedLeaderboard));
-                
-
-            } catch (error) {
-                console.error("Failed to update leaderboard in localStorage:", error);
-            }
-        }
-    }, [isGameOver, score]); 
-
+    setCurrentAttendanceData(newChartData);
+    setCurrentAttendancePercent(newPercentValue);
+    setCurrentAttendanceChangeText(newComparisonText);
+  };
+  const updateProjectData = () => {
+    const newChartData = generateRandomProjectData();
     
-    return (
-        <div
-            ref={gameContainerRef}
-            tabIndex={0}
-            className="w-full max-w-md mx-auto p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow-xl outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
-        >
+    const newInProgressTotal = newChartData.reduce((sum, item) => sum + item.inProgress, 0);
+    const newCompletedTotal = newChartData.reduce((sum, item) => sum + item.completed, 0);
+    
+    setCurrentProjectData(newChartData);
+    setCurrentProjectInProgressCount(newInProgressTotal);
+    setCurrentProjectCompletedCount(newCompletedTotal);
+  };
+  const selectAttendanceFilterOption = (option: string) => {
+    if (option === selectedAttendanceFilter) {
+      setIsAttendanceFilterOpen(false);
+      return;
+    }
+    setSelectedAttendanceFilter(option);
+    setIsAttendanceFilterOpen(false);
+    updateAttendanceData(option);
+  };
+  const selectProjectFilterOption = (option: string) => {
+     if (option === selectedProjectFilter) {
+      setIsProjectFilterOpen(false);
+      return;
+    }
+    setSelectedProjectFilter(option);
+    setIsProjectFilterOpen(false);
+    updateProjectData();
+  };
+  const onAttendanceSearchInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+      setAttendanceSearchTerm(event.target.value);
+  };
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const targetNode = event.target as Node;
 
-            <div className="flex justify-between items-center mb-4">
-                
-                <div className="relative"> 
-                    <button
-                        onClick={onBack}
-                        aria-label="Go Back to Menu"
-                        onMouseEnter={() => setActiveTooltip('back')}
-                        onMouseLeave={() => setActiveTooltip(null)}
-                        className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                    >
-                        <FaArrowLeft size={20} />
-                    </button>
-                    
-                    {activeTooltip === 'back' && (
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-700 dark:bg-gray-900 text-white text-xs rounded-md shadow-sm whitespace-nowrap pointer-events-none z-10">
-                            Go Back
-                        </div>
-                    )}
-                </div>
+      const isClickOutsideNotifications = notificationsRef.current && 
+                                        !notificationsRef.current.contains(targetNode) && 
+                                        window.innerWidth >= 768;
+      const isClickOutsideProfile = profileRef.current && 
+                                    !profileRef.current.contains(targetNode);
+      const isClickOutsideAttendanceFilter = attendanceFilterRef.current && 
+                                             !attendanceFilterRef.current.contains(targetNode);
+      const isClickOutsideProjectFilter = projectFilterRef.current && 
+                                          !projectFilterRef.current.contains(targetNode);
+      const isClickOutsideMobileTimeFilter = mobileTimeFilterRef.current && 
+                                             !mobileTimeFilterRef.current.contains(targetNode);
 
-                <h1 className={`${oswald.className} text-3xl font-bold text-purple-600 dark:text-purple-400`}>2048</h1>
+      if (isClickOutsideNotifications) {
+        setIsNotificationsOpen(false);
+      }
+      if (isClickOutsideProfile) {
+        setIsProfileOpen(false);
+      }
+      if (isClickOutsideAttendanceFilter) {
+        setIsAttendanceFilterOpen(false);
+      }
+      if (isClickOutsideProjectFilter) {
+        setIsProjectFilterOpen(false);
+      }
+      if (isClickOutsideMobileTimeFilter) {
+        setIsMobileTimeFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => { document.removeEventListener('mousedown', handleClickOutside); };
+  }, []);
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    
+    handleScroll(); 
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+  const notifications = [
+    { id: 1, icon: Users, text: "New Employee 'John Doe' onboarded.", href: "#", iconColor: "text-blue-500 dark:text-blue-400" },
+    { id: 2, icon: Briefcase, text: "Project 'Phoenix' deadline approaching.", href: "#", iconColor: "text-orange-500 dark:text-orange-400" },
+    { id: 3, icon: BellRing, text: "Attendance Alert: 'Jane Smith' late check-in.", href: "#", iconColor: "text-red-500 dark:text-red-400" },
+    { id: 4, icon: CheckCircle, text: "Payroll for March processed successfully.", href: "#", iconColor: "text-green-500 dark:text-green-400" },
+  ];
+  const employeeAttendanceData: EmployeeAttendance[] = [
+    {
+      id: '1', name: 'David Mike', employeeId: 'DES 2342', avatarUrl: 'https://randomuser.me/api/portraits/men/32.jpg', 
+      department: 'Design', status: 'Attend', checkInTime: '09:35 AM', checkOutTime: '04:30 PM'
+    },
+    {
+      id: '2', name: 'Wingle Kim', employeeId: 'DEV 3432', avatarUrl: 'https://randomuser.me/api/portraits/women/44.jpg',
+      department: 'Development', status: 'Attend', checkInTime: '09:40 AM', checkOutTime: '05:00 PM'
+    },
+    {
+      id: '3', name: 'Danial Woul', employeeId: 'HR 3436', avatarUrl: 'https://randomuser.me/api/portraits/men/46.jpg',
+      department: 'Human Resource', status: 'Day off', checkInTime: null, checkOutTime: null
+    },
+    {
+      id: '4', name: 'Smitha Gom', employeeId: 'DEV 3424', avatarUrl: 'https://randomuser.me/api/portraits/women/68.jpg',
+      department: 'Development', status: 'Attend', checkInTime: '10:03 AM', checkOutTime: '04:30 PM'
+    },
+    
+  ];
+  const scheduleData: ScheduleItem[] = [
+    {
+      id: 's1', title: 'Interview Candidate - Customer Service', date: '29 March, 2025', timeRange: '09:00 - 09:30',
+      meetingType: 'Google Meet', participants: [
+          'https://randomuser.me/api/portraits/women/31.jpg', 
+          'https://randomuser.me/api/portraits/men/33.jpg', 
+          'https://randomuser.me/api/portraits/women/35.jpg'
+          ], 
+      type: 'Meeting'
+    },
+    {
+      id: 's2', title: 'Town-hall Office - March 2025', date: '30 March, 2025', timeRange: '09:30 - 11:30',
+      meetingType: 'Zoom Meeting', participants: [
+          'https://randomuser.me/api/portraits/men/52.jpg', 
+          'https://randomuser.me/api/portraits/women/55.jpg'
+          ], 
+      participantCount: 100, 
+      type: 'Event'
+    },
+     {
+      id: 's3', title: 'Interview Candidate - Design Lead', date: '31 March, 2025', timeRange: '09:00 - 09:30',
+      meetingType: 'Google Meet', participants: [
+          'https://randomuser.me/api/portraits/men/71.jpg', 
+          'https://randomuser.me/api/portraits/women/72.jpg', 
+          'https://randomuser.me/api/portraits/men/73.jpg'
+          ] ,
+      type: 'Meeting'
+    },
+     {
+      id: 's4', title: 'Company Picnic', date: '01 April, 2025', timeRange: '12:00 - 15:00',
+      meetingType: 'Zoom Meeting',
+       participants: [
+          'https://randomuser.me/api/portraits/men/11.jpg', 
+          'https://randomuser.me/api/portraits/women/12.jpg'
+          ], 
+      participantCount: 50,
+      type: 'Event'
+    },
+  ];
+
+  
+  const filteredAttendanceList = employeeAttendanceData.filter(employee =>
+      employee.name.toLowerCase().includes(attendanceSearchTerm.toLowerCase()) ||
+      employee.employeeId.toLowerCase().includes(attendanceSearchTerm.toLowerCase())
+  );
+
+  return (
+    <main className={`${roboto.className} min-h-screen flex flex-col bg-gray-100 dark:bg-[#101010] dark:text-[#f6f6f6]`}>
+      
+      <nav className={`
+        shadow-sm w-full sticky top-0 z-20 
+        transition-colors duration-300 ease-in-out 
+        ${isScrolled 
+          ? 'bg-white/80 dark:bg-[#101010]/80 backdrop-blur-lg' 
+          : 'bg-white dark:bg-[#101010]'
+        }
+      `}> 
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex-shrink-0">
+              <span className={`${montserrat.className} text-xl font-bold`}>Dashboard</span> 
+            </div>
+            <div className="flex items-center space-x-4">
+              
+              <div className="relative" ref={notificationsRef}>
+                <button 
+                  onClick={toggleNotifications}
+                  className="relative p-1 rounded-full text-gray-400 hover:text-gray-600 dark:text-neutral-400 dark:hover:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-[#101010] focus:ring-indigo-500 cursor-pointer transition-colors duration-150 ease-in-out"
+                  aria-label="View notifications"
+                  aria-haspopup="true" 
+                  aria-expanded={isNotificationsOpen}
+                >
+                  <Bell className="h-6 w-6" aria-hidden="true" />
+                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-[#101010]" /> 
+                </button>
+
                 
-                <div className="flex gap-2">
-                    
-                    <div className="relative">
-                        <button
-                            onClick={handleRestart}
-                            aria-label="Restart Game (R)"
-                            onMouseEnter={() => setActiveTooltip('restart')}
-                            onMouseLeave={() => setActiveTooltip(null)}
-                            className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                        >
-                            <FaRedo size={20} />
-                        </button>
-                         
-                        {activeTooltip === 'restart' && (
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-700 dark:bg-gray-900 text-white text-xs rounded-md shadow-sm whitespace-nowrap pointer-events-none z-10">
-                                Restart (R)
-                            </div>
-                        )}
+                {isNotificationsOpen && (
+                  <div className="hidden md:block origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-lg bg-white dark:bg-[#1f1f1f] ring-1 ring-black dark:ring-neutral-700 ring-opacity-5 focus:outline-none py-2 px-2 z-30"> 
+                    <div className="px-2 pb-2 text-sm font-semibold border-b border-gray-200 dark:border-neutral-700 mb-2">
+                      Notifications
                     </div>
-
-                    
-                    <div className="relative">
-                        <button
-                            onClick={handleUndo}
-                            aria-label="Undo Last Move (Z)"
-                            onMouseEnter={() => setActiveTooltip('undo')}
-                            onMouseLeave={() => setActiveTooltip(null)}
-                            className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={history.length === 0}
-                        >
-                            <FaUndo size={20} />
-                        </button>
-                         
-                        {activeTooltip === 'undo' && (
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-700 dark:bg-gray-900 text-white text-xs rounded-md shadow-sm whitespace-nowrap pointer-events-none z-10">
-                                Undo (Z)
-                            </div>
-                        )}
+                    <div className="space-y-1"> 
+                      {notifications.map((notification) => (
+                        <NotificationItem 
+                          key={notification.id}
+                          icon={notification.icon}
+                          text={notification.text}
+                          href={notification.href}
+                          iconColor={notification.iconColor}
+                        />
+                      ))}
                     </div>
-                </div>
+                  </div>
+                )}
+              </div> 
+              
+
+              
+              <div className="relative" ref={profileRef}>
+                 <button
+                    onClick={toggleProfile}
+                    className="flex items-center justify-center h-9 w-9 rounded-full bg-gray-300 dark:bg-[#333] text-sm font-medium text-gray-600 dark:text-neutral-300 border-2 border-transparent hover:border-indigo-500 dark:hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-[#101010] focus:ring-indigo-500 cursor-pointer transition-colors duration-150 ease-in-out"
+                    aria-label="User menu"
+                    aria-haspopup="true"
+                    aria-expanded={isProfileOpen}
+                 > 
+                      WK
+                 </button>
+                {isProfileOpen && (
+                  <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-[#1f1f1f] ring-1 ring-black dark:ring-neutral-700 ring-opacity-5 focus:outline-none z-30"> 
+                     <div className="px-4 py-2 text-sm font-semibold border-b border-gray-200 dark:border-neutral-700 mb-1">
+                      My Account
+                    </div>
+                    <a href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-neutral-200 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] cursor-pointer transition-colors duration-150 ease-in-out">
+                      <User className="mr-3 h-5 w-5 text-gray-500 dark:text-neutral-400" />
+                      <span>Profile</span>
+                    </a>
+                    <a href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-neutral-200 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] cursor-pointer transition-colors duration-150 ease-in-out">
+                      <Settings className="mr-3 h-5 w-5 text-gray-500 dark:text-neutral-400" />
+                      <span>Settings</span>
+                    </a>
+                    <div className="border-t border-gray-200 dark:border-neutral-700 my-1"></div>
+                    <a href="#" className="flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer transition-colors duration-150 ease-in-out">
+                      <LogOut className="mr-3 h-5 w-5" />
+                      <span>Logout</span>
+                    </a>
+                  </div>
+                )}
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      
+      <AnimatePresence>
+        {isNotificationsOpen && (
+          <motion.div
+            key="notification-modal" 
+            initial={{ x: "100%" }} 
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }} 
+            transition={{ type: "tween", ease: "easeInOut", duration: 0.3 }}
+            className="fixed inset-0 bg-white dark:bg-[#181818] z-40 p-4 flex flex-col md:hidden" 
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notification-modal-title"
+          >
+            
+            <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-neutral-700 mb-4 flex-shrink-0">
+              <h2 id="notification-modal-title" className={`${montserrat.className} text-lg font-semibold`}>Notifications</h2>
+              <button
+                onClick={toggleNotifications} 
+                className="p-1 rounded-md text-gray-500 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-150 ease-in-out"
+                aria-label="Close notifications"
+              >
+                <X className="h-6 w-6" />
+              </button>
             </div>
 
             
-            <div className="flex justify-between gap-4 mb-6">
-                <div className="flex-1 bg-gray-200 dark:bg-gray-700 p-3 rounded-lg text-center">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Score</div>
-                    <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{score}</div>
-                </div>
-                <div className="flex-1 bg-gray-200 dark:bg-gray-700 p-3 rounded-lg text-center">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Best</div>
-                    <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{bestScore}</div>
-                </div>
-            </div>
-
-            
-            <div 
-                className="grid grid-cols-4 gap-3 bg-gray-300 dark:bg-gray-600 p-3 rounded-lg aspect-square relative touch-none" 
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-             >
-                
-                {Array.from({ length: 16 }).map((_, index) => (
-                    <div key={`bg-${index}`} className="bg-gray-400/50 dark:bg-gray-500/50 rounded-md aspect-square" />
+            <div className="flex-grow overflow-y-auto space-y-1"> 
+               {notifications.map((notification) => (
+                  <NotificationItem 
+                    key={notification.id}
+                    icon={notification.icon}
+                    text={notification.text}
+                    href={notification.href}
+                    iconColor={notification.iconColor}
+                  />
                 ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      
+      <div className="flex-grow p-8">
+        
+        <div className="flex justify-between items-center mb-6">
+          
+          <h1 className={`${montserrat.className} text-3xl font-bold`}> 
+            Overview
+          </h1>
+          
+          
+          <div className="hidden md:flex space-x-1 bg-gray-200 dark:bg-[#2a2a2a] p-1 rounded-lg">
+            {timeRanges.map((range) => (
+              <button
+                key={range}
+                onClick={() => handleTimeRangeSelect(range)}
+                className={`
+                  px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 
+                  cursor-pointer 
+                  ${selectedTimeRange === range
+                    ? 'bg-white dark:bg-[#444] text-gray-900 dark:text-neutral-100 shadow'
+                    : 'text-gray-600 dark:text-neutral-400 hover:bg-gray-300 dark:hover:bg-[#383838]'
+                  }
+                `}
+                aria-label={`Select time range ${range}`}
+                aria-pressed={selectedTimeRange === range}
+              >
+                {range}
+              </button>
+            ))}
+          </div>
+
+          
+          <div className="block md:hidden relative" ref={mobileTimeFilterRef}>
+            <button
+              onClick={() => setIsMobileTimeFilterOpen(!isMobileTimeFilterOpen)}
+              className="flex items-center text-sm text-gray-500 dark:text-neutral-400 bg-gray-100 dark:bg-[#2a2a2a] px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-[#383838] transition-colors cursor-pointer border border-gray-300 dark:border-neutral-700"
+              aria-haspopup="listbox"
+              aria-expanded={isMobileTimeFilterOpen}
+            >
+              {selectedTimeRange}
+              <ChevronDown className={`h-4 w-4 ml-2 transition-transform duration-200 ${isMobileTimeFilterOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isMobileTimeFilterOpen && (
+              <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-[#2a2a2a] rounded-md shadow-lg overflow-hidden z-10 ring-1 ring-black dark:ring-neutral-700 ring-opacity-5">
+                 <ul role="listbox">
+                  {timeRanges.map((range) => (
+                    <li
+                      key={range}
+                      onClick={() => handleTimeRangeSelect(range)} 
+                      className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-[#383838] ${selectedTimeRange === range ? 'font-semibold text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-neutral-300'}`}
+                      role="option"
+                      aria-selected={selectedTimeRange === range}
+                    >
+                      {range}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+
+        
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          {currentStatCardData.map((item) => (
+            <StatCard 
+              key={item.id}
+              {...item} 
+            />
+          ))}
+        </div>
+
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          
+          <div className="bg-white dark:bg-[#181818] p-5 rounded-lg shadow-sm">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className={`${montserrat.className} text-lg font-semibold mb-1`}>Attendance Overview</h2>
+                <p className={`text-sm flex items-center ${currentAttendanceChangeText.startsWith('+') ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {currentAttendanceChangeText.startsWith('+') ? (
+                     <ArrowUp className="h-4 w-4 mr-1" />
+                   ) : (
+                     <ArrowDown className="h-4 w-4 mr-1" />
+                   )}
+                  <span>{currentAttendancePercent}%</span> 
+                  <span className="text-xs text-gray-500 dark:text-neutral-400 ml-1"> {currentAttendanceChangeText}</span>
+                </p>
+              </div>
+              
+              <div className="relative" ref={attendanceFilterRef}>
+                <button
+                  onClick={() => setIsAttendanceFilterOpen(!isAttendanceFilterOpen)}
+                  className="flex items-center text-sm text-gray-500 dark:text-neutral-400 bg-gray-100 dark:bg-[#2a2a2a] px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-[#383838] transition-colors cursor-pointer"
+                  aria-haspopup="listbox"
+                  aria-expanded={isAttendanceFilterOpen}
+                >
+                  {selectedAttendanceFilter}
+                  <ChevronDown className={`h-4 w-4 ml-1 transition-transform duration-200 ${isAttendanceFilterOpen ? 'rotate-180' : ''}`} />
+                </button>
                 
-                <div className="absolute inset-0 grid grid-cols-4 gap-3 p-3 pointer-events-none"> 
-                    {board.flat().map((value, index) => (
-                        <div key={`tile-slot-${index}`} className="w-full h-full"> 
-                            <Tile value={value} />
-                        </div>
-                    ))}
-                </div>
-                
-                <AnimatePresence>
-                    {isGameOver && (
-                        <motion.div 
-                           key="game-over-overlay" 
-                           className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center rounded-lg text-center p-4 pointer-events-auto z-20" 
-                           initial={{ opacity: 0, scale: 0.8 }}
-                           animate={{ opacity: 1, scale: 1 }}
-                           exit={{ opacity: 0, scale: 0.8 }}
-                           transition={{ duration: 0.3 }}
+                {isAttendanceFilterOpen && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-[#2a2a2a] rounded-md shadow-lg overflow-hidden z-10 ring-1 ring-black dark:ring-neutral-700 ring-opacity-5">
+                    <ul role="listbox">
+                      {filterOptions.map((option) => (
+                        <li
+                          key={option}
+                          onClick={() => selectAttendanceFilterOption(option)}
+                          className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-[#383838] ${selectedAttendanceFilter === option ? 'font-semibold text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-neutral-300'}`}
+                          role="option"
+                          aria-selected={selectedAttendanceFilter === option}
                         >
-                            <p className="text-white text-4xl font-bold mb-4">Game Over!</p>
-                            <p className="text-gray-300 text-lg mb-6">Score: {score}</p>
-                            <motion.button
-                                onClick={handleRestart}
-                                className="px-6 py-3 bg-purple-500 text-white rounded-md hover:bg-purple-600 dark:hover:bg-purple-700 cursor-pointer text-lg font-semibold transition-colors origin-center"
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                Try Again (R)
-                            </motion.button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                          {option}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+            <AttendanceChart data={currentAttendanceData} />
+          </div>
+
+          
+          <div className="bg-white dark:bg-[#181818] p-5 rounded-lg shadow-sm">
+             <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className={`${montserrat.className} text-lg font-semibold mb-1`}>Project Overview</h2>
+                
+                <p className="text-xs space-x-3">
+                  <span className="text-gray-500 dark:text-neutral-400">
+                    IN PROGRESS <span className="font-semibold text-gray-700 dark:text-neutral-200">{currentProjectInProgressCount}</span>
+                  </span>
+                   <span className="text-gray-500 dark:text-neutral-400">
+                    COMPLETED <span className="font-semibold text-gray-700 dark:text-neutral-200">{currentProjectCompletedCount}</span>
+                  </span>
+                </p>
+              </div>
+              
+              <div className="relative" ref={projectFilterRef}>
+                <button
+                  onClick={() => setIsProjectFilterOpen(!isProjectFilterOpen)}
+                  className="flex items-center text-sm text-gray-500 dark:text-neutral-400 bg-gray-100 dark:bg-[#2a2a2a] px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-[#383838] transition-colors cursor-pointer"
+                  aria-haspopup="listbox"
+                  aria-expanded={isProjectFilterOpen}
+                >
+                  {selectedProjectFilter}
+                  <ChevronDown className={`h-4 w-4 ml-1 transition-transform duration-200 ${isProjectFilterOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isProjectFilterOpen && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-[#2a2a2a] rounded-md shadow-lg overflow-hidden z-10 ring-1 ring-black dark:ring-neutral-700 ring-opacity-5">
+                     <ul role="listbox">
+                      {filterOptions.map((option) => (
+                        <li
+                          key={option}
+                          onClick={() => selectProjectFilterOption(option)}
+                          className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-[#383838] ${selectedProjectFilter === option ? 'font-semibold text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-neutral-300'}`}
+                          role="option"
+                          aria-selected={selectedProjectFilter === option}
+                        >
+                          {option}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+             <ProjectChart data={currentProjectData} />
+          </div>
+        </div>
+
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8"> 
+          <AttendanceTable 
+            attendanceList={filteredAttendanceList} 
+            searchTerm={attendanceSearchTerm}
+            onSearchChange={onAttendanceSearchInput}
+          />
+          <ScheduleSection scheduleItems={scheduleData} />
+        </div>
+
+        
+
+      </div>
+
+      
+      <footer className="w-full border-t border-gray-200 dark:border-neutral-700 mt-auto bg-white dark:bg-[#181818]"> 
+        <div className="max-w-full mx-auto py-6 px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-gray-500 dark:text-neutral-400">
+          
+          <div>
+            © {new Date().getFullYear()} Dashboard. All rights reserved.
+          </div>
+
+          
+          <div className="flex space-x-4">
+            <a href="#" className="hover:text-gray-700 dark:hover:text-neutral-200 transition-colors cursor-pointer">Privacy Policy</a>
+            <a href="#" className="hover:text-gray-700 dark:hover:text-neutral-200 transition-colors cursor-pointer">Terms of Service</a>
+          </div>
+
+          
+          <div className="flex space-x-4">
+            <a href="#" aria-label="Twitter" className="text-xl hover:text-gray-700 dark:hover:text-neutral-200 transition-colors cursor-pointer">
+              <FaTwitter />
+            </a>
+            <a href="#" aria-label="GitHub" className="text-xl hover:text-gray-700 dark:hover:text-neutral-200 transition-colors cursor-pointer">
+              <FaGithub />
+            </a>
+            <a href="#" aria-label="LinkedIn" className="text-xl hover:text-gray-700 dark:hover:text-neutral-200 transition-colors cursor-pointer">
+              <FaLinkedin />
+            </a>
+          </div>
+        </div>
+      </footer>
+    </main>
+  );
+};
+
+export default DashboardPage;
+
+const StatusBadge: React.FC<{status: 'Attend' | 'Day off';}> = ({ status }) => {
+  const isAttending = status === 'Attend';
+  const bgColor = isAttending ? 'bg-green-500/20 dark:bg-green-400/20' : 'bg-red-500/20 dark:bg-red-400/20';
+  const textColor = isAttending ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300';
+  const dotColor = isAttending ? 'bg-green-500' : 'bg-red-500';
+
+  return (
+    <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}> 
+      <span className={`w-2 h-2 mr-1.5 rounded-full ${dotColor}`}></span>
+      {status}
+    </div>
+  );
+};
+
+const AttendanceTable: React.FC<{
+  attendanceList: EmployeeAttendance[];
+  searchTerm: string;
+  onSearchChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}> = ({ attendanceList, searchTerm, onSearchChange }) => {
+  return (
+    <div className="bg-white dark:bg-[#181818] p-5 rounded-lg shadow-sm col-span-2">
+      
+      <div className="flex justify-between items-center mb-4">
+        <h2 className={`${montserrat.className} text-lg font-semibold`}>Attendance</h2>
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <input 
+              type="text"
+              placeholder="Search employee"
+              value={searchTerm}
+              onChange={onSearchChange}
+              className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-neutral-700 bg-gray-50 dark:bg-[#2a2a2a] rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:text-neutral-200 placeholder-gray-400 dark:placeholder-neutral-500"
+              aria-label="Search employees by name or ID"
+            />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-neutral-500" />
+          </div>
+          <button className="p-1.5 border border-gray-300 dark:border-neutral-700 bg-gray-50 dark:bg-[#2a2a2a] rounded-md text-gray-500 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-[#383838] transition-colors cursor-pointer" aria-label="Select date">
+            <CalendarDays className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      
+      <div className="hidden lg:grid lg:grid-cols-[auto_1fr_1fr_1fr_1fr_1fr] gap-x-4 gap-y-2 text-sm">
+        
+        <div className="flex items-center"> 
+          <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 dark:bg-[#2a2a2a] border-gray-300 dark:border-neutral-600 rounded focus:ring-indigo-500 cursor-pointer" aria-label="Select all employees" /> 
+        </div>
+        <div className="text-gray-500 dark:text-neutral-400 font-medium text-xs uppercase tracking-wider py-2">Employee</div>
+        <div className="text-gray-500 dark:text-neutral-400 font-medium text-xs uppercase tracking-wider py-2">Department</div>
+        <div className="text-gray-500 dark:text-neutral-400 font-medium text-xs uppercase tracking-wider py-2">Status</div>
+        <div className="text-gray-500 dark:text-neutral-400 font-medium text-xs uppercase tracking-wider py-2">Check In Time</div>
+        <div className="text-gray-500 dark:text-neutral-400 font-medium text-xs uppercase tracking-wider py-2">Check Out Time</div>
+        
+        
+        <div className="col-span-6 border-t border-gray-200 dark:border-neutral-700"></div>
+
+        
+        {attendanceList.length > 0 ? (
+            attendanceList.map((employee) => (
+                <React.Fragment key={`desktop-${employee.id}`}> 
+                    <div className="flex items-center py-2 border-b border-gray-100 dark:border-neutral-700/50"> <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 dark:bg-[#2a2a2a] border-gray-300 dark:border-neutral-600 rounded focus:ring-indigo-500 cursor-pointer" aria-label={`Select ${employee.name}`} /> </div>
+                    <div className="flex items-center space-x-3 py-2 border-b border-gray-100 dark:border-neutral-700/50"> <div className="relative h-10 w-10 flex-shrink-0"> <Image src={employee.avatarUrl || "/placeholder-avatar.png"} alt={employee.name} layout="fill" objectFit="cover" className="rounded-full" /> </div> <div> <div className="font-medium text-gray-900 dark:text-neutral-100">{employee.name}</div> <div className="text-xs text-gray-500 dark:text-neutral-400">{employee.employeeId}</div> </div> </div>
+                    <div className="py-2 flex items-center text-gray-700 dark:text-neutral-300 border-b border-gray-100 dark:border-neutral-700/50">{employee.department}</div>
+                    <div className="py-2 flex items-center border-b border-gray-100 dark:border-neutral-700/50"> <StatusBadge status={employee.status} /> </div>
+                    <div className="py-2 flex items-center text-gray-700 dark:text-neutral-300 border-b border-gray-100 dark:border-neutral-700/50">{employee.checkInTime || '--:-- AM'}</div>
+                    <div className="py-2 flex items-center text-gray-700 dark:text-neutral-300 border-b border-gray-100 dark:border-neutral-700/50">{employee.checkOutTime || '--:-- PM'}</div>
+                </React.Fragment>
+            ))
+         ) : (
+             <div className="col-span-6 text-center py-6 text-sm text-gray-500 dark:text-neutral-400">
+                 No employees found matching "{searchTerm}".
+             </div>
+         )}
+      </div>
+
+      
+      <div className="block lg:hidden space-y-3 mt-4">
+          {attendanceList.length > 0 ? (
+              attendanceList.map((employee) => (
+                  <div key={`mobile-${employee.id}`} className="bg-gray-50 dark:bg-[#2a2a2a] p-4 rounded-lg shadow-sm">
+                      
+                      <div className="flex items-start space-x-3 mb-3">
+                           <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 dark:bg-[#2a2a2a] border-gray-300 dark:border-neutral-600 rounded focus:ring-indigo-500 cursor-pointer mt-1" aria-label={`Select ${employee.name}`} /> 
+                           <div className="relative h-10 w-10 flex-shrink-0">
+                               <Image src={employee.avatarUrl || "/placeholder-avatar.png"} alt={employee.name} layout="fill" objectFit="cover" className="rounded-full" />
+                           </div>
+                           <div className="flex-grow">
+                               <div className="font-medium text-sm text-gray-900 dark:text-neutral-100">{employee.name}</div>
+                               <div className="text-xs text-gray-500 dark:text-neutral-400">{employee.employeeId}</div>
+                           </div>
+                      </div>
+                      
+                      <div className="space-y-2 text-xs">
+                           <div className="flex justify-between">
+                               <span className="text-gray-500 dark:text-neutral-400">Department:</span>
+                               <span className="text-gray-700 dark:text-neutral-300">{employee.department}</span>
+                           </div>
+                           <div className="flex justify-between items-center">
+                               <span className="text-gray-500 dark:text-neutral-400">Status:</span>
+                               <StatusBadge status={employee.status} />
+                           </div>
+                           <div className="flex justify-between">
+                               <span className="text-gray-500 dark:text-neutral-400">Check In:</span>
+                               <span className="text-gray-700 dark:text-neutral-300">{employee.checkInTime || '--:-- AM'}</span>
+                           </div>
+                           <div className="flex justify-between">
+                               <span className="text-gray-500 dark:text-neutral-400">Check Out:</span>
+                               <span className="text-gray-700 dark:text-neutral-300">{employee.checkOutTime || '--:-- PM'}</span>
+                           </div>
+                      </div>
+                  </div>
+              ))
+          ) : (
+             <div className="text-center py-6 text-sm text-gray-500 dark:text-neutral-400">
+                 No employees found matching "{searchTerm}".
+             </div>
+          )}
+      </div>
+
+    </div>
+  );
+};
+
+const ScheduleSection: React.FC<{
+    scheduleItems: ScheduleItem[];
+}> = ({ scheduleItems }) => {
+    const [activeTab, setActiveTab] = useState("All");
+    const tabs = ["All", "Meetings", "Events"];
+
+    const filteredItems = scheduleItems.filter((item) => {
+        if (activeTab === "All") {
+            return true;
+        } else if (activeTab === "Meetings") {
+            return item.type === "Meeting";
+        } else if (activeTab === "Events") {
+            return item.type === "Event";
+        } else {
+            return false;
+        }
+    });
+
+    const handleDateFilterClick = () => {
+        console.log("Schedule Date filter clicked!");
+    };
+
+    return (
+        <div className="bg-white dark:bg-[#181818] p-5 rounded-lg shadow-sm col-span-1">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className={`${montserrat.className} text-lg font-semibold`}>Schedule ({filteredItems.length})</h2>
+                <button
+                    onClick={handleDateFilterClick}
+                    className="p-1.5 border border-gray-300 dark:border-neutral-700 bg-gray-50 dark:bg-[#2a2a2a] rounded-md text-gray-500 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-[#383838] transition-colors cursor-pointer"
+                    aria-label="Filter schedule by date"
+                >
+                    <CalendarDays className="h-4 w-4" />
+                </button>
             </div>
 
-            
-            <div className="mt-6 md:hidden"> 
-                <div className="flex justify-center items-center w-full">
-                    <div className="grid grid-cols-3 grid-rows-3 gap-2 w-36 h-36"> 
-                        
-                        <div className="col-start-2 flex items-center justify-center">
-                            <motion.button
-                                onClick={() => { if (moveUp()) { setTimeout(() => setBoard(prev => addNewTile(prev)), 0); } }}
-                                aria-label="Move Up"
-                                className="w-10 h-10 flex items-center justify-center bg-purple-200 dark:bg-purple-700 text-purple-700 dark:text-purple-200 rounded-md hover:bg-purple-300 dark:hover:bg-purple-600 active:bg-purple-400 dark:active:bg-purple-500 cursor-pointer transition-colors shadow-sm origin-center"
-                                whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                            >
-                                <FaArrowUp size={20} />
-                            </motion.button>
-                        </div>
-                        
-                        
-                         <div className="col-start-1 flex items-center justify-center">
-                            <motion.button
-                                onClick={() => { if (moveLeft()) { setTimeout(() => setBoard(prev => addNewTile(prev)), 0); } }}
-                                aria-label="Move Left"
-                                className="w-10 h-10 flex items-center justify-center bg-purple-200 dark:bg-purple-700 text-purple-700 dark:text-purple-200 rounded-md hover:bg-purple-300 dark:hover:bg-purple-600 active:bg-purple-400 dark:active:bg-purple-500 cursor-pointer transition-colors shadow-sm origin-center"
-                                whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                            >
-                                <FaArrowLeft size={20} />
-                            </motion.button>
-                        </div>
-                         <div className="col-start-2"></div>
-                         <div className="col-start-3 flex items-center justify-center">
-                            <motion.button
-                                onClick={() => { if (moveRight()) { setTimeout(() => setBoard(prev => addNewTile(prev)), 0); } }}
-                                aria-label="Move Right"
-                                className="w-10 h-10 flex items-center justify-center bg-purple-200 dark:bg-purple-700 text-purple-700 dark:text-purple-200 rounded-md hover:bg-purple-300 dark:hover:bg-purple-600 active:bg-purple-400 dark:active:bg-purple-500 cursor-pointer transition-colors shadow-sm origin-center"
-                                whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                            >
-                                <FaArrowRight size={20} />
-                            </motion.button>
-                        </div>
+            <div className="flex space-x-1 bg-gray-200 dark:bg-[#2a2a2a] p-1 rounded-lg mb-4">
+                {tabs.map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`
+              flex-1 px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 
+              cursor-pointer 
+              ${
+                  activeTab === tab
+                      ? "bg-white dark:bg-[#444] text-gray-900 dark:text-neutral-100 shadow"
+                      : "text-gray-600 dark:text-neutral-400 hover:bg-gray-300 dark:hover:bg-[#383838]"
+              }
+            `}
+                        aria-label={`Filter by ${tab}`}
+                        aria-pressed={activeTab === tab}
+                    >
+                        {tab}
+                    </button>
+                ))}
+            </div>
 
-                        <div className="col-start-2 flex items-center justify-center">
-                            <motion.button
-                                onClick={() => { if (moveDown()) {  setTimeout(() => setBoard(prev => addNewTile(prev)), 0); } }}
-                                aria-label="Move Down"
-                                 className="w-10 h-10 flex items-center justify-center bg-purple-200 dark:bg-purple-700 text-purple-700 dark:text-purple-200 rounded-md hover:bg-purple-300 dark:hover:bg-purple-600 active:bg-purple-400 dark:active:bg-purple-500 cursor-pointer transition-colors shadow-sm origin-center"
-                                whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                            >
-                                <FaArrowDown size={20} />
-                            </motion.button>
+            <div className="space-y-4 h-[calc(100%-100px)] overflow-y-auto pr-2">
+                {filteredItems.length > 0 ? (
+                    filteredItems.map((item) => (
+                        <div key={item.id} className="bg-gray-50 dark:bg-[#2a2a2a] p-4 rounded-lg">
+                            <h3 className="font-semibold mb-1 text-gray-900 dark:text-neutral-100 text-sm">{item.title}</h3>
+                            <div className="flex items-center text-xs text-gray-500 dark:text-neutral-400 mb-2 space-x-2">
+                                <span>{item.date}</span>
+                                <span className="w-1 h-1 bg-gray-400 dark:bg-neutral-600 rounded-full"></span>
+                                <span>{item.timeRange}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <a
+                                    href={item.meetingType === "Google Meet" ? "https://meet.google.com/" : "https://zoom.us/"}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center text-xs text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                                >
+                                    {item.meetingType === "Google Meet" ? (
+                                        <SiGooglemeet className="h-3.5 w-3.5 mr-1.5 text-green-600 dark:text-green-500" />
+                                    ) : (
+                                        <Video className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
+                                    )}
+                                    {item.meetingType}
+                                    <ArrowRight className="h-3 w-3 ml-1" />
+                                </a>
+
+                                <div className="flex items-center -space-x-2">
+                                    {item.participants.slice(0, 3).map((avatarUrl, index) => (
+                                        <div key={index} className="relative h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#2a2a2a]">
+                                            <Image
+                                                src={avatarUrl || "/placeholder-avatar.png"}
+                                                alt={`Participant ${index + 1}`}
+                                                layout="fill"
+                                                objectFit="cover"
+                                                className="rounded-full"
+                                            />
+                                        </div>
+                                    ))}
+
+                                    {
+                                        item.participantCount === 100 ? (
+                                            <div className="relative h-6 w-6 rounded-full bg-gray-300 dark:bg-[#444] ring-2 ring-white dark:ring-[#2a2a2a] flex items-center justify-center text-xs font-medium text-gray-600 dark:text-neutral-300">
+                                                100+
+                                            </div>
+                                        ) : item.participantCount && item.participantCount > 3 ? (
+                                            <div className="relative h-6 w-6 rounded-full bg-gray-300 dark:bg-[#444] ring-2 ring-white dark:ring-[#2a2a2a] flex items-center justify-center text-xs font-medium text-gray-600 dark:text-neutral-300">
+                                                +{item.participantCount - 3}
+                                            </div>
+                                        ) : null
+                                    }
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    ))
+                ) : (
+                    <p className="text-center text-sm text-gray-500 dark:text-neutral-400 py-4">No items found for "{activeTab}".</p>
+                )}
             </div>
         </div>
     );
 };
 
-
-interface ModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    title: string;
-    children: React.ReactNode;
-}
-
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
-    
-
-    return (
-         <motion.div 
-            key={title} 
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={onClose} 
-        >
-            <motion.div 
-                className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 text-gray-800 dark:text-gray-200"
-                onClick={(e) => e.stopPropagation()} 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.2, delay: 0.1 }}
-            >
-                <button 
-                    onClick={onClose}
-                    aria-label="Close modal"
-                    className="absolute top-3 right-3 p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                >
-                    <FaTimes size={18} />
-                </button>
-                <h2 className={`${oswald.className} text-2xl font-bold mb-4 text-purple-600 dark:text-purple-400`}>{title}</h2>
-                <div className="space-y-4">
-                    {children}
-                </div>
-            </motion.div>
-        </motion.div>
-    );
-};
-
-
-const titleVariants = {
-    hidden: { opacity: 0, y: -20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-};
-
-const menuContainerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            delayChildren: 0.2, 
-            staggerChildren: 0.1, 
-        },
-    },
-};
-
-const menuItemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
-
-const Page: React.FC = () => {
-    const [currentScreen, setCurrentScreen] = useState("menu"); 
-    const [showHowToPlayModal, setShowHowToPlayModal] = useState(false);
-    const [showAboutUsModal, setShowAboutUsModal] = useState(false);
-    const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
-    const [leaderboardScores, setLeaderboardScores] = useState<Array<{ score: number, date: number }>>([]); 
-
-    
-    const loadLeaderboardData = () => {
-        try {
-            const storedLeaderboard = localStorage.getItem(LEADERBOARD_STORAGE_KEY);
-            let scores: Array<{ score: number, date: number }> = [];
-            if (storedLeaderboard) {
-                try {
-                    scores = JSON.parse(storedLeaderboard);
-                    if (!Array.isArray(scores)) {
-                        scores = [];
-                    }
-                } catch (parseError) {
-                    console.error("Failed to parse leaderboard data:", parseError);
-                    scores = [];
-                }
-            }
-            setLeaderboardScores(scores);
-        } catch (error) {
-            console.error("Failed to load leaderboard from localStorage:", error);
-            setLeaderboardScores([]); 
-        }
-    };
-
-    const handleMenuClick = (label: string) => {
-        if (label === "Classic Mode" || label === "Challenge Mode" || label === "Speed Mode") {
-            setCurrentScreen("game");
-        } else if (label === "How To Play?") {
-            setShowHowToPlayModal(true);
-        } else if (label === "About Us") {
-            setShowAboutUsModal(true);
-        } else if (label === "Leader Board") {
-            loadLeaderboardData(); 
-            setShowLeaderboardModal(true); 
-        } 
-    };
-
-    const handleBack = () => {
-        setCurrentScreen("menu");
-    };
-
-    
-    const formatDate = (timestamp: number) => {
-        const date = new Date(timestamp);
-        return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-        
-    };
-
-    return (
-        <main
-            className={`${openSans.className} flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 dark:from-gray-800 dark:via-gray-900 dark:to-black overflow-hidden`} 
-        >
-            <AnimatePresence mode="wait">
-                {currentScreen === "menu" && (
-                    <motion.div
-                       key="menu-screen"
-                       initial={{ opacity: 0 }}
-                       animate={{ opacity: 1 }}
-                       exit={{ opacity: 0 }}
-                       transition={{ duration: 0.3 }}
-                       className="flex flex-col items-center justify-center w-full" 
-                    >
-                        <div className="text-center mb-12">
-                            <motion.h1
-                                key="main-title" 
-                                className={`${oswald.className} text-7xl md:text-8xl font-bold text-purple-600 dark:text-purple-400 tracking-tight 
-                                           drop-shadow-[0_0_8px_rgb(168_85_247/0.5)] dark:drop-shadow-[0_0_10px_rgb(192_132_252/0.4)]`}
-                                variants={titleVariants}
-                                initial="hidden"
-                                animate="visible"
-                            >
-                                2048
-                            </motion.h1>
-                        </div>
-                        <motion.div 
-                            className="w-full max-w-md grid grid-cols-2 gap-4"
-                            variants={menuContainerVariants}
-                            initial="hidden"
-                            animate="visible"
-                        >
-                            {menuItems.map((item) => (
-                                <motion.button
-                                    key={item.label}
-                                    variants={menuItemVariants} 
-                                    whileHover={{ scale: 1.05, transition: { duration: 0.15 } }} 
-                                    whileTap={{ scale: 0.95 }} 
-                                    onClick={() => handleMenuClick(item.label)}
-                                    onKeyDown={(e) => (e.key === "Enter" || e.key === " " ? handleMenuClick(item.label) : null)}
-                                    tabIndex={0}
-                                    aria-label={item.aria}
-                                    className="flex flex-col items-center justify-center p-4 md:p-6 bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm rounded-xl shadow-md hover:bg-white dark:hover:bg-gray-600 transition-colors duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 origin-center" 
-                                >
-                                    <item.icon className="text-3xl md:text-4xl text-purple-600 dark:text-purple-400 mb-2" />
-                                    <span className="text-sm md:text-base font-semibold text-gray-800 dark:text-gray-100 text-center">
-                                        {item.label}
-                                    </span>
-                                </motion.button>
-                            ))}
-                        </motion.div>
-                   </motion.div>
-                )}
-
-                {currentScreen === "game" && (
-                     <motion.div
-                        key="game-screen"
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        transition={{ duration: 0.3 }}
-                        className="w-full flex justify-center" 
-                      >
-                        <GameScreen onBack={handleBack} />
-                      </motion.div>
-                  )}
-            </AnimatePresence>
-            
-
-            <AnimatePresence>
-                {showHowToPlayModal && (
-                    <Modal 
-                        isOpen={showHowToPlayModal} 
-                        onClose={() => setShowHowToPlayModal(false)} 
-                        title="How To Play"
-                    >
-                         <p>Use your <strong className="text-purple-600 dark:text-purple-400">arrow keys</strong> (or <strong className="text-purple-600 dark:text-purple-400">swipe</strong> on mobile) to move the tiles.</p>
-                         <p>When two tiles with the same number touch, they <strong className="text-purple-600 dark:text-purple-400">merge into one!</strong></p>
-                         <p>Join the numbers and get to the <strong className="text-purple-600 dark:text-purple-400">2048 tile!</strong></p>
-                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">You can undo moves with 'Z' and restart with 'R'.</p>
-                    </Modal>
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {showAboutUsModal && (
-                    <Modal 
-                        isOpen={showAboutUsModal} 
-                        onClose={() => setShowAboutUsModal(false)} 
-                        title="About Us"
-                    >
-                        <p>Welcome to our version of the classic 2048 puzzle!</p>
-                         <p>We built this game with care, aiming for a smooth experience whether you're playing on your computer or phone.</p>
-                         <p>We hope you enjoy the challenge and have fun merging those tiles!</p>
-                    </Modal>
-                )}
-             </AnimatePresence>
-
-            <AnimatePresence>
-                {showLeaderboardModal && (
-                    <Modal 
-                        isOpen={showLeaderboardModal} 
-                        onClose={() => setShowLeaderboardModal(false)} 
-                        title="Leaderboard"
-                    >
-                         {leaderboardScores.length === 0 ? (
-                             <p className="text-center text-gray-500 dark:text-gray-400">No high scores recorded yet. Play a game!</p>
-                         ) : (
-                             <ol className="space-y-2 list-decimal list-inside">
-                                 {leaderboardScores.map((entry, index) => (
-                                     <li key={entry.date} className="flex justify-between items-center text-sm">
-                                         <span>
-                                             <span className="font-semibold mr-2">{index + 1}.</span>
-                                             {entry.score.toLocaleString()} Points
-                                         </span>
-                                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                                             {formatDate(entry.date)}
-                                         </span>
-                                     </li>
-                                 ))}
-                             </ol>
-                         )}
-                    </Modal>
-                )}
-            </AnimatePresence>
-        </main>
-    );
-};
-
-export default Page;
