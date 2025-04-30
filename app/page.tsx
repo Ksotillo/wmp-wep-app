@@ -1,393 +1,293 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Sun, Moon, LockKeyhole, Zap, Info } from 'lucide-react';
-import { Lora, Open_Sans } from 'next/font/google';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Lora, Open_Sans, Press_Start_2P } from 'next/font/google';
+import { Eraser, Trash2, Sun, Moon, Palette } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-const lora = Lora({
-  subsets: ['latin'],
-  weight: ['600', '700'], 
-});
-const PIVOT_X = 250; 
-const PIVOT_Y = 50;  
-type SimulationState = {
-  angle: number; 
-  angularVelocity: number; 
-  timeElapsed: number; 
-};
-type EnergyDataPoint = {
-  time: number;
-  kinetic: number;
-  potential: number;
-  total: number;
-};
 const openSans = Open_Sans({
-    subsets: ["latin"],
-    weight: ["400", "500"],
+  subsets: ['latin'],
+  weight: ['400', '500'],
 });
-export default function PendulumSimulationPage() {
-  const [length, modifyLength] = useState(150); 
-  const [initialAngleDegrees, setInitialAngle] = useState(45); 
-  const [gravity, updateGravity] = useState(9.81); 
-  const [damping, changeDamping] = useState(0.1); 
-  const [mass, alterMass] = useState(1); 
-  const [isSwinging, setIsSwinging] = useState(false); 
-  const [simulationData, updateSimulationData] = useState<SimulationState>({
-    angle: (45 * Math.PI) / 180, 
-    angularVelocity: 0,
-    timeElapsed: 0,
-  });
-  const [energyHistory, setEnergyHistory] = useState<EnergyDataPoint[]>([]);
-  const [darkMode, setDarkMode] = useState(true); 
-  const animationFrameRef = useRef<number | null>(null);
-  const previousTimeRef = useRef<number | null>(null);
-  const simulationStateRef = useRef<SimulationState>(simulationData);
-  const lengthRef = useRef(length);
-  const gravityRef = useRef(gravity);
-  const dampingRef = useRef(damping);
-  const isSwingingRef = useRef(isSwinging);
+const DEFAULT_GRID_SIZE = 16;
+const DEFAULT_COLOR = '#FFFFFF';
+const DARK_MODE_DEFAULT_COLOR = '#171717';
+const DEFAULT_DRAW_COLOR = '#34d399';
+const pressStart2P = Press_Start_2P({
+    subsets: ["latin"],
+    weight: "400",
+});
+const titleVariants = {
+    hidden: { opacity: 0, y: -30 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+};
+
+const topControlsVariants = {
+    hidden: { opacity: 0, y: -20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.2 } },
+};
+const GRID_SIZES = [8, 16, 32];
+const PALETTE = [
+  '#FFFFFF',
+  '#000000',
+  '#FF0000',
+  '#00FF00',
+  '#0000FF',
+  '#FFFF00',
+  '#FF00FF',
+  '#00FFFF',
+  '#FFA500',
+  '#800080',
+  '#34d399',
+  '#fb7185',
+];
+
+type Grid = string[][];
+const initializeGrid = (size: number, color: string): Grid => {
+  return Array.from({ length: size }, () =>
+    Array(size).fill(color)
+  );
+};
+const RainbowTextStyle = `
+  @keyframes rainbowCycle {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .animate-rainbow-cycle {
+    background-size: 400% auto; /* Make gradient larger than text */
+    animation: rainbowCycle 10s linear infinite;
+  }
+`;
+
+const gridVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.5, delay: 0.4 } },
+};
+
+const floatingBarVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, delay: 0.6 } },
+};
+
+export default function PixelArtEditorPage() {
+  const [darkMode, setDarkMode] = useState(true);
+  const [gridSize, defineGridSize] = useState<number>(DEFAULT_GRID_SIZE);
+  const currentBackgroundColor = darkMode ? DARK_MODE_DEFAULT_COLOR : DEFAULT_COLOR;
+  const [gridColors, setGridColors] = useState<Grid>(
+    initializeGrid(DEFAULT_GRID_SIZE, currentBackgroundColor) 
+  );
   useEffect(() => {
-      simulationStateRef.current = simulationData;
-  }, [simulationData]);
-  useEffect(() => {
-      lengthRef.current = length;
-  }, [length]);
-  const massRef = useRef(mass);
-  const [bobPosition, setBobPosition] = useState(() => {
-      const initialAngleRad = (initialAngleDegrees * Math.PI) / 180;
-      return {
-          bobX: PIVOT_X + length * Math.sin(initialAngleRad),
-          bobY: PIVOT_Y + length * Math.cos(initialAngleRad),
-      };
-  });
-  
-  useEffect(() => { gravityRef.current = gravity; }, [gravity]);
-  
-  useEffect(() => {
-    if (!isSwingingRef.current) { 
-      const newAngleRad = (initialAngleDegrees * Math.PI) / 180;
-      const newSimData = {
-          angle: newAngleRad,
-          angularVelocity: 0,
-          timeElapsed: 0,
-      };
-      updateSimulationData(newSimData);
-      setEnergyHistory([]); 
-      
-      simulationStateRef.current = newSimData;
-      
-      const newBobX = PIVOT_X + lengthRef.current * Math.sin(newAngleRad);
-      const newBobY = PIVOT_Y + lengthRef.current * Math.cos(newAngleRad);
-      setBobPosition({ bobX: newBobX, bobY: newBobY });
+    const oldBg = !darkMode ? DARK_MODE_DEFAULT_COLOR : DEFAULT_COLOR;
+    const newBg = darkMode ? DARK_MODE_DEFAULT_COLOR : DEFAULT_COLOR;
+
+   
+    setGridColors(prevGrid => 
+      prevGrid.map(row => 
+        row.map(cell => (cell === oldBg ? newBg : cell))
+      )
+    );
+
+   
+    if (selectedColor === oldBg) {
+      setCurrentColor(newBg);
     }
-  }, [length, initialAngleDegrees, gravity, damping, mass]); 
-
-  
-  const simulationStep = useCallback((currentTime: number) => {
-    if (!isSwingingRef.current) {
-        previousTimeRef.current = null; 
-        return;
-    }
-    if (previousTimeRef.current === null) {
-        previousTimeRef.current = currentTime; 
-        animationFrameRef.current = requestAnimationFrame(simulationStep);
-        return;
-    }
-
-    const deltaTime = (currentTime - previousTimeRef.current) / 1000; 
-    previousTimeRef.current = currentTime;
-    const L = lengthRef.current;
-    const g = gravityRef.current;
-    const d = dampingRef.current;
-    const m = massRef.current; 
-    let { angle, angularVelocity, timeElapsed } = simulationStateRef.current;
-    if (L <= 0) { 
-        animationFrameRef.current = requestAnimationFrame(simulationStep);
-        return;
-    }
-
-    
-    const angularAcceleration = -(g / L) * Math.sin(angle) - d * angularVelocity;
-    angularVelocity += angularAcceleration * deltaTime;
-    angle += angularVelocity * deltaTime;
-    timeElapsed += deltaTime;
-    const height = L * (1 - Math.cos(angle)); 
-    const potentialEnergy = m * g * height; 
-    const linearVelocity = L * angularVelocity; 
-    const kineticEnergy = 0.5 * m * linearVelocity * linearVelocity; 
-    const totalEnergy = kineticEnergy + potentialEnergy;
-    const newSimData: SimulationState = { angle, angularVelocity, timeElapsed };
-    const newEnergyPoint: EnergyDataPoint = { time: timeElapsed, kinetic: kineticEnergy, potential: potentialEnergy, total: totalEnergy };
-    updateSimulationData(newSimData); 
-    const newBobX = PIVOT_X + L * Math.sin(angle);
-    const newBobY = PIVOT_Y + L * Math.cos(angle);
-    setBobPosition({ bobX: newBobX, bobY: newBobY }); 
-
-  
-    setEnergyHistory(prev => {
-        const newHistory = [...prev, newEnergyPoint];
-        
-        return newHistory.length > 500 ? newHistory.slice(newHistory.length - 500) : newHistory;
-    });
-
-
-    
-    animationFrameRef.current = requestAnimationFrame(simulationStep);
-  }, []); 
-  useEffect(() => {
-    if (isSwinging) {
-      previousTimeRef.current = null; 
-      animationFrameRef.current = requestAnimationFrame(simulationStep);
-    } else {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-       previousTimeRef.current = null; 
-    }
-    
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [isSwinging, simulationStep]);
-  const flipSimulationState = () => {
-    setIsSwinging(prev => !prev);
+   
+  }, [darkMode]);
+  const [selectedColor, setCurrentColor] = useState<string>(DEFAULT_DRAW_COLOR);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+ 
+  const handleMouseDown = (rowIndex: number, colIndex: number) => {
+      setIsDragging(true);
+      paintCell(rowIndex, colIndex);
   };
+  const paintCell = useCallback((rowIndex: number, colIndex: number) => {
+    if (gridColors[rowIndex]?.[colIndex] === selectedColor) return;
 
-  const revertToInitialState = useCallback(() => {
-    setIsSwinging(false); 
-    const newAngleRad = (initialAngleDegrees * Math.PI) / 180;
-    const newSimData = {
-        angle: newAngleRad,
-        angularVelocity: 0,
-        timeElapsed: 0,
-    };
-    updateSimulationData(newSimData);
-    setEnergyHistory([]); 
-    simulationStateRef.current = newSimData; 
-    
-    const newBobX = PIVOT_X + lengthRef.current * Math.sin(newAngleRad);
-    const newBobY = PIVOT_Y + lengthRef.current * Math.cos(newAngleRad);
-    setBobPosition({ bobX: newBobX, bobY: newBobY });
-  
-  }, [initialAngleDegrees]); 
+    const newGridColors = gridColors.map((row, rIdx) => {
+      if (rIdx === rowIndex) {
+        return row.map((cell, cIdx) => {
+          if (cIdx === colIndex) {
+            return selectedColor;
+          }
+          return cell;
+        });
+      }
+      return row;
+    });
+    setGridColors(newGridColors);
+  }, [gridColors, selectedColor]);
+ 
+  const handleMouseEnter = (rowIndex: number, colIndex: number) => {
+    if (isDragging) {
+      paintCell(rowIndex, colIndex);
+    }
+  };
+  const handleMouseUp = () => {
+   
+    if (isDragging) {
+      setIsDragging(false);
+    }
+  };
+  const handleGridMouseLeave = () => {
+   
+    if (isDragging) {
+      setIsDragging(false);
+    }
+  };
+  const chooseEraser = useCallback(() => {
+    setCurrentColor(currentBackgroundColor);
+  }, [currentBackgroundColor]);
+  const changeGridDimension = useCallback((newSize: number) => {
+   
+    if (newSize === gridSize) return;
+    defineGridSize(newSize);
+    setGridColors(initializeGrid(newSize, currentBackgroundColor));
+  }, [currentBackgroundColor, gridSize]);
 
+  const clearDrawingArea = useCallback(() => {
+   
+    setGridColors(initializeGrid(gridSize, currentBackgroundColor));
+  }, [gridSize, currentBackgroundColor]);
   const switchColorMode = () => {
     setDarkMode(!darkMode);
+   
   };
-
-  const processLengthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      modifyLength(Number(e.target.value));
-  };
-  const registerAngleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setInitialAngle(Number(e.target.value));
-  };
-  const newGravityValue = (e: React.ChangeEvent<HTMLInputElement>) => {
-      updateGravity(Number(e.target.value));
-  };
-  const dampingFactorUpdate = (e: React.ChangeEvent<HTMLInputElement>) => {
-      changeDamping(Number(e.target.value));
-  };
-  const massValueInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-      alterMass(Number(e.target.value));
-  };
-
-  useEffect(() => { dampingRef.current = damping; }, [damping]);
-  useEffect(() => { isSwingingRef.current = isSwinging; }, [isSwinging]);
-  useEffect(() => { massRef.current = mass; }, [mass]);
 
   return (
-    <div className={`flex flex-col-reverse md:flex-row sm:h-screen w-full ${openSans.className} ${darkMode ? 'bg-[#0a0a0a] text-gray-200' : 'bg-gray-100 text-gray-800'} transition-colors duration-300`}>
-      <div className={`w-full md:w-72 lg:w-80 p-4 border-t md:border-t-0 md:border-r shrink-0 ${darkMode ? 'bg-[#171717] border-[#27272a]' : 'bg-white border-gray-300'} flex flex-col space-y-4`}>
-         <div className="flex justify-between items-center">
-             <h1 className={`text-xl font-semibold ${lora.className}`}>Pendulum Settings</h1>
-             <button onClick={switchColorMode} className={`p-1.5 rounded-full ${darkMode ? 'text-yellow-400 hover:bg-gray-700' : 'text-indigo-600 hover:bg-gray-200'} transition-colors cursor-pointer`}>
-                 {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-             </button>
-         </div>
-         <div className="space-y-3">
-            <div>
-                 <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="length" className="block text-sm font-medium">Length ({length} px)</label>
-                    <div className="group relative flex items-center">
-                        <Info size={14} className="text-gray-400 cursor-help" />
-                        <span className="absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-700 dark:bg-gray-600 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 w-max max-w-xs shadow-md scale-95 group-hover:scale-100 hidden group-hover:block">
-                            Length of the pendulum rod (pixels in SVG).
-                        </span>
-                    </div>
-                </div>
-                <input
-                   type="range" id="length" min="10" max="300" step="1"
-                   value={length}
-                   onChange={processLengthChange}
-                   disabled={isSwinging}
-                   className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#fb3250] ${darkMode ? 'bg-[#27272a]' : 'bg-gray-300'} ${isSwinging ? 'opacity-50 cursor-not-allowed' : ''}`}
-                />
-           </div>
-             <div>
-                 <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="initialAngle" className="block text-sm font-medium">Start Angle ({initialAngleDegrees}°)</label>
-                    <div className="group relative flex items-center">
-                        <Info size={14} className="text-gray-400 cursor-help" />
-                        <span className="absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-700 dark:bg-gray-600 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 w-max max-w-xs shadow-md scale-95 group-hover:scale-100 hidden group-hover:block">
-                            Initial angle relative to vertical (degrees).
-                        </span>
-                    </div>
-                 </div>
-                 <input
-                     type="range" id="initialAngle" min="-90" max="90" step="1"
-                     value={initialAngleDegrees}
-                     onChange={registerAngleChange}
-                     disabled={isSwinging}
-                    className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#fb3250] ${darkMode ? 'bg-[#27272a]' : 'bg-gray-300'} ${isSwinging ? 'opacity-50 cursor-not-allowed' : ''}`}
-                 />
-             </div>
-            <div>
-                 <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="gravity" className="block text-sm font-medium">Gravity ({gravity.toFixed(2)})</label>
-                    <div className="group relative flex items-center">
-                        <Info size={14} className="text-gray-400 cursor-help" />
-                        <span className="absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-700 dark:bg-gray-600 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 w-max max-w-xs shadow-md scale-95 group-hover:scale-100 hidden group-hover:block">
-                            Acceleration due to gravity (sim units, m/s²).
-                        </span>
-                    </div>
-                </div>
-                 <input
-                     type="range" id="gravity" min="1" max="20" step="0.1"
-                     value={gravity}
-                     onChange={newGravityValue}
-                     disabled={isSwinging}
-                     className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#fb3250] ${darkMode ? 'bg-[#27272a]' : 'bg-gray-300'} ${isSwinging ? 'opacity-50 cursor-not-allowed' : ''}`}
-                 />
-            </div>
-             <div>
-                 <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="damping" className="block text-sm font-medium">Damping ({damping.toFixed(2)})</label>
-                    <div className="group relative flex items-center">
-                        <Info size={14} className="text-gray-400 cursor-help" />
-                        <span className="absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-700 dark:bg-gray-600 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 w-max max-w-xs shadow-md scale-95 group-hover:scale-100 hidden group-hover:block">
-                            Damping factor for energy loss (unitless).
-                        </span>
-                    </div>
-                 </div>
-                 <input
-                     type="range" id="damping" min="0" max="1" step="0.01"
-                     value={damping}
-                     onChange={dampingFactorUpdate}
-                    className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#fb3250] ${darkMode ? 'bg-[#27272a]' : 'bg-gray-300'} `}
-                 />
-             </div>
-             <div>
-                 <div className="flex items-center justify-between mb-1">
-                     <label htmlFor="mass" className="block text-sm font-medium">Mass ({mass.toFixed(1)} kg)</label>
-                    <div className="group relative flex items-center">
-                        <Info size={14} className="text-gray-400 cursor-help" />
-                        <span className="absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-700 dark:bg-gray-600 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 w-max max-w-xs shadow-md scale-95 group-hover:scale-100 hidden group-hover:block">
-                            Mass of the pendulum bob (sim units, kg).
-                        </span>
-                    </div>
-                </div>
-                 <input
-                    type="range" id="mass" min="0.1" max="5" step="0.1"
-                    value={mass}
-                    onChange={massValueInput}
-                    disabled={isSwinging}
-                    className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#fb3250] ${darkMode ? 'bg-[#27272a]' : 'bg-gray-300'} ${isSwinging ? 'opacity-50 cursor-not-allowed' : ''}`}
-                 />
-             </div>
-         </div>
-         <div className="flex items-center justify-center space-x-4 pt-2">
-             <button
-                 onClick={flipSimulationState}
-                 className={`px-4 py-2 rounded-md flex items-center justify-center gap-2 text-white font-medium cursor-pointer transition-colors ${isSwinging ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} `}
-             >
-                 {isSwinging ? <Pause size={18} /> : <Play size={18} />}
-                 <span>{isSwinging ? 'Pause' : 'Start'}</span>
-             </button>
-             <button
-                 onClick={revertToInitialState}
-                 disabled={isSwinging}
-                 className={`p-2 rounded-full flex items-center justify-center cursor-pointer transition-colors ${darkMode ? 'bg-[#be5461] hover:bg-[#a74854]' : 'bg-gray-300 hover:bg-gray-400'} ${isSwinging ? 'opacity-50 cursor-not-allowed' : (darkMode ? 'text-gray-100' : 'text-gray-800')}`}
+    <div className={`min-h-screen flex flex-col items-center p-4 pt-6 relative ${openSans.className} ${darkMode ? 'bg-[#0a0a0a] text-gray-200' : 'bg-gray-100 text-gray-800'} transition-colors duration-300 overflow-hidden`}>
+      <motion.div 
+        className="w-full mb-20"
+        variants={titleVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <style>{RainbowTextStyle}</style>
+        <h1 className={`text-3xl font-bold text-center ${pressStart2P.className} 
+                     bg-gradient-to-r from-red-500 via-orange-500 via-yellow-400 via-green-500 via-blue-500 to-purple-600 
+                     bg-clip-text text-transparent 
+                     select-none 
+                     animate-rainbow-cycle`
+                    }>
+          Pixel Art Creator
+        </h1>
+      </motion.div>
+      
+      <motion.div 
+        className="w-full flex justify-between items-center mb-4 px-4"
+        style={{ maxWidth: 'min(80vw, 80vh, 500px)' }}
+        variants={topControlsVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="flex items-center space-x-2">
+          <label htmlFor="grid-size-select" className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Grid:</label>
+          <select 
+            id="grid-size-select"
+            value={gridSize}
+            onChange={(e) => changeGridDimension(Number(e.target.value))}
+            className={`rounded text-xs font-medium cursor-pointer transition-colors p-1 border ${darkMode ? 'bg-[#171717] border-gray-600 text-gray-200 focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-700 focus:ring-blue-500 focus:border-blue-500'}`}
+          >
+            {GRID_SIZES.map((size) => (
+              <option key={size} value={size}>
+                {size}x{size}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="flex justify-end">
+          <button 
+            onClick={switchColorMode} 
+            className={`p-2 rounded-full ${darkMode ? 'text-yellow-400 hover:bg-gray-700' : 'text-indigo-600 hover:bg-gray-200'} transition-colors cursor-pointer`}
+          >
+            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        </div>
+      </motion.div>
+
+      <motion.div 
+        className={`grid border mb-24 ${darkMode ? 'border-gray-600 bg-[#171717]' : 'border-gray-400 bg-white'} shadow-lg`}
+        style={{
+          gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+          width: 'min(80vw, 80vh, 500px)',
+          aspectRatio: '1 / 1',
+          cursor: 'crosshair'
+        }}
+        onMouseUp={handleMouseUp} 
+        onMouseLeave={handleGridMouseLeave} 
+        variants={gridVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {gridColors.map((row, rowIndex) =>
+          row.map((color, colIndex) => (
+            <div
+              key={`${rowIndex}-${colIndex}`}
+              className={`border ${darkMode ? 'border-gray-700' : 'border-gray-300'}`}
+              style={{
+                backgroundColor: color,
+               
+                minWidth: '1px', 
+                minHeight: '1px',
+              }}
+              onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
+              onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
+             
+              draggable="false" 
+            />
+          ))
+        )}
+      </motion.div>
+
+      <motion.div 
+        className={`fixed bottom-8 left-1/2 -translate-x-1/2 p-3 rounded-lg shadow-lg flex items-center gap-3 ${darkMode ? 'bg-[#171717]/90 border border-gray-700 backdrop-blur-sm' : 'bg-white/90 border border-gray-300 backdrop-blur-sm'} transition-colors duration-300 z-10`}
+        variants={floatingBarVariants}
+        initial="hidden"
+        animate="visible"
+      >
+          {PALETTE.map((color) => (
+            <button
+              key={color}
+              onClick={() => setCurrentColor(color)}
+              className={`w-7 h-7 rounded-full border-2 cursor-pointer transition-transform duration-100 ease-in-out ${selectedColor === color && color !== currentBackgroundColor ? (darkMode ? 'ring-2 ring-offset-2 ring-offset-gray-800 ring-white scale-110' : 'ring-2 ring-offset-2 ring-offset-gray-200 ring-black scale-110') : (darkMode ? 'border-gray-600 hover:scale-105' : 'border-gray-400 hover:scale-105')}`}
+              style={{ backgroundColor: color }}
+            />
+          ))}
+          <button
+            onClick={chooseEraser}
+            className={`w-7 h-7 rounded-full border-2 flex items-center justify-center cursor-pointer transition-transform duration-100 ease-in-out ${selectedColor === currentBackgroundColor ? (darkMode ? 'ring-2 ring-offset-2 ring-offset-gray-800 ring-white scale-110 bg-gray-700' : 'ring-2 ring-offset-2 ring-offset-gray-200 ring-black scale-110 bg-gray-300') : (darkMode ? 'border-gray-600 hover:scale-105 bg-gray-700/50' : 'border-gray-400 hover:scale-105 bg-gray-300/50')}`}
+          >
+            <Eraser size={14} className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}/>
+          </button>
+          <div className={`relative w-7 h-7 rounded-full border-2 cursor-pointer transition-transform duration-100 ease-in-out overflow-hidden ${!PALETTE.includes(selectedColor) && selectedColor !== currentBackgroundColor ? (darkMode ? 'ring-2 ring-offset-2 ring-offset-gray-800 ring-white scale-110' : 'ring-2 ring-offset-2 ring-offset-gray-200 ring-black scale-110') : (darkMode ? 'border-gray-600 hover:scale-105' : 'border-gray-400 hover:scale-105')}`}>
+            <input 
+              type="color"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              value={!PALETTE.includes(selectedColor) && selectedColor !== currentBackgroundColor ? selectedColor : '#000000'}
+              onChange={(e) => setCurrentColor(e.target.value)}
+            />
+            <div 
+              className="w-full h-full flex items-center justify-center"
+              style={{ 
+                backgroundColor: (!PALETTE.includes(selectedColor) && selectedColor !== currentBackgroundColor) 
+                  ? selectedColor 
+                  : (darkMode ? '#404040' : '#e5e5e5')
+              }}
             >
-                 <RotateCcw size={18} />
-             </button>
-         </div>
-         <div className="text-xs pt-4 space-y-1.5 opacity-80">
-             <div className="flex items-center gap-1.5">
-                 <LockKeyhole size={14} className="shrink-0 text-blue-400" />
-                 <span>Length, Angle, Gravity, Mass: Adjustable when paused.</span>
-             </div>
-             <div className="flex items-center gap-1.5">
-                 <RotateCcw size={14} className="shrink-0 text-yellow-400" />
-                 <span>Reset: Applies initial angle settings.</span>
-             </div>
-             <div className="flex items-center gap-1.5">
-                 <Zap size={14} className="shrink-0 text-green-400" />
-                 <span>Damping: Adjustable live during simulation.</span>
-             </div>
-         </div>
-      </div>
-      <div className="flex-1 flex flex-col p-4 overflow-hidden">
-          
-          <div className={`w-full flex-1 flex items-center justify-center border rounded-lg ${darkMode ? 'bg-[#171717] border-[#27272a]' : 'bg-white border-gray-300'} mb-4`}>
-               <svg width="500" height="350" viewBox="0 0 500 350">
-                  
-                  <circle cx={PIVOT_X} cy={PIVOT_Y} r="5" fill={darkMode ? '#cbd5e1' : '#4b5563'} />
-                  <line
-                    x1={PIVOT_X}
-                    y1={PIVOT_Y}
-                    x2={bobPosition.bobX}
-                    y2={bobPosition.bobY}
-                    stroke={darkMode ? '#9ca3af' : '#6b7280'}
-                    strokeWidth="2"
-                  />
-                  <circle
-                    cx={bobPosition.bobX}
-                    cy={bobPosition.bobY}
-                    r="15"
-                    fill="#fb3250"
-                    filter={darkMode ? 'drop-shadow(0 0 6px rgba(251, 50, 80, 0.6))' : 'drop-shadow(0 0 5px rgba(251, 50, 80, 0.5))'}
-                 />
-               </svg>
+              { (PALETTE.includes(selectedColor) || selectedColor === currentBackgroundColor) && 
+                <Palette size={14} className={darkMode ? "text-gray-400" : "text-gray-600"} />
+              }
+            </div>
           </div>
-          <div className={`w-full min-h-[250px] md:min-h-[450px] border rounded-lg ${darkMode ? 'bg-[#171717] border-[#27272a]' : 'bg-white border-gray-300'} p-2 pt-4`}>
-             <ResponsiveContainer width="100%" height="100%">
-                 <LineChart data={energyHistory} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                     <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#3f3f46' : '#d1d5db'} />
-                     <XAxis
-                         dataKey="time"
-                         type="number"
-                         domain={['dataMin', 'dataMax']}
-                         tickFormatter={(time) => typeof time === 'number' ? time.toFixed(1) + 's' : ''}
-                         stroke={darkMode ? '#9ca3af' : '#6b7280'}
-                         tick={{ fontSize: 10 }}
-                     />
-                     <YAxis stroke={darkMode ? '#9ca3af' : '#6b7280'} tick={{ fontSize: 10 }} label={{ value: 'Energy (J)', angle: -90, position: 'insideLeft', fill: darkMode ? '#9ca3af' : '#6b7280', fontSize: 11, dx: -5 }} />
-                     <Tooltip
-                        contentStyle={{
-                            backgroundColor: darkMode ? 'rgba(23, 23, 23, 0.9)' : 'rgba(255, 255, 255, 0.9)', 
-                            borderColor: darkMode ? '#3f3f46' : '#d1d5db',
-                            color: darkMode ? '#e5e7eb' : '#1f2937',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            padding: '6px 10px',
-                        }}
-                        itemStyle={{ padding: '2px 0' }}
-                        labelStyle={{ marginBottom: '4px', fontWeight: 'bold' }}
-                        formatter={(value: number | string | Array<number | string>) => typeof value === 'number' ? `${value.toFixed(2)} J` : value}
-                        labelFormatter={(label: number) => typeof label === 'number' ? `Time: ${label.toFixed(1)}s` : label}
-                    />
-                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} verticalAlign="top" align="right" />
-                    <Line type="monotone" dataKey="kinetic" name="Kinetic" stroke="#34d399" strokeWidth={2} dot={false} isAnimationActive={false} />
-                    <Line type="monotone" dataKey="potential" name="Potential" stroke="#60a5fa" strokeWidth={2} dot={false} isAnimationActive={false} />
-                    <Line type="monotone" dataKey="total" name="Total" stroke="#fb3250" strokeWidth={2} dot={false} isAnimationActive={false} />
-                 </LineChart>
-            </ResponsiveContainer>
-          </div>
-      </div>
+          <div className={`w-px h-6 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
+          <button 
+            onClick={clearDrawingArea}
+            className={`p-1.5 rounded-full flex items-center justify-center cursor-pointer transition-colors ${darkMode ? 'text-red-400 hover:bg-red-900/50' : 'text-red-500 hover:bg-red-100'}`}
+          >
+            <Trash2 size={16} />
+          </button>
+      </motion.div>
     </div>
   );
 }
