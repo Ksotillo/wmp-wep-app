@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body 
-        className={`${plusJakartaSans.variable} ${figtree.variable} font-figtree antialiased bg-black`}
+        className={`${plusJakartaSans.variable} ${figtree.variable} font-figtree antialiased bg-slate-100 dark:bg-slate-900`}
       >
         {children}
       </body>
