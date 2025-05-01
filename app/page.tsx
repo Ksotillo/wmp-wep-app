@@ -1,765 +1,502 @@
 'use client'
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import Image from 'next/image'; 
-import {
-  Bell, Search, UserCircle, ChevronDown, Clock, Users, UserCheck, UserX, ArrowUp, ArrowDown, Timer,
-  Calendar as CalendarIcon, Download, MoreHorizontal, ChevronsUpDown, ArrowUpNarrowWide, ArrowDownNarrowWide,
-  ClipboardList, Edit, Trash2, 
-  FilterX, RefreshCw, FileText, 
-  Settings, LogOut, User, 
-  Github, Linkedin, Twitter, 
-  MoreVertical
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { LayoutGrid, Check, Sparkles, MoveRight, HelpCircle, Twitter, Github, Linkedin, Send } from 'lucide-react'; 
+import { motion } from 'framer-motion';
 
-const DashboardHeader = () => {
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+type PricingCardProps = {
+  planName: string;
+  price: string | null; 
+  billingInfo: string;
+  features: string[];
+  buttonText: string;
+  isFeatured?: boolean; 
+  isCustom?: boolean; 
+  isYearly: boolean;
+};
 
-  const switchNotificationPanel = () => setIsNotificationsOpen(prev => !prev);
-  const switchProfileDropdown = () => setIsProfileOpen(prev => !prev);
 
-  const notificationsRef = useRef<HTMLDivElement>(null);
-  const notificationsButtonRef = useRef<HTMLButtonElement>(null);
-
-  const profileRef = useRef<HTMLDivElement>(null);
-  const profileButtonRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    const closeMenusOnClickOutside = (event) => { 
-      const target = event.target as Node;
-      
-      if (notificationsRef.current && !notificationsRef.current.contains(target) && notificationsButtonRef.current && !notificationsButtonRef.current.contains(target)) {
-        setIsNotificationsOpen(false);
-      }
-      
-      if (profileRef.current && !profileRef.current.contains(target) && profileButtonRef.current && !profileButtonRef.current.contains(target)) {
-        setIsProfileOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', closeMenusOnClickOutside);
-    return () => document.removeEventListener('mousedown', closeMenusOnClickOutside);
-  }, [notificationsRef, notificationsButtonRef, profileRef, profileButtonRef]);
+const PricingCard = ({ planName, price, billingInfo, features, buttonText, isFeatured = false, isCustom = false, isYearly }: PricingCardProps) => {
+  const yearlyDiscount = 0.30;
+  const monthlyPrice = isFeatured && price ? parseFloat(price) / (1 - yearlyDiscount) : null;
+  const displayPrice = isYearly ? price : monthlyPrice?.toFixed(2);
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
 
   return (
-    <header className="flex flex-row justify-between items-start mb-8">
-      <div className="mb-0">
-        <h1 className="text-2xl font-semibold font-montserrat">Dashboard</h1>
+    <motion.div
+      variants={cardVariants}
+      className={`rounded-xl p-6 md:p-8 shadow-lg flex flex-col ${isFeatured ? 'bg-gradient-to-br from-purple-600 to-indigo-700 text-white' : 'bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-200'} h-full`}>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className={`text-xl font-semibold font-montserrat ${isFeatured ? 'text-white' : 'text-gray-800 dark:text-white'}`}>{planName}</h3>
+        {isFeatured && isYearly && (
+          <span className="bg-white text-purple-700 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center space-x-1">
+            <span>🔥</span>
+            <span>Save 30% OFF</span>
+          </span>
+        )}
       </div>
-      <div className="flex items-center space-x-2 sm:space-x-4">
-         
-         <div className="relative" ref={notificationsRef}>
-             <button
-                ref={notificationsButtonRef}
-                onClick={switchNotificationPanel}
-                className="cursor-pointer p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-full relative"
-             >
-              <Bell size={20} />
-              
-              <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-neutral-900"></span>
-            </button>
-             {isNotificationsOpen && (
-                <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white dark:bg-[#171717] rounded-md shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 z-20">
-                    <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                        <h3 className="text-sm font-medium text-gray-800 dark:text-gray-300">Notifications</h3>
-                    </div>
-                    <div className="py-1 max-h-60 overflow-y-auto">
-                        
-                        <a href="#" className="flex items-start px-4 py-3 text-sm text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800">
-                            <UserCheck size={18} className="mr-3 mt-1 text-green-500 flex-shrink-0"/>
-                            <div>
-                                <p className="font-medium dark:text-gray-300">John Doe clocked in</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-500">5 minutes ago</p>
-                            </div>
-                        </a>
-                        <a href="#" className="flex items-start px-4 py-3 text-sm text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800">
-                             <Clock size={18} className="mr-3 mt-1 text-yellow-500 flex-shrink-0"/>
-                             <div>
-                                <p className="font-medium dark:text-gray-300">Sarah Lee arrived late</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-500">1 hour ago</p>
-                             </div>
-                         </a>
-                         <a href="#" className="flex items-start px-4 py-3 text-sm text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800">
-                             <UserX size={18} className="mr-3 mt-1 text-red-500 flex-shrink-0"/>
-                             <div>
-                                 <p className="font-medium dark:text-gray-300">James Carter reported absent</p>
-                                 <p className="text-xs text-gray-500 dark:text-gray-500">Yesterday</p>
-                             </div>
-                         </a>
-                    </div>
-                     <div className="p-2 border-t border-gray-200 dark:border-gray-700">
-                        <a href="#" className="block text-center text-xs text-blue-600 dark:text-blue-400 hover:underline">View all notifications</a>
-                    </div>
-                 </div>
-             )}
-         </div>
-
-        
-         <div className="relative" ref={profileRef}>
-             <button
-                ref={profileButtonRef}
-                onClick={switchProfileDropdown}
-                className="cursor-pointer flex items-center space-x-2 p-1 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-lg"
-             >
-               <UserCircle size={24} className="text-gray-500 dark:text-gray-500" />
-               <ChevronDown size={16} />
-            </button>
-             {isProfileOpen && (
-                 <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#171717] rounded-md shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 z-20">
-                     <div className="py-1" role="menu" >
-                         <a href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800" role="menuitem">
-                             <User size={14} className="mr-2" /> Your Profile
-                         </a>
-                         <a href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800" role="menuitem">
-                            <Settings size={14} className="mr-2" /> Settings
-                         </a>
-                         <button
-                             onClick={() => { console.log('Signing out...'); setIsProfileOpen(false); }}
-                             className="cursor-pointer flex items-center w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/50"
-                             role="menuitem"
-                         >
-                            <LogOut size={14} className="mr-2" /> Sign out
-                         </button>
-                      </div>
-                 </div>
-             )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 flex-grow mb-8">
+        <div className="flex flex-col">
+          <p className={`mb-6 text-sm ${isFeatured ? 'text-purple-100' : 'text-gray-600 dark:text-gray-400'}`}>
+            Access a complete payments platform with simple.
+          </p>
+          <div className="mt-auto">
+            {isCustom ? (
+              <p className="text-4xl font-bold font-montserrat mb-2">Let's Talk</p>
+            ) : (
+              <p className="text-4xl font-bold font-montserrat mb-2">
+                ${displayPrice}
+              </p>
+            )}
+            <p className={`text-sm ${isFeatured ? 'text-purple-200' : 'text-gray-500 dark:text-gray-400'}`}>{billingInfo}</p>
+          </div>
+        </div>
+        <div>
+          <ul className="space-y-3">
+            {features.map((feature: string, index: number) => (
+              <li key={index} className="flex items-center space-x-3">
+                <Check className={`w-5 h-5 ${isFeatured ? 'text-green-400' : 'text-green-500'}`} />
+                <span className={`text-sm ${isFeatured ? 'text-purple-50' : 'text-gray-700 dark:text-gray-300'}`}>{feature}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
-    </header>
+      <button className={`cursor-pointer w-full py-3 px-6 rounded-lg font-semibold transition-all duration-300 ${isFeatured ? 'bg-white text-purple-700 hover:bg-gray-100' : 'bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white dark:from-purple-600 dark:to-indigo-700 dark:hover:from-purple-700 dark:hover:to-indigo-800 shadow-md'}`}>
+        {buttonText}
+      </button>
+    </motion.div>
   );
 };
 
-const StatCard = ({ icon: Icon, title, value, change, changeColor, description, iconBgColor, iconColor }) => {
+
+const PricingSection = () => {
+  const [isYearly, setIsYearly] = useState(true);
+  const toggleBilling = () => setIsYearly(!isYearly);
+  const standardFeatures = [
+    'Unlimited users',
+    'Unlimited platform access',
+    'Unlimited revision & request',
+    'Pause & Cancel anytime'
+  ];
+
+  const customFeatures = [
+    'Unlimited users',
+    'Unlimited platform access',
+    'Priority support',
+    'Advanced analytics'
+  ];
+
+  const sectionVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
+  const cardContainerVariants = {
+    hidden: { opacity: 1 }, 
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2 
+      }
+    }
+  };
+
   return (
-    <div className="bg-white dark:bg-[#171717] rounded-lg shadow p-5 flex items-start space-x-4">
-      <div className={`rounded-full p-2 ${iconBgColor}`}>
-        <Icon size={20} className={iconColor} />
-      </div>
-      <div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-1">{title}</p>
-        <p className="text-2xl font-semibold font-montserrat mb-1 dark:text-gray-100">{value}</p>
-        <div className="text-xs text-gray-500 dark:text-gray-500 flex items-center space-x-1">
-          {change && (
-            <span className={`flex items-center ${changeColor === 'green' ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-              {changeColor === 'green' ? <ArrowUp size={12} className="mr-0.5" /> : <ArrowDown size={12} className="mr-0.5" />}
-              {change}
+    <motion.section 
+      variants={sectionVariants}
+      initial="hidden"
+      animate="visible"
+      className="max-w-7xl mx-auto flex flex-col items-center">
+      <motion.div variants={itemVariants} className="inline-flex items-center space-x-2 bg-white dark:bg-neutral-800 text-purple-700 dark:text-gray-300 px-3 py-1 rounded-lg text-sm font-medium mb-4 border border-purple-500 dark:border-neutral-700 shadow-sm">
+        <Sparkles className="w-4 h-4 text-purple-700 dark:text-gray-300" />
+        <span>Pricing Plan</span>
+      </motion.div>
+      <motion.h1 variants={itemVariants} className="text-center text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white font-montserrat mb-4">Simple, Flexible Pricing</motion.h1>
+      <motion.p variants={itemVariants} className="text-center text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-10">
+        See our pricing data and select your best service from our side. We always appreciate your subscription and we are dedicate to give our best efforts
+      </motion.p>
+      <motion.div variants={itemVariants} className="flex flex-col items-center mb-12">
+        <div className="flex items-center justify-center space-x-4">
+            <span className={`text-sm font-medium ${!isYearly ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>Monthly</span>
+            <button
+              onClick={toggleBilling}
+              className={`cursor-pointer relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 ${isYearly ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+            >
+              <motion.span
+                layout
+                className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-300 ${isYearly ? 'translate-x-6' : 'translate-x-1'}`}
+              />
+            </button>
+            <span className={`text-sm font-medium ${isYearly ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>Yearly</span>
+        </div>
+        {isYearly && (
+            <span className="mt-2 text-sm font-medium text-purple-600 dark:text-purple-400">
+              Save 30% OFF
             </span>
-          )}
-          <span>{description}</span>
-        </div>
-      </div>
-    </div>
+        )}
+      </motion.div>
+      <motion.div
+        variants={cardContainerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }} 
+        className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-5xl">
+          <PricingCard
+            planName="Standard"
+            price="15.99"
+            billingInfo={isYearly ? "Per user / billed yearly" : "Per user / billed monthly"}
+            features={standardFeatures}
+            buttonText="Get Started"
+            isFeatured={true}
+            isYearly={isYearly}
+          />
+          <PricingCard
+            planName="Custom"
+            price={null} 
+            billingInfo="Contact us for details"
+            features={customFeatures}
+            buttonText="Contact Sales"
+            isCustom={true}
+            isYearly={isYearly} 
+          />
+      </motion.div>
+    </motion.section>
   );
-};
-
-const baseAttendanceData = [
-  { id: '#E120', name: 'John Doe', img: 'https://randomuser.me/api/portraits/men/32.jpg', department: 'Information Technology', clockIn: '08:15 AM', clockOut: '05:00 PM', status: 'Present' },
-  { id: '#E119', name: 'Sarah Lee', img: 'https://randomuser.me/api/portraits/women/44.jpg', department: 'Human Resource', clockIn: '09:05 AM', clockOut: '05:00 PM', status: 'Late' },
-  { id: '#E118', name: 'Michael Tan', img: 'https://randomuser.me/api/portraits/men/51.jpg', department: 'Marketing', clockIn: '08:50 AM', clockOut: '05:00 PM', status: 'Present' },
-  { id: '#E117', name: 'Alice Morgan', img: 'https://randomuser.me/api/portraits/women/68.jpg', department: 'Finance', clockIn: '08:45 AM', clockOut: '05:00 PM', status: 'Present' },
-  { id: '#E116', name: 'James Carter', img: 'https://randomuser.me/api/portraits/men/75.jpg', department: 'Information Technology', clockIn: '-', clockOut: '-', status: 'Absent' },
-  { id: '#E115', name: 'Emma Brown', img: 'https://randomuser.me/api/portraits/women/12.jpg', department: 'Marketing', clockIn: '08:30 AM', clockOut: '05:05 PM', status: 'Present' },
-  { id: '#E114', name: 'David Bowen', img: 'https://randomuser.me/api/portraits/men/9.jpg', department: 'Human Resource', clockIn: '-', clockOut: '-', status: 'Absent' },
-  { id: '#E113', name: 'Rachel Amanda', img: 'https://randomuser.me/api/portraits/women/23.jpg', department: 'Marketing', clockIn: '08:45 AM', clockOut: '05:10 PM', status: 'Present' },
-  { id: '#E112', name: 'Chris Johnson', img: 'https://randomuser.me/api/portraits/men/88.jpg', department: 'Operations', clockIn: '09:00 AM', clockOut: '05:30 PM', status: 'Present' },
-];
-
-const generateVariedData = (baseData) => {
-  const statuses = ['Present', 'Late', 'Absent'];
-  const randomTimeOffset = () => (Math.random() < 0.7 ? 0 : Math.floor(Math.random() * 16) - 8); 
-
-  const formatTime = (baseTime, offset) => {
-    if (baseTime === '-') return '-';
-    try {
-        const [time, modifier] = baseTime.split(' ');
-        let [hours, minutes] = time.split(':').map(Number);
-
-        if (modifier === 'PM' && hours !== 12) hours += 12;
-        if (modifier === 'AM' && hours === 12) hours = 0; 
-
-        let date = new Date();
-        date.setHours(hours, minutes, 0, 0);
-        date.setMinutes(date.getMinutes() + offset);
-
-        let newHours = date.getHours();
-        const newMinutes = date.getMinutes();
-        const newModifier = newHours >= 12 ? 'PM' : 'AM';
-        newHours = newHours % 12;
-        newHours = newHours ? newHours : 12; 
-
-        return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')} ${newModifier}`;
-    } catch (e) {
-        console.error("Error formatting time:", baseTime, e);
-        return baseTime; 
-    }
-  };
-
-  return baseData.map(item => {
-    const randomStatus = Math.random() < 0.15 ? statuses[Math.floor(Math.random() * statuses.length)] : item.status; 
-    let newClockIn = item.clockIn;
-    let newClockOut = item.clockOut;
-
-    if (randomStatus !== 'Absent') {
-        
-        newClockIn = formatTime(item.clockIn, randomTimeOffset());
-        newClockOut = formatTime(item.clockOut, randomTimeOffset());
-    } else {
-        newClockIn = '-';
-        newClockOut = '-';
-    }
+}
 
 
-    return {
-      ...item,
-      status: randomStatus,
-      clockIn: newClockIn,
-      clockOut: newClockOut,
-    };
-  });
-};
-
-const getStatusBadgeStyles = (status) => {
-  switch (status) {
-    case 'Present':
-      return 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300';
-    case 'Late':
-      return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300';
-    case 'Absent':
-      return 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300';
-    default:
-      return 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
-  }
-};
-
-const escapeCSV = (field) => {
-  const stringField = String(field ?? ''); 
-  
-  if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
-    return `"${stringField.replace(/"/g, '""')}"`;
-  }
-  return stringField;
-};
-
-const convertToCSV = (data) => {
-  if (!data || data.length === 0) {
-    return '';
-  }
-  
-  const headers = ['id', 'name', 'department', 'clockIn', 'clockOut', 'status'];
-  const headerString = headers.map(escapeCSV).join(',');
-
-  
-  const rows = data.map(item => {
-    return headers.map(header => escapeCSV(item[header])).join(',');
-  });
-
-  return [headerString, ...rows].join('\n');
-};
-
-const triggerDownload = (csvString, filename) => {
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    if (link.download !== undefined) { 
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url); 
-    } else {
-        console.error("Browser does not support automatic download.");
-        
-    }
-};
-
-const ConfirmDeleteModal = ({
-  isOpen,
-  onClose,
-  onConfirm,
-  employeeName,
-}) => {
-  if (!isOpen || !employeeName) return null;
-
-  const runConfirmCallback = () => { 
-    onConfirm();
-    onClose();
+const FAQItem = ({ question, answer, isLastRowItem }: { question: string; answer: string; isLastRowItem: boolean }) => {
+  const faqItemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: { opacity: 1, x: 0 }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/75">
-      <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
-        <h2 className="text-xl font-semibold text-neutral-800 dark:text-neutral-100 mb-4 font-heading">
-          Confirm Deletion
-        </h2>
-        <p className="text-neutral-600 dark:text-neutral-300 mb-6 font-body">
-          Are you sure you want to delete the attendance record for{' '}
-          <span className="font-medium">{employeeName}</span>? This action cannot be undone.
-        </p>
-        <div className="flex justify-end space-x-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-md text-sm font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-500 dark:focus:ring-offset-neutral-800 cursor-pointer font-body"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={runConfirmCallback}
-            className="px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-neutral-800 cursor-pointer font-body"
-          >
-            Confirm Delete
-          </button>
-        </div>
-      </div>
-    </div>
+    <motion.div 
+      variants={faqItemVariants}
+      className={`pb-8 ${!isLastRowItem ? 'border-b border-gray-200 dark:border-neutral-700' : ''}`}>
+        <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 font-montserrat">{question}</h4>
+        <p className="text-sm text-gray-600 dark:text-gray-400 font-roboto">{answer}</p>
+    </motion.div>
   );
 };
 
-const AttendanceHistory = () => {
-  const [selectedDepartment, setSelectedDepartment] = useState('All');
-  const [selectedDate, setSelectedDate] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
-  const [displayData, setDisplayData] = useState(baseAttendanceData);
+
+const FAQSection = () => {
+  const faqData = [
+    {
+      question: "Do I have to pay for each agent account?",
+      answer: "Yes, we charge a fee for every agent account created, regardless of whether the agent is logged in or not. It is a long established fact that a reader is distracted by the readable content page when looking."
+    },
+    {
+      question: "What payment methods are accepted?",
+      answer: "We currently accept all major credit cards (Visa, Mastercard, American Express) via our secure payment processor. We plan to add more options like PayPal soon."
+    },
+    {
+      question: "Do you provide customer service agents?",
+      answer: "It is a long established fact that a reader is distracted by the readable content page when looking at its layout. The point of using Lorem Ipsum. No, we provide the tools for your agents."
+    },
+    {
+        question: "Is there a free trial available?",
+        answer: "Yes, we offer a 14-day free trial for our Standard plan, giving you full access to its features. No credit card is required to start your trial."
+    },
+    {
+      question: "Do you offer an annual payment option?",
+      answer: "A long established fact that a reader will be distracted by the readable content of a page when looking at its layout point of using is that it has distribution of letters."
+    },
+    {
+        question: "Can I change my plan later?",
+        answer: "Absolutely! You can easily upgrade, downgrade, or switch between monthly and yearly billing directly from your account dashboard at any time."
+    }
+  ];
+  const totalItems = faqData.length;
+
   
-  const [openRowMenuIndex, setOpenRowMenuIndex] = useState(null);
-  const rowMenuRef = useRef<HTMLDivElement>(null);
-  
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [employeeToDelete, setEmployeeToDelete] = useState(null);
-  
-  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
-  const headerMenuRef = useRef<HTMLDivElement>(null);
-  const headerMenuButtonRef = useRef<HTMLButtonElement>(null);
-  
-  const calendarDateSelected = (event) => {
-    const date = event.target.value;
-    setSelectedDate(date);
-    console.log("Date selected:", date);
-    setDisplayData(generateVariedData(baseAttendanceData));
-    setSearchTerm('');
-    setSelectedDepartment('All');
-    setSortConfig({ key: null, direction: 'ascending' });
-    setOpenRowMenuIndex(null); 
-    setIsHeaderMenuOpen(false); 
+  const introVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
   };
 
-  const departmentChosen = (event) => {
-      const department = event.target.value;
-      setSelectedDepartment(department);
-      console.log("Department selected:", department);
-  };
-  const updateSearchQuery = (event) => {
-      setSearchTerm(event.target.value);
-      console.log("Search term:", event.target.value);
-  };
-  const applyColumnSort = (key) => {
-      let direction = "ascending";
-      if (sortConfig.key === key && sortConfig.direction === "ascending") {
-          direction = "descending";
-      }
-      setSortConfig({ key, direction });
-  };
-  const determineSortIcon = (key) => {
-      if (sortConfig.key !== key) {
-          return <ChevronsUpDown size={14} className="ml-1 opacity-40" />;
-      }
-      return sortConfig.direction === "ascending" ? (
-          <ArrowUpNarrowWide size={14} className="ml-1 text-blue-600 dark:text-blue-400" />
-      ) : (
-          <ArrowDownNarrowWide size={14} className="ml-1 text-blue-600 dark:text-blue-400" />
-      );
-  };
-
-  const exportTableToCSV = () => {
-    console.log("Preparing CSV data...");
-    
-    const csvData = convertToCSV(sortedAndFilteredData);
-    if (csvData) {
-        const filename = `attendance_data_${selectedDate || 'all_dates'}_${selectedDepartment}.csv`;
-        triggerDownload(csvData, filename);
-        console.log("CSV download triggered.");
-    } else {
-        console.log("No data to download.");
+  
+  const gridVariants = {
+    hidden: { opacity: 1 }, 
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.15 }
     }
   };
-  const switchRowMenuVisibility = (index) => {
-    setIsHeaderMenuOpen(false); 
-    setOpenRowMenuIndex(prevIndex => (prevIndex === index ? null : index));
-  };
-  const switchHeaderMenuVisibility = () => {
-    setOpenRowMenuIndex(null); 
-    setIsHeaderMenuOpen(prev => !prev);
-  };
-  const performHeaderAction = (command) => {
-      console.log(`Header action selected: ${command}`);
-      
-      if (command === 'Export Data') {
-          exportTableToCSV();
-      }
-      if (command === 'Refresh Data') {
-          console.log("Simulating data refresh...");
-          setDisplayData(generateVariedData(baseAttendanceData)); 
-      }
-      setIsHeaderMenuOpen(false); 
-  };
-  const processRowMenuClick = (action, employee) => {
-    console.log(`${action} clicked for ${employee.name} (ID: ${employee.id})`);
-    setOpenRowMenuIndex(null); 
-    switch (action) {
-      case 'View Details':
-        
-        console.log("Triggering View Details logic...");
-        break;
-      case 'Edit Times':
-        
-        console.log("Triggering Edit Times logic...");
-        break;
-      case 'Delete Entry':
-        setEmployeeToDelete(employee);
-        setIsDeleteModalOpen(true);
-        break;
-      default:
-        console.warn("Unknown action:", action);
-    }
-  };
-  const deleteSelectedEntry = () => {
-    if (!employeeToDelete) return;
-    console.log(`Confirmed deletion for ${employeeToDelete.name}`);
-    
-    const updatedData = displayData.filter(emp => emp.id !== employeeToDelete.id);
-    setDisplayData(updatedData); 
-    setEmployeeToDelete(null); 
-  };
-  const abortDeletion = () => {
-    setIsDeleteModalOpen(false);
-    setEmployeeToDelete(null);
-  };
-
-  const sortedAndFilteredData = useMemo(() => {
-    let sortableItems = [...displayData].filter(item =>
-        (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         item.department.toLowerCase().includes(searchTerm.toLowerCase())) &&
-        (selectedDepartment === 'All' || item.department === selectedDepartment)
-    );
-
-    if (sortConfig.key !== null) {
-       sortableItems.sort((a, b) => {
-         const key = sortConfig.key;
-         
-         const valA = a[key] === '-' ? (sortConfig.direction === 'ascending' ? Infinity : -Infinity) : a[key];
-         const valB = b[key] === '-' ? (sortConfig.direction === 'ascending' ? Infinity : -Infinity) : b[key];
-
-         
-         if (typeof valA === 'string' && typeof valB === 'string') {
-             return sortConfig.direction === 'ascending'
-                 ? valA.localeCompare(valB)
-                 : valB.localeCompare(valA);
-         } else {
-             if (valA < valB) return sortConfig.direction === 'ascending' ? -1 : 1;
-             if (valA > valB) return sortConfig.direction === 'ascending' ? 1 : -1;
-             return 0;
-         }
-
-       });
-    }
-    return sortableItems;
-  }, [displayData, searchTerm, sortConfig, selectedDepartment]);
-
-  useEffect(() => {
-    const closeMenusOnClickOutside = (event) => {
-      const target = event.target as Node;
-
-      
-      if (openRowMenuIndex !== null && rowMenuRef.current && !rowMenuRef.current.contains(target)) {
-         const rowButton = document.querySelector(`[data-row-button-index="${openRowMenuIndex}"]`);
-         if (rowButton && !rowButton.contains(target)) {
-            setOpenRowMenuIndex(null);
-         }
-      }
-
-      
-      if (isHeaderMenuOpen && headerMenuRef.current && !headerMenuRef.current.contains(target)) {
-        if (headerMenuButtonRef.current && !headerMenuButtonRef.current.contains(target)) {
-           setIsHeaderMenuOpen(false);
-        }
-      }
-    };
-    document.addEventListener('mousedown', closeMenusOnClickOutside);
-    return () => document.removeEventListener('mousedown', closeMenusOnClickOutside);
-  }, [openRowMenuIndex, isHeaderMenuOpen]); 
-
 
   return (
-    <div className="bg-white dark:bg-[#171717] rounded-lg shadow p-5 overflow-x-auto">
-      
-      <div className="flex justify-between items-center mb-6 relative">
-        <div className="flex items-center space-x-2">
-            <ClipboardList size={20} className="text-blue-600 dark:text-blue-400" />
-            <h2 className="text-lg font-semibold font-montserrat dark:text-gray-200">Attendance History</h2>
+    <motion.section 
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.1 }} 
+      className="max-w-7xl mx-auto mt-20 md:mt-28 px-4 sm:px-6 lg:px-8">
+      <motion.div variants={introVariants} className="flex justify-center mb-4">
+        <div className="inline-flex items-center space-x-2 bg-white dark:bg-neutral-800 text-purple-700 dark:text-gray-300 px-3 py-1 rounded-lg text-sm font-medium border border-purple-500 dark:border-neutral-700 shadow-sm">
+            <HelpCircle className="w-4 h-4 text-purple-700 dark:text-gray-300" />
+            <span>FAQ'S</span>
         </div>
-        
-        <div className="relative">
-             <button
-                ref={headerMenuButtonRef}
-                onClick={switchHeaderMenuVisibility}
-                className="cursor-pointer text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-offset-neutral-800"
-             >
-                <MoreHorizontal size={18} />
-            </button>
-            
-            {isHeaderMenuOpen && (
-                <div
-                    ref={headerMenuRef}
-                    className="absolute right-0 mt-1 w-48 bg-white dark:bg-neutral-800 rounded-md shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 z-30" 
-                >
-                    <div className="py-1 font-body" role="menu" >
-                         {['Refresh Data', 'Export Data', 'Settings'].map((action) => (
-                            <button
-                                key={action}
-                                onClick={() => performHeaderAction(action)}
-                                className="cursor-pointer flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700"
-                                role="menuitem"
-                            >
-                                {action === 'Refresh Data' && <RefreshCw size={14} className="mr-2 opacity-70"/>}
-                                {action === 'Export Data' && <Download size={14} className="mr-2 opacity-70"/>}
-                                {action === 'Settings' && <Settings size={14} className="mr-2 opacity-70"/>}
-                                {action}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-         </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-        <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
-          
-           <div className="relative w-full sm:w-auto">
-             <select
-                value={selectedDepartment}
-                onChange={departmentChosen}
-                className="cursor-pointer appearance-none w-full sm:w-auto bg-white dark:bg-neutral-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-500 pr-8"
-              >
-                <option value="All">All Departments</option>
-                <option value="Information Technology">Information Technology</option>
-                <option value="Human Resource">Human Resource</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Finance">Finance</option>
-                <option value="Operations">Operations</option>
-              </select>
-              <ChevronDown size={16} className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
-          </div>
-
-           
-           <div className="relative w-full sm:w-auto">
-             <input
-                type="date"
-                value={selectedDate}
-                onChange={calendarDateSelected}
-                className="cursor-pointer w-full sm:w-auto bg-white dark:bg-neutral-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-500"
-             />
-           </div>
-        </div>
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-           <div className="relative w-full sm:w-auto">
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search employee"
-              value={searchTerm}
-              onChange={updateSearchQuery}
-              className="w-full sm:w-auto bg-gray-100 dark:bg-neutral-800 border border-gray-300 dark:border-gray-700 rounded-lg pl-9 pr-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-500"
-            />
-          </div>
-           <button onClick={exportTableToCSV} className="cursor-pointer flex items-center justify-center w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600 rounded-lg px-4 py-1.5 text-sm font-medium">
-             <Download size={16} className="mr-2" />
-             <span>Download data</span>
-          </button>
-        </div>
-      </div>
-
-       <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-        <thead className="text-xs text-gray-700 dark:text-gray-300 uppercase bg-gray-50 dark:bg-neutral-800">
-           <tr>
-             <th scope="col" className="px-2 sm:px-4 py-3 whitespace-nowrap">
-               <button onClick={() => applyColumnSort('id')} className="flex items-center gap-1 cursor-pointer hover:text-gray-900 dark:hover:text-white"># ID {determineSortIcon('id')}</button>
-            </th>
-            <th scope="col" className="px-2 sm:px-4 py-3 whitespace-nowrap">
-               <button onClick={() => applyColumnSort('name')} className="flex items-center gap-1 cursor-pointer hover:text-gray-900 dark:hover:text-white">Name {determineSortIcon('name')}</button>
-            </th>
-            <th scope="col" className="px-2 sm:px-4 py-3 whitespace-nowrap hidden sm:table-cell">
-               <button onClick={() => applyColumnSort('department')} className="flex items-center gap-1 cursor-pointer hover:text-gray-900 dark:hover:text-white">Department {determineSortIcon('department')}</button>
-            </th>
-            <th scope="col" className="px-2 sm:px-4 py-3 whitespace-nowrap">
-               <button onClick={() => applyColumnSort('clockIn')} className="flex items-center gap-1 cursor-pointer hover:text-gray-900 dark:hover:text-white">Clock-in {determineSortIcon('clockIn')}</button>
-            </th>
-            <th scope="col" className="px-2 sm:px-4 py-3 whitespace-nowrap hidden sm:table-cell">
-               <button onClick={() => applyColumnSort('clockOut')} className="flex items-center gap-1 cursor-pointer hover:text-gray-900 dark:hover:text-white">Clock-out {determineSortIcon('clockOut')}</button>
-            </th>
-            <th scope="col" className="px-2 sm:px-4 py-3 whitespace-nowrap">
-               <button onClick={() => applyColumnSort('status')} className="flex items-center gap-1 cursor-pointer hover:text-gray-900 dark:hover:text-white">Status {determineSortIcon('status')}</button>
-            </th>
-            <th scope="col" className="px-2 sm:px-4 py-3">
-               <span className="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-           {sortedAndFilteredData.map((item, index) => (
-            <tr key={item.id} className="bg-white dark:bg-[#171717] border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-neutral-800">
-              <td className="px-2 sm:px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap text-xs sm:text-sm">{item.id}</td>
-              <td className="px-2 sm:px-4 py-3">
-                <div className="flex items-center space-x-2">
-                  <Image
-                     src={item.img}
-                     alt={item.name}
-                     width={28}
-                     height={28}
-                     className="rounded-full object-cover hidden sm:inline-block"
-                   />
-                  <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm">{item.name}</span>
-                </div>
-              </td>
-              <td className="px-2 sm:px-4 py-3 dark:text-gray-400 hidden sm:table-cell text-xs sm:text-sm">{item.department}</td>
-              <td className="px-2 sm:px-4 py-3 dark:text-gray-400 text-xs sm:text-sm">{item.clockIn}</td>
-              <td className="px-2 sm:px-4 py-3 dark:text-gray-400 hidden sm:table-cell text-xs sm:text-sm">{item.clockOut}</td>
-              <td className="px-2 sm:px-4 py-3">
-                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeStyles(item.status)}`}>{item.status}</span>
-              </td>
-              <td className="px-2 sm:px-4 py-3 text-right relative">
-                 <button
-                    onClick={() => switchRowMenuVisibility(index)}
-                    data-row-button-index={index} 
-                    className="cursor-pointer text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-offset-neutral-800"
-                 >
-                    <MoreHorizontal size={18} />
-                 </button>
-                 {openRowMenuIndex === index && (
-                    <div
-                        ref={rowMenuRef} 
-                        data-row-menu 
-                        className="absolute right-0 mt-1 mr-2 sm:mr-0 w-40 bg-white dark:bg-neutral-800 rounded-md shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 z-20" 
-                    >
-                        <div className="py-1 font-body" role="menu" >
-                             
-                             {['View Details', 'Edit Times', 'Delete Entry'].map((action) => (
-                                <button
-                                    key={action}
-                                    onClick={() => processRowMenuClick(action, item)}
-                                    className={`cursor-pointer flex items-center w-full text-left px-4 py-2 text-sm ${
-                                        action === 'Delete Entry'
-                                        ? 'text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/50'
-                                        : 'text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700'
-                                    }`}
-                                    role="menuitem"
-                                >
-                                    {action === 'Edit Times' && <Edit size={14} className="mr-2 opacity-70"/>}
-                                    {action === 'Delete Entry' && <Trash2 size={14} className="mr-2 opacity-70"/>}
-                                    {action === 'View Details' && <User size={14} className="mr-2 opacity-70"/>} 
-                                    {action}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                 )}
-              </td>
-            </tr>
-          ))}
-            
-            {sortedAndFilteredData.length === 0 && (
-                <tr>
-                    <td colSpan={7} className="text-center py-10 text-gray-500 dark:text-gray-400">
-                        No matching records found.
-                    </td>
-                </tr>
-            )}
-        </tbody>
-       </table>
-
-       
-       <ConfirmDeleteModal
-            isOpen={isDeleteModalOpen}
-            onClose={abortDeletion}
-            onConfirm={deleteSelectedEntry}
-            employeeName={employeeToDelete?.name ?? null}
-       />
-    </div>
+      </motion.div>
+      <motion.h2 variants={introVariants} transition={{ delay: 0.1 }} className="text-center text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white font-montserrat mb-12 md:mb-16">
+        Common questions & answers
+      </motion.h2>
+      <motion.div 
+        variants={gridVariants}
+        className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+          {faqData.map((item, index) => {
+            const isLastRowItem = index >= totalItems - 2; 
+            return (
+              <FAQItem 
+                key={index} 
+                question={item.question} 
+                answer={item.answer} 
+                isLastRowItem={isLastRowItem} 
+              />
+            );
+          })}
+      </motion.div>
+    </motion.section>
   );
 };
 
-const Footer = () => {
-    return (
-        <footer className="mt-16 pt-8 pb-8 border-t border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-500 text-sm">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                    
-                     <div className="text-center md:text-left">
-                         <p className="font-semibold text-gray-600 dark:text-gray-400">Andromeda Inc.</p>
-                         <p>&copy; {new Date().getFullYear()} All rights reserved.</p>
-                     </div>
 
-                     
-                    <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2">
-                         <a href="#" className="hover:text-gray-700 dark:hover:text-gray-300 hover:underline">About Us</a>
-                         <a href="#" className="hover:text-gray-700 dark:hover:text-gray-300 hover:underline">Contact</a>
-                         <a href="#" className="hover:text-gray-700 dark:hover:text-gray-300 hover:underline">Privacy Policy</a>
-                         <a href="#" className="hover:text-gray-700 dark:hover:text-gray-300 hover:underline">Terms of Service</a>
-                     </nav>
 
-                    
-                    <div className="flex justify-center md:justify-end space-x-5">
-                        <a
-                            href="https://twitter.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                        >
-                             <span className="sr-only">Twitter</span>
-                             <Twitter size={20} />
-                         </a>
-                         <a
-                            href="https://github.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                         >
-                             <span className="sr-only">GitHub</span>
-                             <Github size={20} />
-                         </a>
-                         <a
-                             href="https://linkedin.com"
-                             target="_blank"
-                             rel="noopener noreferrer"
-                             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+const PricingPage = () => {
+  const currentYear = new Date().getFullYear();
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-white via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-neutral-900 dark:to-black text-gray-900 dark:text-gray-200 font-roboto flex flex-col">
+      <div className="absolute top-0 left-0 w-96 h-96 bg-purple-300/90 dark:bg-purple-900 rounded-full filter blur-[150px] opacity-50 dark:opacity-30 -translate-x-1/4 -translate-y-1/4 pointer-events-none"></div>
+      <div className="absolute bottom-0 right-0 w-80 h-80 bg-indigo-300/90 dark:bg-indigo-900 rounded-full filter blur-[120px] opacity-50 dark:opacity-30 translate-x-1/4 translate-y-1/4 pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-72 h-72 bg-blue-300/80 dark:bg-blue-800/70 rounded-full filter blur-[80px] opacity-60 dark:opacity-40 translate-x-1/4 -translate-y-1/4 pointer-events-none"></div>
+
+      <motion.header
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="sticky top-4 z-50 w-full px-4 sm:px-6 lg:px-8 flex justify-center"
+      >
+          <div className="w-full max-w-7xl rounded-lg px-6 py-3 shadow-lg border border-white/20 dark:border-white/10 bg-white/20 dark:bg-black/50 backdrop-blur-lg">
+              <nav className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                      <LayoutGrid className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                      <span className="text-xl font-semibold text-gray-800 dark:text-gray-100 font-montserrat">Scheduler</span>
+                  </div>
+                  <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
+                      <a
+                          href="#"
+                          className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                      >
+                          Home
+                      </a>
+                      <a
+                          href="#"
+                          className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                      >
+                          Features
+                      </a>
+                      <a
+                          href="#"
+                          className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                      >
+                          Product
+                      </a>
+                      <a
+                          href="#"
+                          className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                      >
+                          Pricing
+                      </a>
+                      <a
+                          href="#"
+                          className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                      >
+                          Contact Us
+                      </a>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                      <button className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors px-4 py-2 rounded-lg">
+                          Log In
+                      </button>
+                      <button className="cursor-pointer text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 dark:from-purple-600 dark:to-indigo-700 dark:hover:from-purple-700 dark:hover:to-indigo-800 px-4 py-2 rounded-lg shadow-md transition-all">
+                          Sign Up
+                      </button>
+                  </div>
+              </nav>
+          </div>
+      </motion.header>
+
+      <div className="relative z-0 flex-grow">
+          <main className="pt-28 sm:pt-32 pb-24 px-4 sm:px-6 lg:px-8">
+              <PricingSection />
+              <FAQSection />
+          </main>
+      </div>
+
+      <motion.footer
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1 }}
+          transition={{ duration: 0.6 }}
+          className="bg-white/50 dark:bg-black/30 border-t border-gray-200 dark:border-neutral-800 mt-24 py-12"
+      >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-8">
+                  <div className="lg:col-span-2">
+                      <div className="flex items-center space-x-2 mb-4">
+                          <LayoutGrid className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                          <span className="text-xl font-semibold text-gray-800 dark:text-gray-100 font-montserrat">Scheduler</span>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-xs">
+                          Making scheduling simple and efficient for everyone.
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">&copy; {currentYear} Scheduler. All rights reserved.</p>
+                  </div>
+                  <div>
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-200 tracking-wider uppercase mb-4 font-montserrat">
+                          Product
+                      </h5>
+                      <ul className="space-y-3">
+                          <li>
+                              <a
+                                  href="#"
+                                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+                              >
+                                  Features
+                              </a>
+                          </li>
+                          <li>
+                              <a
+                                  href="#"
+                                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+                              >
+                                  Pricing
+                              </a>
+                          </li>
+                          <li>
+                              <a
+                                  href="#"
+                                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+                              >
+                                  Integrations
+                              </a>
+                          </li>
+                          <li>
+                              <a
+                                  href="#"
+                                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+                              >
+                                  Updates
+                              </a>
+                          </li>
+                      </ul>
+                  </div>
+                  <div>
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-200 tracking-wider uppercase mb-4 font-montserrat">
+                          Company
+                      </h5>
+                      <ul className="space-y-3">
+                          <li>
+                              <a
+                                  href="#"
+                                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+                              >
+                                  About Us
+                              </a>
+                          </li>
+                          <li>
+                              <a
+                                  href="#"
+                                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+                              >
+                                  Careers
+                              </a>
+                          </li>
+                          <li>
+                              <a
+                                  href="#"
+                                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+                              >
+                                  Blog
+                              </a>
+                          </li>
+                          <li>
+                              <a
+                                  href="#"
+                                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+                              >
+                                  Contact
+                              </a>
+                          </li>
+                      </ul>
+                  </div>
+                  <div className="lg:col-span-2">
+                      <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-200 tracking-wider uppercase mb-4 font-montserrat">
+                          Subscribe
+                      </h5>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                          Get the latest news and updates directly in your inbox.
+                      </p>
+                      <form className="flex flex-col sm:flex-row gap-2">
+                          <input
+                              type="email"
+                              placeholder="Enter your email"
+                              required
+                              className="flex-grow px-3 py-2 rounded-md text-sm bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600"
+                          />
+                          <button
+                              type="submit"
+                              className="cursor-pointer inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 dark:from-purple-600 dark:to-indigo-700 dark:hover:from-purple-700 dark:hover:to-indigo-800 shadow-sm transition-all whitespace-nowrap"
                           >
-                             <span className="sr-only">LinkedIn</span>
-                             <Linkedin size={20} />
-                         </a>
-                     </div>
-                 </div>
-             </div>
-        </footer>
-    );
-};
-
-const DashboardPage = () => {
-  return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-gray-200 font-roboto p-4 sm:p-8"> 
-       <main className="flex-grow">
-           <DashboardHeader />
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-               
-                 <StatCard icon={UserCheck} title="Total Employees Present" value="120" change="+ 5%" changeColor="green" description="from yesterday" iconBgColor="bg-blue-100 dark:bg-blue-900" iconColor="text-blue-600 dark:text-blue-400" />
-                 <StatCard icon={Clock} title="Late Arrivals Today" value="15" change="+ 3 people" changeColor="green" description="compared to last week" iconBgColor="bg-yellow-100 dark:bg-yellow-900" iconColor="text-yellow-600 dark:text-yellow-400" />
-                 <StatCard icon={UserX} title="Employees Absent" value="8" change="- 2 people" changeColor="red" description="compared to last Monday" iconBgColor="bg-red-100 dark:bg-red-900" iconColor="text-red-600 dark:text-red-400" />
-                 <StatCard icon={Timer} title="Average Check-In Time" value="08:25 AM" description="Consistent with last week" iconBgColor="bg-indigo-100 dark:bg-indigo-900" iconColor="text-indigo-600 dark:text-indigo-400" />
-           </div>
-          <AttendanceHistory />
-       </main>
-      <Footer /> 
+                              <Send className="w-4 h-4 mr-2" />
+                              Subscribe
+                          </button>
+                      </form>
+                  </div>
+              </div>
+              <div className="mt-10 pt-8 border-t border-gray-200 dark:border-neutral-800 flex flex-col sm:flex-row justify-between items-center">
+                  <div className="flex space-x-5">
+                      <a
+                          href="https://twitter.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      >
+                          <span className="sr-only">Twitter</span>
+                          <Twitter size={20} />
+                      </a>
+                      <a
+                          href="https://github.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      >
+                          <span className="sr-only">GitHub</span>
+                          <Github size={20} />
+                      </a>
+                      <a
+                          href="https://linkedin.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      >
+                          <span className="sr-only">LinkedIn</span>
+                          <Linkedin size={20} />
+                      </a>
+                  </div>
+              </div>
+          </div>
+      </motion.footer>
     </div>
   );
 };
-export default DashboardPage;
+
+export default PricingPage;
