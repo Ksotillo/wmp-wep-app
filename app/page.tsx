@@ -51,23 +51,21 @@ const DropdownMenu = ({ items, isOpen }) => (
   </AnimatePresence>
 );
 
-
-const DropdownLink = ({ label, items }: { label: string; items: { href: string; label: string }[] }) => {
+const DropdownLink = ({ label, items }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null); 
+  const dropdownRef = useRef(null); 
 
   const toggleDropdown = () => setIsOpen(!isOpen);
 
-  
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    const closeMenuIfClickedOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', closeMenuIfClickedOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', closeMenuIfClickedOutside);
     };
   }, []);
 
@@ -268,68 +266,12 @@ export default function OpticalStoreLandingPage() {
       </div>
     </motion.div>
   );
-  
-  const HeroSection = () => {
-    return (
-      <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-        <div className="flex flex-col lg:flex-row gap-12 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-6 lg:w-1/2 text-center lg:text-left"
-          >
-            <h1 className={`text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white leading-tight ${montserrat.className}`}>
-              Find your perfect eyewear look
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-xl mx-auto lg:mx-0">
-              We're all about finding you that perfect pair. Experience the difference a perfect pair makes. Let's find yours together.
-            </p>
-            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 justify-center lg:justify-start">
-              <button 
-                onClick={() => setCurrentView('browsing')}
-                className="px-8 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-medium rounded-lg shadow hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors cursor-pointer">
-                Explore shop
-              </button>
-              <button className="px-8 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
-                Use Your Benefits
-              </button>
-            </div>
-            <TrustpilotRating />
-          </motion.div>
-  
-          <div className="flex flex-row space-x-4 lg:w-1/2 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 scrollbar-hide">
-             <ImageCard
-                imgSrc="https://images.unsplash.com/photo-1642036048293-e0e2c3ff7599?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                alt="Man wearing Hugo Boss glasses"
-                brand="Hugo Boss"
-                label="Discover"
-                delay={0.2}
-             />
-             <ImageCard
-                imgSrc="https://images.unsplash.com/photo-1628619487942-01c58eed5c33?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fG1lbiUyMHdlYXJpbmclMjBnbGFzc2VzfGVufDB8fDB8fHww"
-                alt="Man wearing Alex Perry glasses"
-                brand="Alex Perry"
-                label="Discover"
-                delay={0.4}
-              />
-             <ImageCard
-                imgSrc="https://images.unsplash.com/photo-1630208232589-e42b29428b19?q=80&w=3169&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                alt="Man wearing Michael Kors glasses"
-                brand="Michael Kors"
-                label="Discover"
-                delay={0.6}
-             />
-          </div>
-        </div>
-      </section>
-    );
-  };
+
 
   const ProductCard = (product: any) => {
     const { imgSrc, alt, tag, tagIcon: TagIcon, colors, brand, name, price, delay } = product;
     
-    const handleProductSelect = () => {
+    const navigateToProductDetail = () => {
         const thumbUrls = [
             "https://m.media-amazon.com/images/I/61sfou+o0xS._AC_SX679_.jpg",
             "https://m.media-amazon.com/images/I/515j4f4Q+uL._AC_SX679_.jpg",
@@ -385,7 +327,7 @@ export default function OpticalStoreLandingPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: delay ?? 0 }}
-        onClick={handleProductSelect} 
+        onClick={navigateToProductDetail} 
         whileHover={{ scale: 1.03 }} 
       >
         <div className="relative p-4">
@@ -409,39 +351,6 @@ export default function OpticalStoreLandingPage() {
     );
   };
 
-  const NewArrivalsSection = () => {
-      const products = [
-        { imgSrc: "https://m.media-amazon.com/images/I/61-0EpsPCGL._AC_SL1500_.jpg", alt: "Alex Perry Glasses", tag: "Best Sellers", colors: 3, brand: "AP2548", name: "Alex Perry", price: "187.99", delay: 0.1 },
-        { imgSrc: "https://m.media-amazon.com/images/I/61kI5-36qaL._AC_SX679_.jpg", alt: "Persol Glasses", tag: "Top Pick", colors: 2, brand: "AP2549", name: "Persol", price: "214.99", delay: 0.2 },
-        { imgSrc: "https://m.media-amazon.com/images/I/51E3DleHwiL._AC_SL1500_.jpg", alt: "Arnette Glasses", tag: "Flash Sale", colors: 4, brand: "AP2550", name: "Arnette", price: "199.99", delay: 0.3 },
-      ];
-      return (
-        <section className="bg-gray-100 dark:bg-gray-900 py-16 md:py-24">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-             
-             <div className="flex justify-between items-center mb-8 md:mb-12">
-                <h2 className={`text-3xl md:text-4xl font-bold text-gray-900 dark:text-white ${montserrat.className}`}>
-                  New Arrivals
-                </h2>
-                 <button
-                    onClick={() => setCurrentView('browsing')}
-                    className="flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors cursor-pointer"
-                 >
-                    <span>View All</span>
-                    <ArrowRight className="ml-1 h-4 w-4" />
-                 </button>
-             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {products.map((product, index) => (
-                <ProductCard key={`${product.brand}-${index}`} {...product} />
-              ))}
-            </div>
-          </div>
-        </section>
-      );
-  };
-
   const PersonalizedCard = ({ 
       IconComponent, 
       title, 
@@ -449,13 +358,6 @@ export default function OpticalStoreLandingPage() {
       bgColorClass, 
       iconColorClass,
       delay
-  }: { 
-      IconComponent: React.ElementType;
-      title: string; 
-      description: string; 
-      bgColorClass: string;
-      iconColorClass: string;
-      delay: number;
   }) => (
     <motion.div 
       className={`p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 ${bgColorClass}`}
@@ -471,70 +373,6 @@ export default function OpticalStoreLandingPage() {
     </motion.div>
   );
 
-  const PersonalizedEyecareSection = () => {
-    const cardsData = [
-      {
-        IconComponent: Eye, 
-        title: "Digital Life Style",
-        description: "Enhance Your Digital Lifestyle with Precision Eyeglasses for Strain-Free Vision.",
-        bgColorClass: "bg-emerald-50 dark:bg-emerald-900/50",
-        iconColorClass: "text-emerald-600 dark:text-emerald-400",
-        delay: 0.1
-      },
-      {
-        IconComponent: Gamepad, 
-        title: "Great Gamer",
-        description: "Level up your gaming experience with glasses designed for the Great Gamer in you.",
-        bgColorClass: "bg-blue-50 dark:bg-blue-900/50",
-        iconColorClass: "text-blue-600 dark:text-blue-400",
-        delay: 0.2
-      },
-      {
-        IconComponent: Heart,
-        title: "Outdoor Lover",
-        description: "Explore the Great Outdoors with Clarity and Comfort. Eyewear for the Outdoor Enthusiast.",
-        bgColorClass: "bg-yellow-50 dark:bg-yellow-900/50",
-        iconColorClass: "text-yellow-600 dark:text-yellow-400",
-        delay: 0.3
-      },
-       {
-        IconComponent: Car, 
-        title: "Always Driving",
-        description: "Navigate Every Journey: Eyewear Companion for the Always-Driving Enthusiast.",
-        bgColorClass: "bg-pink-50 dark:bg-pink-900/50",
-        iconColorClass: "text-pink-600 dark:text-pink-400",
-        delay: 0.4
-      }
-    ];
-
-    return (
-      <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-        <div className="text-center mb-12">
-            <h2 className={`text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 ${montserrat.className}`}>Personalized eyecare for you.</h2>
-            <p className="text-md text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Select one card to find the perfect style or lenses, according to your needs.
-            </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-           {cardsData.map((card, index) => (
-             <PersonalizedCard key={index} {...card} />
-           ))}
-        </div>
-      </section>
-    );
-  };
-
-  const UnrivalledExcellenceIntro = () => (
-    <section className="container mx-auto px-4 sm:px-6 lg:px-8 pt-16 md:pt-24 text-center">
-      <h2 className={`text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 ${montserrat.className}`}>
-        Unrivalled Excellence
-      </h2>
-      <p className="text-md text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-        Select one card to find the perfect style or lenses, according to your needs.
-      </p>
-    </section>
-  );
-
   const FeatureCard = ({ 
     bgColorClass,
     title, 
@@ -546,17 +384,6 @@ export default function OpticalStoreLandingPage() {
     imgPosition = 'bottom',
     children,
     textColorClass = 'text-gray-900 dark:text-white'
-  }: { 
-    bgColorClass: string; 
-    title: string; 
-    description: string; 
-    buttonText?: string; 
-    buttonLink?: string;
-    imgSrc?: string; 
-    imgAlt?: string;
-    imgPosition?: 'bottom' | 'right';
-    children?: React.ReactNode;
-    textColorClass?: string;
   }) => (
     <div className={`rounded-xl overflow-hidden shadow-lg ${bgColorClass} p-8 md:p-10 h-full flex flex-col`}>
       <h3 className={`text-2xl md:text-3xl font-bold mb-4 ${montserrat.className} ${textColorClass}`}>{title}</h3>
@@ -579,35 +406,6 @@ export default function OpticalStoreLandingPage() {
     </div>
   );
 
-  const DualFeatureSection = () => (
-    <section className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 md:pb-24">
-       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 md:gap-8 items-stretch"> 
-            <div className="md:col-span-3">
-                <FeatureCard
-                    bgColorClass="bg-blue-100 dark:bg-blue-900/50"
-                    title="Purchasing with insurance, made easy."
-                    description="This is our promise to you. We accept most vision insurance plans, both in and out-of-network."
-                    buttonText="Shop with insurance"
-                    imgSrc="https://assets2.oakley.com/cdn-record-files-pi/58d9e879-090c-4864-815b-a357009c3456/11e5b9a6-8fe1-45d2-b8ba-afc7016666e7/0OO4054__405401__P21__shad__qt.png"
-                    imgAlt="Stylish sunglasses"
-                    textColorClass="text-blue-900 dark:text-blue-100"
-                    imgPosition="bottom"
-                />
-            </div>
-            <div className="md:col-span-2">
-                <FeatureCard
-                    bgColorClass="bg-yellow-200 dark:bg-yellow-700/50"
-                    title="Shop Online, Thrive In-Store!"
-                    description="Online convenience meets in-store expertise for your ultimate eyewear experience!"
-                    imgSrc="https://t4.ftcdn.net/jpg/05/33/40/95/360_F_533409571_jqweTxLE0JRvfbKJvm9dTKwfkWDoEIEh.png"
-                    imgAlt="Hand holding glasses"
-                    textColorClass="text-yellow-900 dark:text-yellow-100"
-                    imgPosition="right"
-                />
-            </div>
-        </div>
-    </section>
-  );
 
   const BestsellerSection = () => {
     const bestsellerProducts = [
@@ -622,12 +420,12 @@ export default function OpticalStoreLandingPage() {
     const canGoPrev = bestsellerIndex > 0;
     const canGoNext = bestsellerIndex < bestsellerProducts.length - productsToShow;
 
-    const handlePrevClick = () => { 
+    const showPreviousBestsellers = () => { 
         if (canGoPrev) {
             setBestsellerIndex(prev => prev - 1);
         }
     };
-    const handleNextClick = () => { 
+    const displayNextBestsellers = () => { 
         if (canGoNext) {
             setBestsellerIndex(prev => prev + 1);
         }
@@ -639,14 +437,14 @@ export default function OpticalStoreLandingPage() {
           <h2 className={`text-3xl md:text-4xl font-bold text-gray-900 dark:text-white ${montserrat.className}`}>Bestseller</h2>
           <div className="flex space-x-2">
             <button 
-              onClick={handlePrevClick}
+              onClick={showPreviousBestsellers}
               disabled={!canGoPrev}
               className={`p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:focus:ring-offset-gray-900 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <button 
-              onClick={handleNextClick}
+              onClick={displayNextBestsellers}
               disabled={!canGoNext}
               className={`p-2 rounded-full bg-gray-900 dark:bg-gray-200 text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:focus:ring-offset-gray-900 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
             >
@@ -687,7 +485,7 @@ export default function OpticalStoreLandingPage() {
       </a>
     );
 
-    const handleNewsletterSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    const processNewsletterSubscription = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         console.log("Newsletter signup submitted");
         alert("Thank you for subscribing!"); 
@@ -718,7 +516,7 @@ export default function OpticalStoreLandingPage() {
             <div>
                <h5 className={`font-semibold mb-4 text-gray-900 dark:text-white ${montserrat.className}`}>Stay Updated</h5>
                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Get the latest news and offers directly in your inbox.</p>
-               <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-2">
+               <form onSubmit={processNewsletterSubscription} className="flex flex-col sm:flex-row gap-2">
                   <input 
                     type="email" 
                     placeholder="Enter your email"
@@ -1016,50 +814,219 @@ export default function OpticalStoreLandingPage() {
      );
   };
 
+    const cardsData = [
+        {
+            IconComponent: Eye,
+            title: "Digital Life Style",
+            description: "Enhance Your Digital Lifestyle with Precision Eyeglasses for Strain-Free Vision.",
+            bgColorClass: "bg-emerald-50 dark:bg-emerald-900/50",
+            iconColorClass: "text-emerald-600 dark:text-emerald-400",
+            delay: 0.1,
+        },
+        {
+            IconComponent: Gamepad,
+            title: "Great Gamer",
+            description: "Level up your gaming experience with glasses designed for the Great Gamer in you.",
+            bgColorClass: "bg-blue-50 dark:bg-blue-900/50",
+            iconColorClass: "text-blue-600 dark:text-blue-400",
+            delay: 0.2,
+        },
+        {
+            IconComponent: Heart,
+            title: "Outdoor Lover",
+            description: "Explore the Great Outdoors with Clarity and Comfort. Eyewear for the Outdoor Enthusiast.",
+            bgColorClass: "bg-yellow-50 dark:bg-yellow-900/50",
+            iconColorClass: "text-yellow-600 dark:text-yellow-400",
+            delay: 0.3,
+        },
+        {
+            IconComponent: Car,
+            title: "Always Driving",
+            description: "Navigate Every Journey: Eyewear Companion for the Always-Driving Enthusiast.",
+            bgColorClass: "bg-pink-50 dark:bg-pink-900/50",
+            iconColorClass: "text-pink-600 dark:text-pink-400",
+            delay: 0.4,
+        },
+    ];
+
+      const products = [
+        { imgSrc: "https://m.media-amazon.com/images/I/61-0EpsPCGL._AC_SL1500_.jpg", alt: "Alex Perry Glasses", tag: "Best Sellers", colors: 3, brand: "AP2548", name: "Alex Perry", price: "187.99", delay: 0.1 },
+        { imgSrc: "https://m.media-amazon.com/images/I/61kI5-36qaL._AC_SX679_.jpg", alt: "Persol Glasses", tag: "Top Pick", colors: 2, brand: "AP2549", name: "Persol", price: "214.99", delay: 0.2 },
+        { imgSrc: "https://m.media-amazon.com/images/I/51E3DleHwiL._AC_SL1500_.jpg", alt: "Arnette Glasses", tag: "Flash Sale", colors: 4, brand: "AP2550", name: "Arnette", price: "199.99", delay: 0.3 },
+      ];
+
   return (
-    <div className={`min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 ${roboto.className}`}>
-      <SiteHeader />
-      <main className="flex-grow">
-        <AnimatePresence mode="wait">
-          {currentView === 'landing' ? (
-             <motion.div
-                key="landing"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-             >
-                <HeroSection /> 
-                <NewArrivalsSection />
-                <PersonalizedEyecareSection /> 
-                <UnrivalledExcellenceIntro />
-                <DualFeatureSection />
-                <BestsellerSection />
-             </motion.div>
-          ) : currentView === 'browsing' ? (
-             <motion.div
-                key="browsing"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-             >
-                <ProductBrowsingPageContent />
-             </motion.div>
-          ) : currentView === 'detail' && selectedProduct ? (
-               <motion.div
-                  key="detail"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-               >
-                  <ProductDetailPageContent product={selectedProduct} />
-               </motion.div>
-          ) : null}
-        </AnimatePresence>
-      </main>
-      <SiteFooter />
-    </div>
+      <div className={`min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 ${roboto.className}`}>
+          <SiteHeader />
+          <main className="flex-grow">
+              <AnimatePresence mode="wait">
+                  {currentView === "landing" ? (
+                      <motion.div
+                          key="landing"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                      >
+                          <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+                              <div className="flex flex-col lg:flex-row gap-12 items-center">
+                                  <motion.div
+                                      initial={{ opacity: 0, x: -50 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      transition={{ duration: 0.5 }}
+                                      className="space-y-6 lg:w-1/2 text-center lg:text-left"
+                                  >
+                                      <h1
+                                          className={`text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white leading-tight ${montserrat.className}`}
+                                      >
+                                          Find your perfect eyewear look
+                                      </h1>
+                                      <p className="text-lg text-gray-600 dark:text-gray-400 max-w-xl mx-auto lg:mx-0">
+                                          We're all about finding you that perfect pair. Experience the difference a perfect pair makes.
+                                          Let's find yours together.
+                                      </p>
+                                      <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 justify-center lg:justify-start">
+                                          <button
+                                              onClick={() => setCurrentView("browsing")}
+                                              className="px-8 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-medium rounded-lg shadow hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors cursor-pointer"
+                                          >
+                                              Explore shop
+                                          </button>
+                                          <button className="px-8 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                                              Use Your Benefits
+                                          </button>
+                                      </div>
+                                      <TrustpilotRating />
+                                  </motion.div>
+
+                                  <div className="flex flex-row space-x-4 lg:w-1/2 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 scrollbar-hide">
+                                      <ImageCard
+                                          imgSrc="https://images.unsplash.com/photo-1642036048293-e0e2c3ff7599?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                                          alt="Man wearing Hugo Boss glasses"
+                                          brand="Hugo Boss"
+                                          label="Discover"
+                                          delay={0.2}
+                                      />
+                                      <ImageCard
+                                          imgSrc="https://images.unsplash.com/photo-1628619487942-01c58eed5c33?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fG1lbiUyMHdlYXJpbmclMjBnbGFzc2VzfGVufDB8fDB8fHww"
+                                          alt="Man wearing Alex Perry glasses"
+                                          brand="Alex Perry"
+                                          label="Discover"
+                                          delay={0.4}
+                                      />
+                                      <ImageCard
+                                          imgSrc="https://images.unsplash.com/photo-1630208232589-e42b29428b19?q=80&w=3169&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                                          alt="Man wearing Michael Kors glasses"
+                                          brand="Michael Kors"
+                                          label="Discover"
+                                          delay={0.6}
+                                      />
+                                  </div>
+                              </div>
+                          </section>
+                          <section className="bg-gray-100 dark:bg-gray-900 py-16 md:py-24">
+                              <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                                  <div className="flex justify-between items-center mb-8 md:mb-12">
+                                      <h2
+                                          className={`text-3xl md:text-4xl font-bold text-gray-900 dark:text-white ${montserrat.className}`}
+                                      >
+                                          New Arrivals
+                                      </h2>
+                                      <button
+                                          onClick={() => setCurrentView("browsing")}
+                                          className="flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors cursor-pointer"
+                                      >
+                                          <span>View All</span>
+                                          <ArrowRight className="ml-1 h-4 w-4" />
+                                      </button>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                                      {products.map((product, index) => (
+                                          <ProductCard key={`${product.brand}-${index}`} {...product} />
+                                      ))}
+                                  </div>
+                              </div>
+                          </section>
+
+                          <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+                              <div className="text-center mb-12">
+                                  <h2
+                                      className={`text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 ${montserrat.className}`}
+                                  >
+                                      Personalized eyecare for you.
+                                  </h2>
+                                  <p className="text-md text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                                      Select one card to find the perfect style or lenses, according to your needs.
+                                  </p>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+                                  {cardsData.map((card, index) => (
+                                      <PersonalizedCard key={index} {...card} />
+                                  ))}
+                              </div>
+                          </section>
+                          <section className="container mx-auto px-4 sm:px-6 lg:px-8 pt-16 md:pt-24 text-center">
+                              <h2 className={`text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 ${montserrat.className}`}>
+                                  Unrivalled Excellence
+                              </h2>
+                              <p className="text-md text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                                  Select one card to find the perfect style or lenses, according to your needs.
+                              </p>
+                          </section>
+                          <section className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 md:pb-24">
+                              <div className="grid grid-cols-1 md:grid-cols-5 gap-6 md:gap-8 items-stretch">
+                                  <div className="md:col-span-3">
+                                      <FeatureCard
+                                          bgColorClass="bg-blue-100 dark:bg-blue-900/50"
+                                          title="Purchasing with insurance, made easy."
+                                          description="This is our promise to you. We accept most vision insurance plans, both in and out-of-network."
+                                          buttonText="Shop with insurance"
+                                          imgSrc="https://assets2.oakley.com/cdn-record-files-pi/58d9e879-090c-4864-815b-a357009c3456/11e5b9a6-8fe1-45d2-b8ba-afc7016666e7/0OO4054__405401__P21__shad__qt.png"
+                                          imgAlt="Stylish sunglasses"
+                                          textColorClass="text-blue-900 dark:text-blue-100"
+                                          imgPosition="bottom"
+                                      />
+                                  </div>
+                                  <div className="md:col-span-2">
+                                      <FeatureCard
+                                          bgColorClass="bg-yellow-200 dark:bg-yellow-700/50"
+                                          title="Shop Online, Thrive In-Store!"
+                                          description="Online convenience meets in-store expertise for your ultimate eyewear experience!"
+                                          imgSrc="https://t4.ftcdn.net/jpg/05/33/40/95/360_F_533409571_jqweTxLE0JRvfbKJvm9dTKwfkWDoEIEh.png"
+                                          imgAlt="Hand holding glasses"
+                                          textColorClass="text-yellow-900 dark:text-yellow-100"
+                                          imgPosition="right"
+                                      />
+                                  </div>
+                              </div>
+                          </section>
+                          <BestsellerSection />
+                      </motion.div>
+                  ) : currentView === "browsing" ? (
+                      <motion.div
+                          key="browsing"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                      >
+                          <ProductBrowsingPageContent />
+                      </motion.div>
+                  ) : currentView === "detail" && selectedProduct ? (
+                      <motion.div
+                          key="detail"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                      >
+                          <ProductDetailPageContent product={selectedProduct} />
+                      </motion.div>
+                  ) : null}
+              </AnimatePresence>
+          </main>
+          <SiteFooter />
+      </div>
   );
 }
