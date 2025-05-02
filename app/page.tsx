@@ -18,14 +18,14 @@ const roboto = Roboto({
   variable: '--font-roboto',
 });
 
-const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
+const NavLink = ({ href, children }) => (
   <a href={href} className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
     {children}
   </a>
 );
 
 
-const DropdownMenu = ({ items, isOpen }: { items: { href: string; label: string }[], isOpen: boolean }) => (
+const DropdownMenu = ({ items, isOpen }) => (
   <AnimatePresence>
     {isOpen && (
       <motion.div
