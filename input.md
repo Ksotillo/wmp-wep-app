@@ -1,0 +1,2 @@
+stylish sun glasses: https://assets2.oakley.com/cdn-record-files-pi/58d9e879-090c-4864-815b-a357009c3456/11e5b9a6-8fe1-45d2-b8ba-afc7016666e7/0OO4054__405401__P21__shad__qt.png
+Hand holding glasses: https://t3.ftcdn.net/jpg/00/79/14/28/360_F_79142856_KUwopQQvTDocxXCjNaUnYA0oDAqrU2ge.jpg
