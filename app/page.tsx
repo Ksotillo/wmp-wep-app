@@ -1,795 +1,1250 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { FiSearch, FiShoppingCart, FiMenu, FiX, FiSun, FiMoon, FiPlay, FiArrowRight, FiChevronDown } from "react-icons/fi";
-import { FaInstagram, FaYoutube, FaTwitter, FaFacebookF } from "react-icons/fa";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+
+import {
+    UserCircle,
+    Menu,
+    X,
+    FileText,
+    PlusCircle,
+    Search,
+    MessageSquare,
+    ChevronDown,
+    MessageCircle as LucideMessageCircle,
+    Activity as LucideActivity,
+    FileEdit as LucideFileEdit,
+    Send,
+    Save,
+    Trash2,
+    Bold,
+    Italic,
+    Eye,
+    Code as CodeIcon,
+    List,
+    ListOrdered,
+    Link2,
+    Code2 as CodeBlockIcon,
+    Settings,
+    LogOut,
+    Edit3,
+    Quote,
+    CloudUpload,
+    History as HistoryIcon
+} from "lucide-react";
+
+interface Comment {
+    id: number;
+    user: string;
+    text: string;
+    timestamp: string;
+    isAnnotation?: boolean;
+    contextText?: string;
+    documentId?: string;
+}
+
+interface Document {
+    id: string;
+    title: string;
+    content: string;
+    lastModified?: number;
+}
+
+interface ActivityLog {
+    id: string;
+    timestamp: Date;
+    action: string; 
+    documentTitle?: string; 
+    details?: string; 
+}
 
 
+const documentTemplates= [
+    {
+        id: "blank",
+        name: "Blank Document",
+        content: `### Untitled\n\nStart with a clean slate.`,
+    },
+    {
+        id: "meeting-notes",
+        name: "Meeting Notes",
+        
+        content: `### Meeting Notes\n\n**Date:** ${new Date().toLocaleDateString()}\n**Attendees:**\n- Person A\n- Person B\n\n**Agenda:**\n1. Point 1\n2. Point 2\n\n**Discussion:**\n\n\n**Action Items:**\n- Action 1 (Owner, Due Date)\n`,
+    },
+    {
+        id: "project-brief",
+        name: "Project Brief",
+        content: `### Project Brief: [Project Name]\n\n**1. Project Goal:**\n   - \n\n**2. Target Audience:**\n   - \n\n**3. Key Deliverables:**\n   - \n\n**4. Timeline:**\n   - \n\n**5. Budget (Optional):**\n   - `,
+    },
+];
 
-const translations = {
-  EN: {
+const initialSampleDocuments: Document[] = [
+    {
+        id: "doc-1",
+        title: "Project Proposal.docx",
+        content: `### Project Proposal: CollaboraDocs\n\nThis document outlines the proposal for the CollaboraDocs platform...`,
+        lastModified: Date.now() - 100000,
+    },
+    {
+        id: "doc-2",
+        title: "Q3 Marketing Report.pdf",
+        content: `### Q3 Marketing Performance\n\nDetailed analysis of marketing campaigns and results for the third quarter.`,
+        lastModified: Date.now() - 200000,
+    },
+    {
+        id: "doc-3",
+        title: "Meeting Notes - July 15.txt",
+        content: `#### Attendees\n- Alice\n- Bob\n\n#### Discussion Points\n- Reviewed Q2 results...`,
+        lastModified: Date.now(),
+    },
+];
+
+const defaultInitialDocContent = documentTemplates[0].content; 
+
+const CollaboraDocsInitialPage = () => {
+    const [isLeftSidebarVisible, setIsLeftSidebarVisible] = useState(false);
+    const [activeMainTab, setActiveMainTab] = useState("");
+    const [newCommentText, setNewCommentText] = useState("");
+    const [commentsList, setCommentsList] = useState([]);
+
+    const [documents, setDocuments] = useState([]);
+    const [activeDocumentId, setActiveDocumentId] = useState(null);
+    const [documentText, setDocumentText] = useState("");
+    const [sidebarSearchTerm, setSidebarSearchTerm] = useState("");
+    const [saveStatus, setSaveStatus] = useState("");
+    const [editorMode, setEditorMode] = useState("");
+    const [isCreateDocModalOpen, setIsCreateDocModalOpen] = useState(false);
+    const [newDocumentTitle, setNewDocumentTitle] = useState("");
+    const [selectedTemplateId, setSelectedTemplateId] = useState("");
+    const [activityLogs, setActivityLogs] = useState([]);
+    const [isUserProfileDropdownOpen, setIsUserProfileDropdownOpen] = useState(false);
+    const [currentUserName, setCurrentUserName] = useState("Demo User");
+    const [selectedDocumentText, setSelectedDocumentText] = useState("");
+    const textAreaRef = useRef(null);
+    const userProfileRef = useRef(null);
+
+    const activeHeadingFont = "'Oswald', sans-serif";
+    const activeBodyFont = "'Open Sans', sans-serif";
+    useEffect(() => {
+        try {
+            const storedDocsString = localStorage.getItem("collaboradocs-documents");
+            let loadedDocuments = initialSampleDocuments;
+            if (storedDocsString) {
+                const storedDocsMeta = JSON.parse(storedDocsString);
+                if (storedDocsMeta.length > 0) {
+                    loadedDocuments = storedDocsMeta.map((metaDoc) => {
+                        const storedContent = localStorage.getItem(`collaboradocs-doc-content-${metaDoc.id}`);
+                        return {
+                            ...metaDoc,
+                            content:
+                                storedContent ||
+                                initialSampleDocuments.find((sd) => sd.id === metaDoc.id)?.content ||
+                                defaultInitialDocContent,
+                        };
+                    });
+                } else {
+                    loadedDocuments = [];
+                }
+            }
+            setDocuments(loadedDocuments);
+
+            if (loadedDocuments.length > 0) {
+                const lastActiveId = localStorage.getItem("collaboradocs-lastActiveDocId");
+                const docExists = loadedDocuments.find((d) => d.id === lastActiveId);
+                setActiveDocumentId(docExists ? lastActiveId : loadedDocuments[0].id);
+            } else {
+                setActiveDocumentId(null);
+            }
+        } catch (error) {
+            console.error("Failed to load documents from localStorage:", error);
+            setDocuments(initialSampleDocuments);
+            if (initialSampleDocuments.length > 0) setActiveDocumentId(initialSampleDocuments[0].id);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (activeDocumentId) {
+            const currentDoc = documents.find((doc) => doc.id === activeDocumentId);
+            if (currentDoc) {
+                setDocumentText(currentDoc.content);
+                setCommentsList([]);
+                localStorage.setItem("collaboradocs-lastActiveDocId", activeDocumentId);
+                setEditorMode("edit");
+            } else {
+                if (documents.length > 0) {
+                    setActiveDocumentId(documents[0].id);
+                } else {
+                    setActiveDocumentId(null);
+                    setDocumentText(defaultInitialDocContent); 
+                    setEditorMode("edit");
+                }
+            }
+        } else {
+            setDocumentText(defaultInitialDocContent);
+            setCommentsList([]);
+            localStorage.removeItem("collaboradocs-lastActiveDocId");
+            setEditorMode("edit");
+        }
+    }, [activeDocumentId, documents]);
+
+    useEffect(() => {
+        if (documents.length > 0 || localStorage.getItem("collaboradocs-documents")) {
+            const docsToStore = documents.map(({ id, title, lastModified }) => ({ id, title, lastModified }));
+            localStorage.setItem("collaboradocs-documents", JSON.stringify(docsToStore));
+        } else if (documents.length === 0 && !localStorage.getItem("collaboradocs-documents")) {
+        } else {
+            localStorage.setItem("collaboradocs-documents", JSON.stringify([]));
+        }
+    }, [documents]);
+
+    const addActivityLog = useCallback((action, documentTitle, details) => {
+        const newLog = {
+            id: `log-${Date.now()}`,
+            timestamp: new Date(),
+            action,
+            documentTitle,
+            details,
+        };
+        setActivityLogs(prevLogs => [newLog, ...prevLogs].slice(0, 50)); 
+    }, []);
+
+
+    const toggleLeftSidebar = () => setIsLeftSidebarVisible(!isLeftSidebarVisible);
+
+    const triggerMockFeatureAlert = (actionName: string) => alert(`${actionName} activated! This is a placeholder.`);
+
+    const updateEditorContent = (newContent: string) => setDocumentText(newContent);
+
+    const persistCurrentDocument = useCallback(() => {
+        if (activeDocumentId) {
+            const currentDoc = documents.find((doc) => doc.id === activeDocumentId);
+            if (currentDoc) {
+                const updatedDoc = { ...currentDoc, content: documentText, lastModified: Date.now() };
+                setDocuments((docs) => docs.map((d) => (d.id === activeDocumentId ? updatedDoc : d)));
+                localStorage.setItem(`collaboradocs-doc-content-${activeDocumentId}`, documentText);
+                setSaveStatus("Saved!");
+                addActivityLog("Document Saved", updatedDoc.title);
+                setTimeout(() => setSaveStatus(""), 2000);
+            } else {
+                setSaveStatus("Error: Document not found.");
+            }
+        } else {
+            setSaveStatus("No active document to save.");
+        }
+    }, [activeDocumentId, documentText, documents, addActivityLog]);
+    const processCommentSubmission = () => {
+        if (!newCommentText.trim()) return;
+        
+        const tempAnnotationContext = localStorage.getItem('tempAnnotationContext');
+        let actualCommentText = newCommentText.trim();
+        let isAnnot = false;
+        let contextTxt = undefined;
+
+        if (tempAnnotationContext) {
+            
+            
+            
+            const quotedContextLines = tempAnnotationContext.split('\n').map(line => `> ${line}`).join('\n');
+            if (actualCommentText.startsWith(quotedContextLines)) {
+                isAnnot = true;
+                contextTxt = tempAnnotationContext; 
+                
+                actualCommentText = actualCommentText.substring(quotedContextLines.length).trim();
+            }
+            localStorage.removeItem('tempAnnotationContext'); 
+        }
+
+        const newComment = {
+            id: Date.now(),
+            user: currentUserName,
+            text: actualCommentText, 
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            isAnnotation: isAnnot,
+            contextText: contextTxt,
+            documentId: activeDocumentId || undefined, 
+        };
+
+        
+        if (!newComment.text && isAnnot) {
+            alert("Please add your comment after the quoted text.");
+            
+            
+            return;
+        }
+
+        setCommentsList([newComment, ...commentsList]);
+        setNewCommentText("");
+        const currentDoc = documents.find(doc => doc.id === activeDocumentId);
+        if (currentDoc) {
+            addActivityLog(
+                isAnnot ? "Annotation Added" : "Comment Added", 
+                currentDoc.title, 
+                isAnnot ? `Context: "${contextTxt?.substring(0,30)}..." Comment: "${actualCommentText.substring(0,20)}..."` 
+                        : `Comment: "${actualCommentText.substring(0,30)}..."`
+            );
+        }
+    };
+
+    const alterUserProfileName = () => {
+        const newName = prompt("Enter new user name:", currentUserName);
+        if (newName && newName.trim() !== "") {
+            setCurrentUserName(newName.trim());
+            addActivityLog(`User name changed to "${newName.trim()}"`);
+        }
+        setIsUserProfileDropdownOpen(false);
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (userProfileRef.current && !userProfileRef.current.contains(event.target as Node)) {
+                setIsUserProfileDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    const openCreateDocumentModal = () => {
+        setNewDocumentTitle("");
+        setSelectedTemplateId(documentTemplates[0].id);
+        setIsCreateDocModalOpen(true);
+    };
+
+    const closeCreateDocumentModal = () => {
+        setIsCreateDocModalOpen(false);
+        setNewDocumentTitle("");
+    };
+
+    const confirmCreateNewDocument = () => {
+        const title = newDocumentTitle.trim();
+        if (title === "") {
+            alert("Document title cannot be empty.");
+            return;
+        }
+
+        const selectedTemplate = documentTemplates.find((t) => t.id === selectedTemplateId) || documentTemplates[0];
+        let content = selectedTemplate.content;
+        content = content.replace(/\[Project Name\]/g, title);
+        content = content.replace(/### Untitled/g, `### ${title}`);
+        content = content.replace(/\$\{new Date\(\)\.toLocaleDateString\(\)\}/g, new Date().toLocaleDateString());
+
+        const newDoc: Document = {
+            id: `doc-${Date.now()}`,
+            title: title,
+            content: content,
+            lastModified: Date.now(),
+        };
+        setDocuments((prevDocs) => [newDoc, ...prevDocs]);
+        setActiveDocumentId(newDoc.id);
+        setActiveMainTab("document");
+        localStorage.setItem(`collaboradocs-doc-content-${newDoc.id}`, newDoc.content);
+        addActivityLog("Document Created", newDoc.title, `From template: ${selectedTemplate.name}`);
+
+        closeCreateDocumentModal();
+
+        if (isLeftSidebarVisible && window.innerWidth < 1024) {
+            toggleLeftSidebar();
+        }
+    };
+
+    const loadDocumentIntoView = (docId: string) => {
+        setActiveDocumentId(docId);
+        setActiveMainTab("document");
+        if (isLeftSidebarVisible && window.innerWidth < 1024) {
+            toggleLeftSidebar();
+        }
+    };
+
+    const removeDocumentFromList = (docIdToDelete: string) => {
+        if (window.confirm("Are you sure you want to delete this document?")) {
+            const docToDelete = documents.find(doc => doc.id === docIdToDelete);
+            setDocuments((prevDocs) => prevDocs.filter((doc) => doc.id !== docIdToDelete));
+            localStorage.removeItem(`collaboradocs-doc-content-${docIdToDelete}`);
+            if (docToDelete) {
+                addActivityLog("Document Deleted", docToDelete.title);
+            }
+        }
+    };
+
+    const filteredDocuments = documents
+        .filter((doc) => doc.title.toLowerCase().includes(sidebarSearchTerm.toLowerCase()))
+        .sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+
+    const activeDocument = documents.find((doc) => doc.id === activeDocumentId);
+
     
-    "header.nav.home": "Home",
-    "header.nav.newArrival": "New Arrival",
-    "header.nav.shop": "Shop",
-    "header.nav.deals": "Deals",
-    "header.nav.contact": "Contact",
-    "header.nav.aboutUs": "About Us",
-    "header.signIn": "Sign In",
-    
-    "hero.title.line1": "Elevate Your Style With",
-    "hero.title.line2": "Bold Fashion",
-    "hero.exploreCollections": "Explore Collections",
-    
-    "testimonial.quote": "TrendZone's styles are fresh, bold, and exactly what I needed to upgrade my wardrobe. Loved the quality and vibe!",
-    "testimonial.author": "- Rafi H.",
-    
-    "lifestyle.tag": "Lifestyle",
-    "lifestyle.heading": "Set Up Your Fashion With The Latest Trends",
-    
-    "deals.title": "🔥 Hot Deals Just For You!",
-    "deals.shopNow": "Shop Now",
-    
-    "newsletter.title": "Get Exclusive Style Updates!",
-    "newsletter.description": "Be the first to know about new arrivals, flash sales, and insider style tips. Join the TrendZone family.",
-    "newsletter.emailPlaceholder": "Enter your email address",
-    "newsletter.subscribeButton": "Subscribe Now",
-    "newsletter.privacyNote": "We respect your privacy. Unsubscribe at any time.",
-    
-    "footer.brandDescription": "Elevating your style with bold fashion choices and the latest trends. Quality and vibe, delivered.",
-    "footer.quickLinks": "Quick Links",
-    "footer.company": "Company",
-    "footer.careers": "Careers",
-    "footer.privacyPolicy": "Privacy Policy",
-    "footer.termsOfService": "Terms of Service",
-    "footer.stayConnected": "Stay Connected",
-    "footer.stayConnectedDesc": "Don't miss out on the latest styles and offers.",
-    "footer.subscribeNow": "Subscribe Now",
-    "footer.copyright": "© {year} TrendZone. All rights reserved."
-  },
-  ES: {
-    
-    "header.nav.home": "Inicio",
-    "header.nav.newArrival": "Novedades",
-    "header.nav.shop": "Tienda",
-    "header.nav.deals": "Ofertas",
-    "header.nav.contact": "Contacto",
-    "header.nav.aboutUs": "Sobre Nosotros",
-    "header.signIn": "Iniciar Sesión",
-    
-    "hero.title.line1": "Eleva Tu Estilo Con",
-    "hero.title.line2": "Moda Atrevida",
-    "hero.exploreCollections": "Explorar Colecciones",
-    
-    "testimonial.quote": "¡Los estilos de TrendZone son frescos, atrevidos y justo lo que necesitaba para renovar mi guardarropa. Me encantó la calidad y la onda!",
-    "testimonial.author": "- Rafi H.",
-    
-    "lifestyle.tag": "Estilo de Vida",
-    "lifestyle.heading": "Define Tu Moda Con Las Últimas Tendencias",
-    
-    "deals.title": "🔥 ¡Ofertas Calientes Para Ti!",
-    "deals.shopNow": "Comprar Ahora",
-    
-    "newsletter.title": "¡Recibe Actualizaciones Exclusivas de Estilo!",
-    "newsletter.description": "Sé el primero en conocer las novedades, ventas flash y consejos de estilo. Únete a la familia TrendZone.",
-    "newsletter.emailPlaceholder": "Ingresa tu correo electrónico",
-    "newsletter.subscribeButton": "Suscribirse Ahora",
-    "newsletter.privacyNote": "Respetamos tu privacidad. Cancela la suscripción en cualquier momento.",
-    
-    "footer.brandDescription": "Elevando tu estilo con elecciones de moda atrevidas y las últimas tendencias. Calidad y ambiente, entregados.",
-    "footer.quickLinks": "Enlaces Rápidos",
-    "footer.company": "Empresa",
-    "footer.careers": "Carreras",
-    "footer.privacyPolicy": "Política de Privacidad",
-    "footer.termsOfService": "Términos de Servicio",
-    "footer.stayConnected": "Mantente Conectado",
-    "footer.stayConnectedDesc": "No te pierdas los últimos estilos y ofertas.",
-    "footer.subscribeNow": "Suscribirse Ahora",
-    "footer.copyright": "© {year} TrendZone. Todos los derechos reservados. Diseñado con <span class=\"text-red-500\">♥</span> por Ti y Tu Asistente IA."
-  },
+    const convertMarkdownToHtml = (markdown: string): string => {
+        if (!markdown) return "<p><br></p>";
+        let html = markdown;
+
+        
+        html = html.replace(/^###### (.*$)/gim, "<h6>$1</h6>");
+        html = html.replace(/^##### (.*$)/gim, "<h5>$1</h5>");
+        html = html.replace(/^#### (.*$)/gim, "<h4>$1</h4>");
+        html = html.replace(/^### (.*$)/gim, "<h3>$1</h3>");
+        html = html.replace(/^## (.*$)/gim, "<h2>$1</h2>");
+        html = html.replace(/^# (.*$)/gim, "<h1>$1</h1>");
+
+        
+        html = html.replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>");
+        html = html.replace(/__(.*?)__/gim, "<strong>$1</strong>");
+
+        
+        html = html.replace(/\*(.*?)\*/gim, "<em>$1</em>");
+        html = html.replace(/_(.*?)_/gim, "<em>$1</em>");
+
+        
+        html = html.replace(/^\s*[-*+] (.*)/gim, "<li>$1</li>");
+        html = html.replace(/(<li>.*<\/li>\s*)+/gim, (match) => `<ul>${match.replace(/\s*<li>/g, "<li>")}</ul>`);
+
+        
+        const paragraphs = html.split(/\n\s*\n/);
+        html = paragraphs
+            .map((p) => {
+                if (p.startsWith("<ul>") || p.startsWith("<h")) return p;
+                return `<p>${p.replace(/\n/g, "<br />")}</p>`;
+            })
+            .join("");
+
+        return html;
+    };
+
+    const applyMarkdownFormatting = (syntax: "bold" | "italic" | "ul" | "ol" | "link") => {
+        const textarea = textAreaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selectedText = documentText.substring(start, end);
+        let prefix = "";
+        let suffix = "";
+        let textToInsert = selectedText;
+
+        switch (syntax) {
+            case "bold":
+                prefix = "**";
+                suffix = "**";
+                break;
+            case "italic":
+                prefix = "*";
+                suffix = "*";
+                break;
+            case "ul":
+                if (selectedText.includes("\n")) {
+                    textToInsert = selectedText
+                        .split("\n")
+                        .map((line) => `- ${line}`)
+                        .join("\n");
+                } else {
+                    prefix = "- ";
+                }
+                break;
+            case "ol":
+                if (selectedText.includes("\n")) {
+                    let count = 1;
+                    textToInsert = selectedText
+                        .split("\n")
+                        .map((line) => `${count++}. ${line}`)
+                        .join("\n");
+                } else {
+                    prefix = "1. ";
+                }
+                break;
+            case "link":
+                const url = prompt("Enter URL:");
+                if (!url) return;
+                prefix = "[";
+                suffix = `](${url})`;
+                if (!selectedText) textToInsert = "link text";
+                break;
+        }
+
+        const newText = documentText.substring(0, start) + prefix + textToInsert + suffix + documentText.substring(end);
+
+        updateEditorContent(newText);
+
+        textarea.focus();
+        if (selectedText || syntax === "link") {
+            if (syntax === "link" && !selectedText) {
+                textarea.setSelectionRange(start + prefix.length, start + prefix.length + "link text".length);
+            } else {
+                textarea.setSelectionRange(start + prefix.length, start + prefix.length + textToInsert.length);
+            }
+        } else {
+            textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+        }
+    };
+
+    const captureHighlightedText = () => {
+        const textarea = textAreaRef.current;
+        if (textarea) {
+            const text = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
+            if (text.trim() !== "") {
+                setSelectedDocumentText(text.trim());
+            } else {
+                
+                
+                setSelectedDocumentText(""); 
+            }
+        }
+    };
+
+    const initiateCommentOnSelection = () => {
+        if (!selectedDocumentText) return;
+        setActiveMainTab('comments');
+        
+        const quotedText = selectedDocumentText.split('\n').map(line => `> ${line}`).join('\n');
+        setNewCommentText(`${quotedText}\n\n`); 
+        setSelectedDocumentText(""); 
+        
+        
+        localStorage.setItem('tempAnnotationContext', selectedDocumentText);
+    };
+
+    return (
+        <>
+            <style jsx global>{`
+                @import url("https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Open+Sans:wght@400;600;700&display=swap");
+
+                :root {
+                    --color-primary-dark: #2b3230;
+                    --color-primary-light: #f3f5f4;
+                    --color-muted-gray: #949c9b;
+                    --color-accent-green: #31ab62;
+                    --color-light-border: #e5e7eb;
+                    --color-dark-border: #374151;
+                    --color-text-on-dark: #f3f5f4;
+                    --color-text-on-light: #2b3230;
+                }
+
+                body {
+                    font-family: ${activeBodyFont};
+                    background-color: var(--color-primary-light);
+                    color: var(--color-text-on-light);
+                    transition: background-color 0.3s ease, color 0.3s ease;
+                }
+
+                .dark body {
+                    background-color: var(--color-primary-dark);
+                    color: var(--color-text-on-dark);
+                }
+
+                h1,
+                h2,
+                h3,
+                h4,
+                h5,
+                h6 {
+                    font-family: ${activeHeadingFont};
+                    color: inherit;
+                }
+
+                .prose {
+                    color: var(--color-text-on-light);
+                }
+                .dark .prose {
+                    color: var(--color-text-on-dark);
+                }
+                .prose h1,
+                .prose h2,
+                .prose h3,
+                .prose h4,
+                .prose h5,
+                .prose h6 {
+                    color: inherit;
+                }
+                .prose a {
+                    color: var(--color-accent-green);
+                    text-decoration: none;
+                }
+                .prose a:hover {
+                    text-decoration: underline;
+                }
+                .prose strong {
+                    color: inherit;
+                }
+                .prose blockquote {
+                    border-left-color: var(--color-accent-green);
+                    color: inherit;
+                }
+
+                html,
+                body,
+                #__next,
+                .min-h-screen {
+                    height: 100%;
+                }
+
+                /* Main page background - distinct from panels */
+                .page-background {
+                    background-color: var(--color-primary-light);
+                }
+                .dark .page-background {
+                    background-color: var(--color-primary-dark);
+                }
+
+                /* Subtle scrollbar for editor & sidebars */
+                .editor-textarea::-webkit-scrollbar,
+                .sidebar-scrollable::-webkit-scrollbar {
+                    width: 8px;
+                }
+                .editor-textarea::-webkit-scrollbar-track,
+                .sidebar-scrollable::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .editor-textarea::-webkit-scrollbar-thumb,
+                .sidebar-scrollable::-webkit-scrollbar-thumb {
+                    background: var(--color-muted-gray);
+                    border-radius: 4px;
+                }
+                .editor-textarea::-webkit-scrollbar-thumb:hover,
+                .sidebar-scrollable::-webkit-scrollbar-thumb:hover {
+                    background: var(--color-accent-green);
+                }
+            `}</style>
+
+            <div className="min-h-screen flex flex-col page-background text-[var(--color-text-on-light)] dark:text-[var(--color-text-on-dark)]">
+                <header className="sticky top-0 z-30 bg-white/80 dark:bg-gray-900 backdrop-blur-md  border-b border-[var(--color-light-border)] dark:border-[var(--color-dark-border)]">
+                    <div className="  px-4 sm:px-6 py-3 flex justify-between items-center w-full">
+                        <div className="flex items-center">
+                            <button
+                                className="lg:hidden mr-3 p-1.5 rounded-md hover:bg-[var(--color-light-border)]/40 dark:hover:bg-[var(--color-muted-gray)]/40 cursor-pointer"
+                                onClick={toggleLeftSidebar}
+                            >
+                                {isLeftSidebarVisible ? <X size={22} /> : <Menu size={22} />}
+                            </button>
+                            <h1 className="text-2xl font-medium tracking-tight" style={{ fontFamily: activeHeadingFont }}>
+                                NexusDocs
+                            </h1>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                            <div className="relative" ref={userProfileRef}>
+                                <UserCircle
+                                    size={28}
+                                    className="text-[var(--color-muted-gray)] dark:text-[var(--color-light-border)] cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={() => setIsUserProfileDropdownOpen(!isUserProfileDropdownOpen)}
+                                />
+                                {isUserProfileDropdownOpen && (
+                                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-900 border border-[var(--color-light-border)] dark:border-[var(--color-dark-border)] rounded-md shadow-lg py-1 z-50">
+                                        <div className="px-4 py-2 border-b border-[var(--color-light-border)] dark:border-[var(--color-dark-border)]">
+                                            <p className="text-sm font-medium truncate">{currentUserName}</p>
+                                            <p className="text-xs text-[var(--color-muted-gray)] truncate">
+                                                {currentUserName.toLowerCase().replace(/\s+/g, '.')}@example.com
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={alterUserProfileName}
+                                            className="w-full text-left flex items-center px-4 py-2 text-sm hover:bg-[var(--color-light-border)]/70 dark:hover:bg-[var(--color-muted-gray)]/40 transition-colors cursor-pointer"
+                                        >
+                                            <Edit3 size={14} className="mr-2 text-[var(--color-muted-gray)]" /> Change Name
+                                        </button>
+                                        <button
+                                            onClick={() => { triggerMockFeatureAlert('Settings clicked'); setIsUserProfileDropdownOpen(false); }}
+                                            className="w-full text-left flex items-center px-4 py-2 text-sm hover:bg-[var(--color-light-border)]/70 dark:hover:bg-[var(--color-muted-gray)]/40 transition-colors cursor-pointer"
+                                        >
+                                            <Settings size={14} className="mr-2 text-[var(--color-muted-gray)]" /> Settings
+                                        </button>
+                                        <div className="my-1 h-px bg-[var(--color-light-border)] dark:bg-[var(--color-dark-border)]"></div>
+                                        <button
+                                            onClick={() => { triggerMockFeatureAlert('Logout clicked'); setIsUserProfileDropdownOpen(false); }}
+                                            className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-400/10 transition-colors cursor-pointer"
+                                        >
+                                            <LogOut size={14} className="mr-2" /> Logout
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <div className="flex flex-1 overflow-hidden">
+                    <aside
+                        className={`fixed inset-y-0 left-0 z-20 flex flex-col w-64 bg-white dark:bg-gray-900 border-r border-[var(--color-light-border)] dark:border-[var(--color-dark-border)] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex pt-16 lg:pt-0 ${
+                            isLeftSidebarVisible ? "translate-x-0 shadow-xl" : "-translate-x-full lg:translate-x-0"
+                        }`}
+                    >
+                        <div className="p-4 flex-grow flex flex-col overflow-hidden">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-lg font-semibold" style={{ fontFamily: activeHeadingFont }}>
+                                    Documents
+                                </h2>
+                            </div>
+                            <div className="mb-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--color-muted-gray)]" />
+                                    <input
+                                        type="search"
+                                        placeholder="Search docs..."
+                                        value={sidebarSearchTerm}
+                                        onChange={(e) => setSidebarSearchTerm(e.target.value)}
+                                        className="pl-10 pr-3 py-1.5 w-full text-sm rounded-md border border-[var(--color-light-border)] dark:border-[var(--color-dark-border)] bg-white dark:bg-[var(--color-primary-dark)]/50 focus:ring-1 focus:ring-[var(--color-accent-green)] focus:border-[var(--color-accent-green)] outline-none placeholder-[var(--color-muted-gray)]"
+                                    />
+                                </div>
+                            </div>
+                            <nav className="space-y-1 flex-grow overflow-y-auto sidebar-scrollable pr-1">
+                                {filteredDocuments.map((doc) => (
+                                    <a
+                                        key={doc.id}
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            loadDocumentIntoView(doc.id);
+                                        }}
+                                        className={`group flex items-center justify-between px-3 py-2 text-sm rounded-md cursor-pointer transition-all duration-150 ease-in-out
+                      ${
+                          activeDocumentId === doc.id
+                              ? "bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)] font-medium"
+                              : "hover:bg-[var(--color-light-border)]/70 dark:hover:bg-[var(--color-muted-gray)]/40"
+                      }
+                    `}
+                                    >
+                                        <div className="flex items-center truncate">
+                                            <FileText
+                                                size={18}
+                                                className={`mr-3 flex-shrink-0 transition-colors duration-150 ease-in-out 
+                            ${
+                                activeDocumentId === doc.id
+                                    ? "text-[var(--color-accent-green)]"
+                                    : "text-[var(--color-muted-gray)] group-hover:text-[var(--color-accent-green)]"
+                            }`}
+                                            />
+                                            <span className="truncate" title={doc.title}>
+                                                {doc.title}
+                                            </span>
+                                        </div>
+                                        <Trash2
+                                            size={16}
+                                            className="text-[var(--color-muted-gray)] group-hover:text-red-500 dark:group-hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0 cursor-pointer"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                removeDocumentFromList(doc.id);
+                                            }}
+                                        />
+                                    </a>
+                                ))}
+                                {filteredDocuments.length === 0 && documents.length > 0 && (
+                                    <p className="px-3 py-2 text-sm text-[var(--color-muted-gray)] italic">
+                                        No documents match your search.
+                                    </p>
+                                )}
+                                {documents.length === 0 && (
+                                    <p className="px-3 py-2 text-sm text-[var(--color-muted-gray)] italic">No documents yet. Create one!</p>
+                                )}
+                            </nav>
+                            <div className="my-4 pt-4 border-t border-[var(--color-light-border)] dark:border-[var(--color-dark-border)]">
+                                <h3 className="px-1 text-xs font-semibold uppercase text-[var(--color-muted-gray)] tracking-wider mb-2" style={{ fontFamily: activeHeadingFont }}>
+                                    Cloud Storage
+                                </h3>
+                                <div className="space-y-1">
+                                    <button
+                                        onClick={() => alert("Connect to Google Drive")}
+                                        className="w-full flex items-center px-3 py-2 text-sm rounded-md hover:bg-[var(--color-light-border)]/70 dark:hover:bg-[var(--color-muted-gray)]/40 text-left transition-colors cursor-pointer"
+                                    >
+                                        <CloudUpload size={16} className="mr-2.5 text-[var(--color-muted-gray)]" /> Connect to Google Drive
+                                    </button>
+                                    <button
+                                        onClick={() => alert("Link File from Dropbox")}
+                                        className="w-full flex items-center px-3 py-2 text-sm rounded-md hover:bg-[var(--color-light-border)]/70 dark:hover:bg-[var(--color-muted-gray)]/40 text-left transition-colors cursor-pointer"
+                                    >
+                                        <CloudUpload size={16} className="mr-2.5 text-[var(--color-muted-gray)]" /> Link File from Dropbox
+                                    </button>
+                                </div>
+                            </div>
+                            <button
+                                className="mt-auto w-full flex items-center justify-center px-4 py-2 bg-[var(--color-accent-green)] text-[var(--color-text-on-dark)] text-sm font-medium rounded-md hover:opacity-90 transition-opacity cursor-pointer"
+                                onClick={openCreateDocumentModal}
+                            >
+                                <PlusCircle size={18} className="mr-2" /> New Document
+                            </button>
+                        </div>
+                        <div className="p-3 border-t border-[var(--color-light-border)] dark:border-[var(--color-dark-border)]">
+                            <button
+                                className="w-full flex items-center text-sm text-[var(--color-muted-gray)] hover:text-[var(--color-text-on-light)] dark:hover:text-[var(--color-text-on-dark)] p-2 rounded-md hover:bg-[var(--color-light-border)]/50 dark:hover:bg-[var(--color-muted-gray)]/20 cursor-pointer transition-colors"
+                                onClick={() => setActiveMainTab("comments")}
+                            >
+                                <MessageSquare size={16} className="mr-2" /> Post a comment...
+                            </button>
+                        </div>
+                    </aside>
+
+                    {isLeftSidebarVisible && (
+                        <div className="fixed inset-0 z-10 bg-black/30 backdrop-blur-sm lg:hidden" onClick={toggleLeftSidebar}></div>
+                    )}
+
+                    <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto flex flex-col bg-white dark:bg-gray-900">
+                        <div className="mb-4 text-sm">
+                            <span
+                                className="text-[var(--color-muted-gray)] hover:underline cursor-pointer"
+                                onClick={() => triggerMockFeatureAlert("Navigate to All Documents")}
+                            >
+                                All Documents
+                            </span>
+                            <span className="text-[var(--color-muted-gray)] mx-1">/</span>
+                            <span
+                                className="font-medium truncate max-w-[200px] sm:max-w-xs md:max-w-md"
+                                title={activeDocument ? activeDocument.title : "Untitled Document"}
+                            >
+                                {activeDocument ? activeDocument.title : "Untitled Document"}
+                            </span>
+                        </div>
+
+                        <h2
+                            className="text-2xl sm:text-3xl font-semibold mb-4 truncate"
+                            style={{ fontFamily: activeHeadingFont }}
+                            title={activeDocument ? activeDocument.title : "Untitled Document"}
+                        >
+                            {activeDocument ? activeDocument.title : "Untitled Document"}
+                        </h2>
+
+                        <div className="mb-5 border-b border-[var(--color-light-border)] dark:border-[var(--color-dark-border)]">
+                            <nav className="-mb-px flex space-x-4 sm:space-x-6" aria-label="Tabs">
+                                {["document", "comments", "activity", "history"].map((tabKey) => {
+                                    let TabIconComponent = LucideFileEdit;
+                                    if (tabKey === "comments") TabIconComponent = LucideMessageCircle;
+                                    if (tabKey === "activity") TabIconComponent = LucideActivity;
+                                    if (tabKey === "history") TabIconComponent = HistoryIcon;
+                                    const tabLabel = tabKey.charAt(0).toUpperCase() + tabKey.slice(1);
+
+                                    return (
+                                        <button
+                                            key={tabKey}
+                                            onClick={() => setActiveMainTab(tabKey)}
+                                            className={`group inline-flex items-center whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm cursor-pointer transition-colors duration-150 ease-in-out
+                        ${
+                            activeMainTab === tabKey
+                                ? "border-[var(--color-accent-green)] text-[var(--color-accent-green)]"
+                                : "border-transparent text-[var(--color-muted-gray)] hover:text-[var(--color-text-on-light)] dark:hover:text-[var(--color-text-on-dark)] hover:border-[var(--color-muted-gray)]/70"
+                        }
+                      `}
+                                        >
+                                            <TabIconComponent
+                                                size={16}
+                                                className={`mr-2 ${
+                                                    activeMainTab === tabKey
+                                                        ? "text-[var(--color-accent-green)]"
+                                                        : "text-[var(--color-muted-gray)] group-hover:text-[var(--color-text-on-light)] dark:group-hover:text-[var(--color-text-on-dark)]"
+                                                } transition-colors duration-150 ease-in-out`}
+                                            />
+                                            <span className={`${activeMainTab === tabKey ? '' : 'hidden sm:inline-block'}`}>
+                                                {tabLabel}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </nav>
+                        </div>
+
+                        <div className="flex-grow flex flex-col">
+                            {activeMainTab === "document" && (
+                                <div className="flex flex-col flex-grow bg-white dark:bg-gray-900/50 rounded-lg shadow-sm overflow-hidden h-full">
+                                    <div className="flex items-center justify-between p-2 border-b border-[var(--color-light-border)] dark:border-[var(--color-dark-border)]">
+                                        <div className="flex items-center space-x-1">
+                                            {editorMode === "edit" && (
+                                                <>
+                                                    <button
+                                                        title="Bold"
+                                                        onClick={() => applyMarkdownFormatting("bold")}
+                                                        className="p-1.5 rounded hover:bg-[var(--color-light-border)] dark:hover:bg-[var(--color-muted-gray)]/50 cursor-pointer"
+                                                    >
+                                                        <Bold size={16} />
+                                                    </button>
+                                                    <button
+                                                        title="Italic"
+                                                        onClick={() => applyMarkdownFormatting("italic")}
+                                                        className="p-1.5 rounded hover:bg-[var(--color-light-border)] dark:hover:bg-[var(--color-muted-gray)]/50 cursor-pointer"
+                                                    >
+                                                        <Italic size={16} />
+                                                    </button>
+                                                    <button
+                                                        title="Unordered List"
+                                                        onClick={() => applyMarkdownFormatting("ul")}
+                                                        className="p-1.5 rounded hover:bg-[var(--color-light-border)] dark:hover:bg-[var(--color-muted-gray)]/50 cursor-pointer"
+                                                    >
+                                                        <List size={16} />
+                                                    </button>
+                                                    <button
+                                                        title="Ordered List"
+                                                        onClick={() => applyMarkdownFormatting("ol")}
+                                                        className="p-1.5 rounded hover:bg-[var(--color-light-border)] dark:hover:bg-[var(--color-muted-gray)]/50 cursor-pointer"
+                                                    >
+                                                        <ListOrdered size={16} />
+                                                    </button>
+                                                    <button
+                                                        title="Insert Link"
+                                                        onClick={() => applyMarkdownFormatting("link")}
+                                                        className="p-1.5 rounded hover:bg-[var(--color-light-border)] dark:hover:bg-[var(--color-muted-gray)]/50 cursor-pointer"
+                                                    >
+                                                        <Link2 size={16} />
+                                                    </button>
+                                                </>
+                                            )}
+                                            {editorMode === "preview" && (
+                                                <div className="w-[calc(6*1.5rem+6*16px+5*0.25rem)] min-w-[150px]"></div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center space-x-1">
+                                            <button
+                                                onClick={() => setEditorMode("edit")}
+                                                disabled={editorMode === "edit" || !activeDocument}
+                                                className={`p-1.5 rounded flex items-center text-xs font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
+                                                    editorMode === "edit"
+                                                        ? "bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]"
+                                                        : "hover:bg-[var(--color-light-border)] dark:hover:bg-[var(--color-muted-gray)]/50"
+                                                }`}
+                                            >
+                                                <CodeIcon size={14} className="mr-1" /> Edit
+                                            </button>
+                                            <button
+                                                onClick={() => setEditorMode("preview")}
+                                                disabled={editorMode === "preview" || !activeDocument}
+                                                className={`p-1.5 rounded flex items-center text-xs font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
+                                                    editorMode === "preview"
+                                                        ? "bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]"
+                                                        : "hover:bg-[var(--color-light-border)] dark:hover:bg-[var(--color-muted-gray)]/50"
+                                                }`}
+                                            >
+                                                <Eye size={14} className="mr-1" /> Preview
+                                            </button>
+                                        </div>
+
+                                        <div className="flex items-center">
+                                            {saveStatus && (
+                                                <span className="text-xs text-[var(--color-accent-green)] mr-3 transition-opacity duration-500">
+                                                    {saveStatus}
+                                                </span>
+                                            )}
+                                            <button
+                                                onClick={persistCurrentDocument}
+                                                disabled={!activeDocument}
+                                                className="flex items-center px-3 py-1 bg-[var(--color-accent-green)] text-[var(--color-text-on-dark)] text-xs font-medium rounded-md hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <Save size={14} className="mr-1.5" /> Save
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {editorMode === "edit" && (
+                                        <textarea
+                                            ref={textAreaRef}
+                                            value={documentText}
+                                            onChange={(e) => updateEditorContent(e.target.value)}
+                                            onMouseUp={captureHighlightedText}
+                                            onTouchEnd={captureHighlightedText}
+                                            placeholder="Start typing your document... (Supports basic Markdown)"
+                                            className="w-full flex-1 p-3 sm:p-4 text-sm border-none focus:ring-0 bg-transparent dark:bg-transparent outline-none resize-none placeholder-[var(--color-muted-gray)] leading-relaxed editor-textarea min-h-0"
+                                            disabled={!activeDocument}
+                                        />
+                                    )}
+                                    {editorMode === "preview" && activeDocument && (
+                                        <div
+                                            className="prose prose-sm sm:prose-base dark:prose-invert max-w-full w-full flex-1 p-3 sm:p-4 overflow-y-auto editor-textarea min-h-0"
+                                            dangerouslySetInnerHTML={{ __html: convertMarkdownToHtml(documentText) }}
+                                        />
+                                    )}
+                                    {!activeDocument && editorMode === "preview" && (
+                                        <div className="p-3 sm:p-4 text-sm text-[var(--color-muted-gray)] italic flex-1 min-h-0">
+                                            No document selected to preview.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {activeMainTab === "comments" && (
+                                <div className="p-4 sm:p-6 bg-white dark:bg-[var(--color-primary-dark)]/40 rounded-lg shadow-sm flex flex-col h-full">
+                                    <h3 className="text-xl font-semibold mb-4" style={{ fontFamily: activeHeadingFont }}>
+                                        Comments
+                                    </h3>
+                                    <div className="mb-6">
+                                        <textarea
+                                            value={newCommentText}
+                                            onChange={(e) => setNewCommentText(e.target.value)}
+                                            placeholder="Write a comment..."
+                                            className="w-full p-3 text-sm rounded-md border border-[var(--color-light-border)] dark:border-[var(--color-dark-border)] bg-[var(--color-primary-light)] dark:bg-[var(--color-primary-dark)]/70 focus:ring-2 focus:ring-[var(--color-accent-green)] focus:border-[var(--color-accent-green)] outline-none resize-none placeholder-[var(--color-muted-gray)] min-h-[80px]"
+                                            rows={3}
+                                        ></textarea>
+                                        <button
+                                            onClick={processCommentSubmission}
+                                            className="mt-2 flex items-center justify-center px-4 py-2 bg-[var(--color-accent-green)] text-[var(--color-text-on-dark)] text-sm font-medium rounded-md hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                            disabled={!newCommentText.trim()}
+                                        >
+                                            <Send size={16} className="mr-2" /> Post Comment
+                                        </button>
+                                    </div>
+                                    <div className="flex-grow overflow-y-auto space-y-4 pr-1">
+                                        {commentsList.length === 0 && (
+                                            <p className="text-[var(--color-muted-gray)] text-sm italic">
+                                                No comments yet. Be the first to comment!
+                                            </p>
+                                        )}
+                                        {commentsList.map((comment) => (
+                                            <div
+                                                key={comment.id}
+                                                className="p-3 rounded-md border border-[var(--color-light-border)]/50 dark:border-[var(--color-muted-gray)]/30 bg-[var(--color-primary-light)] dark:bg-[var(--color-primary-dark)]/60 shadow-sm"
+                                            >
+                                                <div className="flex items-center mb-1.5">
+                                                    <UserCircle size={20} className="mr-2 text-[var(--color-muted-gray)] flex-shrink-0" />
+                                                    <span className="font-medium text-sm truncate" title={comment.user}>
+                                                        {comment.user}
+                                                    </span>
+                                                    <span className="text-xs text-[var(--color-muted-gray)] ml-auto flex-shrink-0">
+                                                        {comment.timestamp}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm pl-[calc(20px+0.5rem)] leading-relaxed whitespace-pre-wrap break-words">
+                                                    {comment.text}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {activeMainTab === "activity" && (
+                                <div className="p-4 sm:p-6 bg-white dark:bg-[var(--color-primary-dark)]/40 rounded-lg shadow-sm flex-1 overflow-y-auto">
+                                    <h3 className="text-xl font-semibold mb-6" style={{ fontFamily: activeHeadingFont }}>
+                                        Activity Log
+                                    </h3>
+                                    {activityLogs.length === 0 ? (
+                                        <p className="text-[var(--color-muted-gray)] italic">
+                                            No activity yet. Try creating, saving, or commenting on a document.
+                                        </p>
+                                    ) : (
+                                        <ul className="space-y-4">
+                                            {activityLogs.map((log) => {
+                                                let Icon = LucideActivity; 
+                                                if (log.action.includes("Created")) Icon = PlusCircle;
+                                                if (log.action.includes("Saved")) Icon = Save;
+                                                if (log.action.includes("Deleted")) Icon = Trash2;
+                                                if (log.action.includes("Comment")) Icon = LucideMessageCircle;
+
+                                                return (
+                                                    <li key={log.id} className="flex items-start space-x-3 pb-3 border-b border-[var(--color-light-border)] dark:border-[var(--color-muted-gray)]/20 last:border-b-0">
+                                                        <Icon size={18} className="mt-1 text-[var(--color-accent-green)] flex-shrink-0" />
+                                                        <div className="flex-grow">
+                                                            <p className="text-sm font-medium">
+                                                                {log.action}
+                                                                {log.documentTitle && <span className="font-normal text-[var(--color-muted-gray)]"> on "{log.documentTitle}"</span>}
+                                                            </p>
+                                                            {log.details && (
+                                                                <p className="text-xs text-[var(--color-muted-gray)] mt-0.5">
+                                                                    {log.details}
+                                                                </p>
+                                                            )}
+                                                            <p className="text-xs text-[var(--color-muted-gray)]/80 mt-0.5">
+                                                                {log.timestamp.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                                                            </p>
+                                                        </div>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
+                            )}
+                            {activeMainTab === "history" && (
+                                <div className="p-4 sm:p-6 bg-white dark:bg-[var(--color-primary-dark)]/40 rounded-lg shadow-sm flex-1 overflow-y-auto">
+                                    <h3 className="text-xl font-semibold mb-6" style={{ fontFamily: activeHeadingFont }}>
+                                        Document Revisions
+                                    </h3>
+                                    {!activeDocument ? (
+                                        <p className="text-[var(--color-muted-gray)] italic">
+                                            Open a document to see its revision history.
+                                        </p>
+                                    ) : (
+                                        <ul className="space-y-5">
+                                            {[
+                                                { id: "rev-3", timestamp: "July 26, 2024, 02:15 PM", user: "Alice Bertman", changes: "Updated project scope and added new milestones." },
+                                                { id: "rev-2", timestamp: "July 26, 2024, 10:30 AM", user: currentUserName, changes: "Minor typo fixes and section reordering." },
+                                                { id: "rev-1", timestamp: "July 25, 2024, 05:00 PM", user: "Bob Siwoo", changes: "Initial draft creation." },
+                                            ].map((revision, index) => (
+                                                <li key={revision.id} className="pb-4 border-b border-[var(--color-light-border)] dark:border-[var(--color-muted-gray)]/20 last:border-b-0">
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <h4 className="text-md font-medium" style={{ fontFamily: activeHeadingFont }}>
+                                                            Revision - {revision.timestamp} {index === 0 && <span className="text-xs font-normal px-1.5 py-0.5 ml-2 rounded-full bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]">Latest</span>}
+                                                        </h4>
+                                                    </div>
+                                                    <p className="text-xs text-[var(--color-muted-gray)] mb-1.5">
+                                                        Saved by: <span className="font-medium text-[var(--color-text-on-light)] dark:text-[var(--color-text-on-dark)]">{revision.user}</span>
+                                                    </p>
+                                                    <p className="text-sm mb-2.5 italic text-[var(--color-muted-gray)]">
+                                                        "{revision.changes}"
+                                                    </p>
+                                                    <div className="flex items-center space-x-2">
+                                                        <button
+                                                            onClick={() => alert(`Previewing revision ${revision.id} - For demonstration purposes only.`)}
+                                                            className="px-3 py-1 text-xs font-medium rounded-md border border-[var(--color-light-border)] dark:border-[var(--color-muted-gray)] hover:bg-[var(--color-light-border)]/50 dark:hover:bg-[var(--color-muted-gray)]/30 cursor-pointer transition-colors"
+                                                        >
+                                                            Preview Revision
+                                                        </button>
+                                                        <button
+                                                            onClick={() => alert(`Reverting to revision ${revision.id} - For demonstration purposes only. This action is not functional.`)}
+                                                            className="px-3 py-1 text-xs font-medium rounded-md border border-[var(--color-accent-green)]/70 text-[var(--color-accent-green)] hover:bg-[var(--color-accent-green)]/10 cursor-pointer transition-colors"
+                                                        >
+                                                            Revert to this Revision
+                                                        </button>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    {activeDocument && documents.find(d => d.id === activeDocumentId) && [].length === 0 && ( 
+                                        <p className="text-[var(--color-muted-gray)] italic">
+                                            No revision history available for this document yet.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </main>
+
+                    <aside className="hidden xl:flex flex-col w-72 bg-white dark:bg-gray-900 border-l border-[var(--color-light-border)] dark:border-[var(--color-muted-gray)]/50 p-4 sm:p-6 overflow-y-auto sidebar-scrollable">
+                        <h3 className="text-lg font-semibold mb-4" style={{ fontFamily: activeHeadingFont }}>
+                            Annotations
+                        </h3>
+
+                        {selectedDocumentText ? (
+                            <div className="mb-4 p-3 border border-[var(--color-accent-green)]/50 rounded-md bg-[var(--color-accent-green)]/10">
+                                <p className="text-xs text-[var(--color-muted-gray)] mb-1 font-medium">Selected Text:</p>
+                                <blockquote className="border-l-2 border-[var(--color-accent-green)] pl-2 text-sm italic text-[var(--color-text-on-light)] dark:text-[var(--color-text-on-dark)] max-h-32 overflow-y-auto whitespace-pre-wrap break-words">
+                                    {selectedDocumentText}
+                                </blockquote>
+                                <button
+                                    onClick={initiateCommentOnSelection}
+                                    className="mt-3 w-full flex items-center justify-center text-xs px-3 py-1.5 bg-[var(--color-accent-green)] text-[var(--color-text-on-dark)] rounded-md hover:opacity-90 transition-opacity cursor-pointer"
+                                >
+                                    <LucideMessageCircle size={14} className="mr-1.5" /> Comment on Selection
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="p-3 border border-dashed border-[var(--color-light-border)] dark:border-[var(--color-muted-gray)]/50 rounded-md text-center">
+                                <Quote size={24} className="mx-auto text-[var(--color-muted-gray)] mb-2" />
+                                <p className="text-sm text-[var(--color-muted-gray)]">
+                                    Select text in the document to add an annotation or contextual comment.
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="mt-4 pt-4 border-t border-[var(--color-light-border)] dark:border-[var(--color-muted-gray)]/30 flex-grow overflow-y-auto space-y-3 pr-1 sidebar-scrollable">
+                            {commentsList
+                                .filter((comment) => comment.isAnnotation && comment.documentId === activeDocumentId)
+                                .map((annotation) => (
+                                    <div
+                                        key={annotation.id}
+                                        className="p-2.5 rounded-md bg-[var(--color-primary-light)] dark:bg-[var(--color-primary-dark)]/70 border border-[var(--color-light-border)] dark:border-[var(--color-muted-gray)]/40 shadow-sm"
+                                    >
+                                        {annotation.contextText && (
+                                            <blockquote className="mb-1.5 border-l-2 border-[var(--color-accent-green)] pl-2 text-xs italic text-[var(--color-muted-gray)] dark:text-[var(--color-light-border)]/70 max-h-20 overflow-y-auto whitespace-pre-wrap break-words">
+                                                {annotation.contextText}
+                                            </blockquote>
+                                        )}
+                                        <div className="flex items-start space-x-2">
+                                            <UserCircle size={18} className="mt-0.5 text-[var(--color-muted-gray)] flex-shrink-0" />
+                                            <div>
+                                                <div className="flex items-center justify-between text-xs mb-0.5">
+                                                    <span className="font-medium text-text-on-light dark:text-text-on-dark">
+                                                        {annotation.user}
+                                                    </span>
+                                                    <span className="text-[var(--color-muted-gray)]/80">{annotation.timestamp}</span>
+                                                </div>
+                                                <p className="text-sm text-text-on-light dark:text-text-on-dark whitespace-pre-wrap break-words">
+                                                    {annotation.text}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            {commentsList.filter((comment) => comment.isAnnotation && comment.documentId === activeDocumentId).length ===
+                                0 && (
+                                <p className="text-xs text-center text-[var(--color-muted-gray)] italic py-4">
+                                    No annotations for this document yet.
+                                </p>
+                            )}
+                        </div>
+                    </aside>
+                </div>
+
+                <footer className="py-4 px-4 sm:px-6 text-center border-t border-[var(--color-light-border)] dark:border-[var(--color-muted-gray)]/50 bg-white dark:bg-gray-900">
+                    <p className="text-xs text-[var(--color-muted-gray)]">
+                        &copy; {new Date().getFullYear()} NexusDocs. All rights reserved.
+                    </p>
+                </footer>
+
+                {isCreateDocModalOpen && (
+                    <div
+                        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 ease-in-out"
+                        onClick={closeCreateDocumentModal}
+                    >
+                        <div
+                            className="bg-[var(--color-primary-light)] dark:bg-[var(--color-primary-dark)] p-6 rounded-lg shadow-xl w-full max-w-md transform transition-all duration-300 ease-in-out scale-100 opacity-100"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-semibold" style={{ fontFamily: activeHeadingFont }}>
+                                    Create New Document
+                                </h3>
+                                <button
+                                    onClick={closeCreateDocumentModal}
+                                    className="p-1 rounded-md hover:bg-[var(--color-light-border)]/50 dark:hover:bg-[var(--color-muted-gray)]/30 cursor-pointer"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <div className="mb-4">
+                                <label htmlFor="docTemplate" className="block text-sm font-medium mb-1">
+                                    Select Template
+                                </label>
+                                <select
+                                    id="docTemplate"
+                                    value={selectedTemplateId}
+                                    onChange={(e) => setSelectedTemplateId(e.target.value)}
+                                    className="w-full p-2.5 text-sm rounded-md border border-[var(--color-light-border)] dark:border-[var(--color-muted-gray)] bg-white dark:bg-[var(--color-primary-dark)]/50 focus:ring-1 focus:ring-[var(--color-accent-green)] focus:border-[var(--color-accent-green)] outline-none placeholder-[var(--color-muted-gray)] cursor-pointer"
+                                >
+                                    {documentTemplates.map((template) => (
+                                        <option key={template.id} value={template.id}>
+                                            {template.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label htmlFor="newDocTitle" className="block text-sm font-medium mb-1">
+                                    Document Title
+                                </label>
+                                <input
+                                    type="text"
+                                    id="newDocTitle"
+                                    value={newDocumentTitle}
+                                    onChange={(e) => setNewDocumentTitle(e.target.value)}
+                                    placeholder="Enter document title..."
+                                    className="w-full p-2.5 text-sm rounded-md border border-[var(--color-light-border)] dark:border-[var(--color-muted-gray)] bg-white dark:bg-[var(--color-primary-dark)]/50 focus:ring-1 focus:ring-[var(--color-accent-green)] focus:border-[var(--color-accent-green)] outline-none placeholder-[var(--color-muted-gray)]"
+                                    autoFocus
+                                    onKeyDown={(e) => e.key === "Enter" && confirmCreateNewDocument()}
+                                />
+                            </div>
+                            <div className="mt-6 flex justify-end space-x-3">
+                                <button
+                                    onClick={closeCreateDocumentModal}
+                                    className="px-4 py-2 text-sm rounded-md border border-[var(--color-light-border)] dark:border-[var(--color-muted-gray)] hover:bg-[var(--color-light-border)]/50 dark:hover:bg-[var(--color-muted-gray)]/30 cursor-pointer transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmCreateNewDocument}
+                                    disabled={!newDocumentTitle.trim()}
+                                    className="px-4 py-2 bg-[var(--color-accent-green)] text-[var(--color-text-on-dark)] text-sm font-medium rounded-md hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Create Document
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </>
+    );
 };
 
-export default function TrendZoneLandingPage() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState("EN"); 
-
-  
-  const headingFont = "'Montserrat', sans-serif";
-  const bodyFont = "'Roboto', sans-serif";
-
-  useEffect(() => {
-    
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      if (mediaQuery.matches) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    };
-    handleChange(); 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  const updateMobileMenuVisibility = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  
-  const handlePlaceholderClick = (message) => {
-    alert(message);
-  };
-
-  const navLinks = [
-    { href: "#home", labelKey: "header.nav.home" },
-    { href: "#new-arrival", labelKey: "header.nav.newArrival" },
-    { href: "#shop", labelKey: "header.nav.shop" },
-    { href: "#deals", labelKey: "header.nav.deals" },
-    { href: "#contact", labelKey: "header.nav.contact" },
-    { href: "#about-us", labelKey: "header.nav.aboutUs" },
-  ];
-
-  
-  const t = (key) => {
-    const langTranslations = translations[currentLanguage] || translations.EN;
-    let text = langTranslations[key] || translations.EN[key] || key;
-    if (key === "footer.copyright") {
-      text = text.replace("{year}", new Date().getFullYear().toString());
-    }
-    return text;
-  };
-
-  
-  const heroImages = [
-    
-    { id: 1, src: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=2124&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", alt: "Model in orange outfit", className: "md:col-span-2 md:row-span-2 rounded-xl" },
-    { id: 2, src: "https://images.unsplash.com/photo-1603189343302-e603f7add05a?q=80&w=3174&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", alt: "Model in green coat", className: "md:col-span-2 md:row-span-3 rounded-xl" },
-    { id: 3, src: "https://images.unsplash.com/photo-1601762603339-fd61e28b698a?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", alt: "Model in yellow hat and jacket", className: "md:col-span-2 md:row-span-2 rounded-xl" },
-    { id: 4, src: "https://images.unsplash.com/photo-1495385794356-15371f348c31?q=80&w=3070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", alt: "Model in orange outfit 2", className: "md:col-span-2 rounded-xl" }, 
-    { id: 5, src: "https://images.unsplash.com/photo-1562151270-c7d22ceb586a?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", alt: "Model in light blue outfit", className: "md:col-span-2 md:row-span-3 rounded-xl" },
-    { id: 6, src: "https://images.unsplash.com/photo-1571513722275-4b41940f54b8?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", alt: "Model in white t-shirt and heart glasses", className: "md:col-span-2 md:row-span-2 rounded-xl" },
-    { id: 7, src: "https://images.unsplash.com/photo-1608748010899-18f300247112?q=80&w=3164&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", alt: "Model in green suit", className: "md:col-span-2 rounded-xl" }, 
-  ];
-
-  const languageOptions = ["EN", "ES"]; 
-
-  
-  const featuredDeals = [
-    {
-      id: 1,
-      name: "Chic Summer Dress",
-      imageUrl: "https://images.unsplash.com/photo-1572804013427-4d7ca7268217?q=80&w=800&auto=format&fit=crop",
-      price: "$49.99",
-      oldPrice: "$79.99",
-      discount: "-38%",
-      href: "#deal-1"
-    },
-    {
-      id: 2,
-      name: "Urban Street Hoodie",
-      imageUrl: "https://images.unsplash.com/photo-1603189343302-e603f7add05a?q=80&w=3174&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      price: "$65.00",
-      href: "#deal-2"
-    },
-    {
-      id: 3,
-      name: "Classic Leather Jacket",
-      imageUrl: "https://images.unsplash.com/photo-1521223890158-f9f7c3d5d504?q=80&w=800&auto=format&fit=crop",
-      price: "$120.00",
-      oldPrice: "$150.00",
-      discount: "-20%",
-      href: "#deal-3"
-    },
-  ];
-
-  
-  const processNewsletterSubscriptionAttempt = (e) => {
-    e.preventDefault();
-    const emailInput = (e.target as HTMLFormElement).elements.namedItem("email") as HTMLInputElement;
-    if (emailInput && emailInput.value) {
-      console.log("Attempting newsletter signup for:", emailInput.value);
-      handlePlaceholderClick(`Thanks for signing up, ${emailInput.value}! (Placeholder)`);
-      emailInput.value = ''; 
-    } else {
-      handlePlaceholderClick("Please enter a valid email address.");
-    }
-  };
-
-  return (
-      <div className={`min-h-screen transition-colors duration-500 dark:bg-gray-900 text-white`} style={{ fontFamily: bodyFont }}>
-          <style jsx global>{`
-              @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@400;500;700&display=swap");
-              h1,
-              h2,
-              h3,
-              h4,
-              h5,
-              h6 {
-                  font-family: ${headingFont};
-                  font-weight: 700; /* Default bold for headings */
-              }
-              .font-montserrat-black {
-                  font-family: ${headingFont};
-                  font-weight: 900; /* Extra bold for specific titles */
-              }
-              .font-roboto {
-                  font-family: ${bodyFont};
-              }
-          `}</style>
-
-          
-          <header className="sticky top-0 z-50 py-4 px-6 md:px-10 shadow-md backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700/50">
-              <div className="container mx-auto flex justify-between items-center">
-                  <h1
-                      className="text-3xl font-montserrat-black text-gray-900 dark:text-white cursor-pointer"
-                      onClick={() => (window.location.hash = "#home")}
-                  >
-                      TrendZone
-                  </h1>
-
-                  
-                  <nav className="hidden md:flex space-x-8 items-center">
-                      {navLinks.map((link) => (
-                          <a
-                              key={link.labelKey}
-                              href={link.href}
-                              onClick={(e) => { e.preventDefault(); handlePlaceholderClick(`Navigating to ${t(link.labelKey)}...`); }}
-                              className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-300 cursor-pointer"
-                              style={{ fontFamily: bodyFont }}
-                          >
-                              {t(link.labelKey)}
-                          </a>
-                      ))}
-                  </nav>
-
-                  
-                  <div className="flex items-center space-x-3 sm:space-x-4">
-                      <FiSearch className="h-5 w-5 text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-300 cursor-pointer" />
-                      <FiShoppingCart className="h-5 w-5 text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-300 cursor-pointer" />
-
-                      
-                      <div className="relative hidden sm:block">
-                          <select
-                              value={currentLanguage}
-                              onChange={(e) => setCurrentLanguage(e.target.value)}
-                              className="text-xs bg-transparent text-gray-300 hover:text-purple-400 cursor-pointer appearance-none pr-5 focus:outline-none rounded-md py-1 pl-2 border border-transparent hover:border-gray-600 transition-colors duration-300"
-                              style={{ fontFamily: bodyFont }}
-                          >
-                              {languageOptions.map((lang) => (
-                                  <option key={lang} value={lang} className="bg-gray-700 text-white">
-                                      {lang}
-                                  </option>
-                              ))}
-                          </select>
-                          <FiChevronDown className="absolute right-0 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-500 pointer-events-none" />
-                      </div>
-
-                      <button 
-                        onClick={() => handlePlaceholderClick('Performing Sign In...')}
-                        className="text-sm font-medium bg-gray-800 dark:bg-white text-white dark:text-gray-800 px-4 py-2 rounded-full hover:bg-gray-700 dark:hover:bg-gray-200 transition-colors duration-300 cursor-pointer whitespace-nowrap"
-                      >
-                        {t('header.signIn')}
-                      </button>
-
-                      
-                      <div className="md:hidden">
-                          <button
-                              onClick={updateMobileMenuVisibility}
-                              className="text-gray-600 dark:text-gray-300 focus:outline-none p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors duration-300 cursor-pointer "
-                              title="Toggle menu"
-                          >
-                              {isMobileMenuOpen ? <FiX className="h-6 w-6" /> : <FiMenu className="h-6 w-6" />}
-                          </button>
-                      </div>
-                  </div>
-              </div>
-
-              
-              <AnimatePresence>
-                  {isMobileMenuOpen && (
-                      <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.3, ease: "easeInOut" }}
-                          className="md:hidden absolute top-full left-0 right-0 bg-white/95 dark:bg-gray-800/95 shadow-xl border-t border-gray-200 dark:border-gray-700/50 overflow-hidden"
-                      >
-                          <nav className="flex flex-col py-3">
-                              {navLinks.map((link) => (
-                                  <a
-                                      key={link.labelKey}
-                                      href={link.href}
-                                      onClick={(e) => { 
-                                        e.preventDefault(); 
-                                        handlePlaceholderClick(`Navigating to ${t(link.labelKey)}...`);
-                                        updateMobileMenuVisibility();
-                                      }}
-                                      className="block py-2.5 px-6 text-gray-700 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-300 transition-colors duration-200 cursor-pointer"
-                                      style={{ fontFamily: bodyFont }}
-                                  >
-                                      {t(link.labelKey)}
-                                  </a>
-                              ))}
-                              
-                              <div className="px-6 pt-3 mt-2 border-t border-gray-200 dark:border-gray-700/50">
-                                  <select
-                                      value={currentLanguage}
-                                      onChange={(e) => {
-                                          setCurrentLanguage(e.target.value);
-                                          updateMobileMenuVisibility();
-                                      }}
-                                      className="w-full text-sm bg-gray-700 text-gray-200 p-2 rounded-md mb-3 cursor-pointer focus:outline-none focus:ring-1 focus:ring-purple-500"
-                                      style={{ fontFamily: bodyFont }}
-                                  >
-                                      {languageOptions.map((lang) => (
-                                          <option key={lang} value={lang}>
-                                              {lang}
-                                          </option>
-                                      ))}
-                                  </select>
-                                  
-                              </div>
-                          </nav>
-                      </motion.div>
-                  )}
-              </AnimatePresence>
-          </header>
-          
-
-          <main className="container mx-auto px-6 md:px-10 py-8">
-              
-              <section id="home" className="text-center py-10 md:py-20">
-                  <div className="flex flex-col md:flex-row items-center justify-center mb-6 md:mb-10">
-                    
-                    <motion.img
-                      src="https://plus.unsplash.com/premium_photo-1708110921381-5da0d7eb2e0f?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                      alt="Fashion promo visual"
-                      className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover mr-0 md:mr-3 lg:mr-4 cursor-pointer shadow-md hover:shadow-lg dark:shadow-gray-700/50 hidden md:block"
-                      whileHover={{ scale: 1.08, rotate: 0 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 10 }}
-                      onClick={() => console.log("Promo image clicked!")}
-                    />
-                    <motion.h2 
-                      className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-montserrat-black leading-tight max-w-3xl text-gray-900 dark:text-white"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: 0.2 }}
-                    >
-                       {t('hero.title.line1')} <span className="block">{t('hero.title.line2')}</span>
-                    </motion.h2>
-                    
-                    <div className="ml-0 md:ml-4 mt-4 md:mt-0 flex -space-x-2 items-center hidden md:flex">
-                      <img className="inline-block h-8 w-8 rounded-full ring-2 ring-gray-300 dark:ring-gray-700 cursor-pointer transform hover:scale-110 transition-transform duration-150" src="https://randomuser.me/api/portraits/women/79.jpg" alt="User 1"/>
-                      <img className="inline-block h-8 w-8 rounded-full ring-2 ring-gray-300 dark:ring-gray-700 cursor-pointer transform hover:scale-110 transition-transform duration-150" src="https://randomuser.me/api/portraits/men/32.jpg" alt="User 2"/>
-                      <img className="inline-block h-8 w-8 rounded-full ring-2 ring-gray-300 dark:ring-gray-700 cursor-pointer transform hover:scale-110 transition-transform duration-150" src="https://randomuser.me/api/portraits/women/50.jpg" alt="User 3"/>
-                      <a className="flex items-center justify-center h-8 w-8 min-w-[2rem] rounded-full bg-purple-500 text-white text-base leading-8 font-medium ring-2 ring-gray-300 dark:ring-gray-700 cursor-pointer hover:bg-purple-600 transition-colors transform hover:scale-110 focus:outline-none z-10 duration-150">
-                        +
-                      </a>
-                    </div>
-                  </div>
-
-                  
-                   <motion.div 
-                    className="hidden md:grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 md:grid-rows-3 gap-3 md:gap-4 mt-10 md:mt-16 h-[700px] md:h-[650px] lg:h-[750px]"
-                    initial="hidden"
-                    animate="visible"
-                    variants={{
-                      hidden: {},
-                      visible: { transition: { staggerChildren: 0.05, delayChildren: 0.2 } },
-                    }}
-                  >
-                      
-                      {heroImages.slice(0, 7).map((img, index) => {
-                          let gridPositionClasses = "";
-                          let imageContentClasses = "w-full h-full object-cover transition-transform duration-500 group-hover:scale-105";
-
-                          
-                          if (index === 0) {
-                              
-                              gridPositionClasses = "col-span-2 sm:col-span-2 md:col-span-2 md:row-span-2";
-                          } else if (index === 1) {
-                              
-                              gridPositionClasses = "col-span-2 sm:col-span-2 md:col-span-2 md:row-span-1";
-                          } else if (index === 2) {
-                              
-                              gridPositionClasses = "col-span-2 sm:col-span-2 md:col-span-2 md:row-span-3";
-                          } else if (index === 3) {
-                              
-                              gridPositionClasses = "col-span-2 sm:col-span-2 md:col-span-2 md:row-span-2 self-start"; 
-                          } else if (index === 4) {
-                              
-                              gridPositionClasses = "col-span-2 sm:col-span-2 md:col-span-2 md:row-span-3";
-                          } else if (index === 5) {
-                              
-                              gridPositionClasses = "col-span-2 sm:col-span-2 md:col-span-2 md:row-span-2";
-                          } else if (index === 6) {
-                              
-                              gridPositionClasses = "col-span-2 sm:col-span-2 md:col-span-2 md:row-span-1";
-                          }
-
-                          
-                          
-                          
-                          if (typeof window !== "undefined" && window.innerWidth < 640) {
-                              
-                              gridPositionClasses = "col-span-2 row-span-1"; 
-                              if (index === 3)
-                                  imageContentClasses += " h-48"; 
-                              else imageContentClasses += " h-64";
-                          }
-
-                          return (
-                              <motion.div
-                                  key={img.id}
-                                  className={`relative overflow-hidden rounded-xl shadow-lg dark:shadow-[0_10px_15px_-3px_rgba(128,0,128,0.2),_0_4px_6px_-4px_rgba(128,0,128,0.2)] group cursor-pointer ${gridPositionClasses}`}
-                                  variants={{ hidden: { opacity: 0, y: 25 }, visible: { opacity: 1, y: 0 } }}
-                                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                              >
-                                  <img src={img.src} alt={img.alt} className={imageContentClasses} />
-                                  
-                                  {index === 3 && (
-                                      <button 
-                                        onClick={() => handlePlaceholderClick('Exploring Collections...')}
-                                        className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 dark:bg-black text-white px-5 py-2.5 md:px-6 md:py-3 rounded-full text-xs sm:text-sm font-semibold hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors flex items-center space-x-1.5 md:space-x-2 cursor-pointer shadow-xl whitespace-nowrap z-10">
-                                          <span>{t('hero.exploreCollections')}</span>
-                                          <FiArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                      </button>
-                                  )}
-                              </motion.div>
-                          );
-                      })}
-                  </motion.div>
-
-                  
-                  <div className="md:hidden mt-10 space-y-6 flex flex-col items-center">
-                      {heroImages.slice(0, 2).map((img, index) => (
-                          <motion.div
-                              key={`mobile-${img.id}`}
-                              className="w-full max-w-xs h-72 rounded-xl shadow-xl overflow-hidden group cursor-pointer"
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.1 + 0.3, type: "spring", stiffness: 100}}
-                              whileHover={{ scale: 1.03 }}
-                          >
-                              <img 
-                                  src={img.src} 
-                                  alt={img.alt} 
-                                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                              />
-                          </motion.div>
-                      ))}
-                      <motion.button 
-                          onClick={() => handlePlaceholderClick('Exploring Collections...')}
-                          className="mt-6 bg-gray-900 dark:bg-black text-white px-8 py-3.5 rounded-full text-sm sm:text-base font-semibold hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors flex items-center space-x-2 cursor-pointer shadow-xl whitespace-nowrap z-10"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.5, type: "spring"}}
-                      >
-                          <span>{t('hero.exploreCollections')}</span>
-                          <FiArrowRight className="w-4 h-4" />
-                      </motion.button>
-                  </div>
-              </section>
-              
-
-              
-              <section className="py-10 md:py-16 container mx-auto px-6 md:px-10">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-10 md:gap-16">
-                      
-                      <motion.div
-                          className="w-full md:w-1/2 lg:w-2/5 flex flex-col sm:flex-row items-center text-center sm:text-left"
-                          initial={{ opacity: 0, x: -50 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.6, delay: 0.2 }}
-                      >
-                          <span className="text-6xl md:text-8xl text-purple-400 dark:text-purple-600 font-serif mr-0 sm:mr-4 mb-2 sm:mb-0 select-none self-start sm:self-center">
-                              "
-                          </span>
-                          <div className="mt-2 sm:mt-0">
-                              <p className="text-lg md:text-xl italic text-gray-700 dark:text-gray-300 leading-relaxed">
-                                  {t("testimonial.quote")}
-                              </p>
-                              <p className="mt-4 text-md font-semibold text-gray-800 dark:text-white text-right">
-                                  {t("testimonial.author")}
-                              </p>
-                          </div>
-                      </motion.div>
-
-                      
-                      <motion.div
-                          className="w-full md:w-1/2 lg:w-2/5 text-center md:text-right mt-8 md:mt-0"
-                          initial={{ opacity: 0, x: 50 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.6, delay: 0.3 }}
-                      >
-                          <div className="flex items-center justify-center md:justify-end mb-1">
-                              <span className="text-5xl md:text-6xl font-bold text-gray-800 dark:text-white mr-2">01</span>
-                              <span className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                  {t("lifestyle.tag")}
-                              </span>
-                          </div>
-                          <h3 className="text-xl md:text-2xl font-semibold text-gray-800 dark:text-white mb-3 max-w-xs mx-auto md:mx-0 md:ml-auto">
-                              {t("lifestyle.heading")}
-                          </h3>
-                          <a
-                              href="#shop"
-                              className="inline-block p-3 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-purple-500 dark:hover:bg-purple-600 text-gray-700 dark:text-gray-200 hover:text-white transition-all duration-300 cursor-pointer transform hover:scale-110"
-                          >
-                              <FiArrowRight className="w-6 h-6" />
-                          </a>
-                      </motion.div>
-                  </div>
-              </section>
-              
-
-              
-              <section id="deals" className="py-16 md:py-20 ">
-                  <div className="container mx-auto px-6 md:px-10">
-                      <motion.h2
-                          className="text-3xl md:text-4xl font-montserrat-black text-center mb-12 md:mb-16 text-black dark:text-white"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.5 }}
-                      >
-                          🔥 Hot Deals Just For You!
-                      </motion.h2>
-                      <motion.div
-                          className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8"
-                          initial="hidden"
-                          animate="visible"
-                          variants={{
-                              hidden: {},
-                              visible: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } },
-                          }}
-                      >
-                          {featuredDeals.map((deal) => (
-                              <motion.div
-                                  key={deal.id}
-                                  className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-xl hover:shadow-purple-500/30 transition-shadow duration-300 flex flex-col group cursor-pointer"
-                                  variants={{
-                                      hidden: { opacity: 0, y: 30 },
-                                      visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } },
-                                  }}
-                                  whileHover={{ y: -8 }}
-                              >
-                                  <div className="relative w-full aspect-[3/4] overflow-hidden">
-                                      <img
-                                          src={deal.imageUrl}
-                                          alt={deal.name}
-                                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                      />
-                                      {deal.discount && (
-                                          <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-                                              {deal.discount}
-                                          </span>
-                                      )}
-                                  </div>
-                                  <div className="p-5 flex flex-col flex-grow">
-                                      <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white truncate group-hover:text-purple-400 dark:group-hover:text-purple-300 transition-colors">
-                                          {deal.name}
-                                      </h3>
-                                      <div className="flex items-baseline gap-2 mb-3">
-                                          <p className="text-xl font-bold text-purple-600 dark:text-purple-400">{deal.price}</p>
-                                          {deal.oldPrice && (
-                                              <p className="text-sm text-gray-600 dark:text-gray-500 line-through">{deal.oldPrice}</p>
-                                          )}
-                                      </div>
-                                      <a
-                                          href={deal.href}
-                                          onClick={(e) => { e.preventDefault(); handlePlaceholderClick(`Shopping for ${deal.name}...`); }}
-                                          className="mt-auto w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 px-4 rounded-lg text-center transition-colors duration-300 cursor-pointer opacity-90 group-hover:opacity-100 transform group-hover:scale-105"
-                                      >
-                                          {t("deals.shopNow")}
-                                      </a>
-                                  </div>
-                              </motion.div>
-                          ))}
-                      </motion.div>
-                  </div>
-              </section>
-              
-
-              
-              <section id="newsletter" className="py-16 md:py-20 bg-gray-100 dark:bg-gray-800">
-                  <div className="container mx-auto px-6 md:px-10 max-w-3xl text-center">
-                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-                          <h2 className="text-3xl md:text-4xl font-montserrat-black mb-4 text-gray-900 dark:text-white">
-                              {t("newsletter.title")}
-                          </h2>
-                          <p className="text-md md:text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-xl mx-auto">
-                              {t("newsletter.description")}
-                          </p>
-                          <form 
-                            onSubmit={processNewsletterSubscriptionAttempt} 
-                            className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 max-w-lg mx-auto"
-                          >
-                              <input 
-                                type="email" 
-                                name="email"
-                                placeholder={t("newsletter.emailPlaceholder")}
-                                required
-                                className="flex-grow w-full sm:w-auto text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800/50 rounded-lg px-4 py-3 text-sm outline-none transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg"
-                              />
-                              <button
-                                  type="submit"
-                                  className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-300 cursor-pointer shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-400 dark:focus:ring-purple-300 transform hover:scale-105"
-                              >
-                                  {t("newsletter.subscribeButton")}
-                              </button>
-                          </form>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-6">{t("newsletter.privacyNote")}</p>
-                      </motion.div>
-                  </div>
-              </section>
-              
-          </main>
-
-          
-          <motion.footer
-              className="py-12 md:py-16 border-t border-gray-200 dark:border-gray-700/50"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-          >
-              <div className="container mx-auto px-6 md:px-10">
-                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 md:gap-12 mb-8 md:mb-12">
-                      
-                      <div className="md:col-span-3 lg:col-span-1">
-                          <h3 className="text-2xl font-montserrat-black text-gray-900 dark:text-white mb-3">
-                              TrendZone
-                          </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
-                              {t('footer.brandDescription')}
-                          </p>
-                          <div className="flex space-x-4">
-                              <a
-                                  href="#facebook"
-                                  className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
-                                  aria-label="Facebook"
-                              >
-                                  <FaFacebookF className="h-5 w-5" />
-                              </a>
-                              <a
-                                  href="#twitter"
-                                  className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
-                                  aria-label="Twitter"
-                              >
-                                  <FaTwitter className="h-5 w-5" />
-                              </a>
-                              <a
-                                  href="#instagram"
-                                  className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
-                                  aria-label="Instagram"
-                              >
-                                  <FaInstagram className="h-5 w-5" />
-                              </a>
-                              <a
-                                  href="#youtube"
-                                  className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
-                                  aria-label="YouTube"
-                              >
-                                  <FaYoutube className="h-5 w-5" />
-                              </a>
-                          </div>
-                      </div>
-
-                      
-                      <div>
-                          <h4 className="font-semibold text-gray-700 dark:text-gray-100 mb-4 text-sm uppercase tracking-wider">
-                              {t('footer.quickLinks')}
-                          </h4>
-                          <ul className="space-y-2.5 text-sm">
-                              <li>
-                                  <a
-                                      href="#home"
-                                      className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors cursor-pointer"
-                                  >
-                                      {t('header.nav.home')}
-                                  </a>
-                              </li>
-                              <li>
-                                  <a
-                                      href="#new-arrival"
-                                      className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors cursor-pointer"
-                                  >
-                                      {t('header.nav.newArrival')}
-                                  </a>
-                              </li>
-                              <li>
-                                  <a
-                                      href="#deals"
-                                      className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors cursor-pointer"
-                                  >
-                                      {t('header.nav.deals')}
-                                  </a>
-                              </li>
-                              <li>
-                                  <a
-                                      href="#shop"
-                                      className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors cursor-pointer"
-                                  >
-                                      {t('header.nav.shop')}
-                                  </a>
-                              </li>
-                          </ul>
-                      </div>
-
-                      
-                      <div>
-                          <h4 className="font-semibold text-gray-700 dark:text-gray-100 mb-4 text-sm uppercase tracking-wider">
-                              {t('footer.company')}
-                          </h4>
-                          <ul className="space-y-2.5 text-sm">
-                              <li>
-                                  <a
-                                      href="#about-us"
-                                      className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors cursor-pointer"
-                                  >
-                                      {t('header.nav.aboutUs')}
-                                  </a>
-                              </li>
-                              <li>
-                                  <a
-                                      href="#contact"
-                                      className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors cursor-pointer"
-                                  >
-                                      {t('header.nav.contact')}
-                                  </a>
-                              </li>
-                              <li>
-                                  <a
-                                      href="#careers"
-                                      className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors cursor-pointer"
-                                  >
-                                      {t('footer.careers')}
-                                  </a>
-                              </li>
-                              <li>
-                                  <a
-                                      href="#privacy"
-                                      className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors cursor-pointer"
-                                  >
-                                      {t('footer.privacyPolicy')}
-                                  </a>
-                              </li>
-                              <li>
-                                  <a
-                                      href="#terms"
-                                      className="text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors cursor-pointer"
-                                  >
-                                      {t('footer.termsOfService')}
-                                  </a>
-                              </li>
-                          </ul>
-                      </div>
-
-                      
-                      <div className="hidden lg:block"> 
-                          <h4 className="font-semibold text-gray-700 dark:text-gray-100 mb-4 text-sm uppercase tracking-wider">
-                              {t('footer.stayConnected')}
-                          </h4>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                              {t('footer.stayConnectedDesc')}
-                          </p>
-                          <a
-                              href="#newsletter"
-                              className="inline-block bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors duration-300 cursor-pointer"
-                          >
-                              {t('footer.subscribeNow')}
-                          </a>
-                      </div>
-                  </div>
-                  <div className="border-t border-gray-200 dark:border-gray-700 pt-8 text-center md:text-left">
-                      <p 
-                        className="text-xs text-gray-500 dark:text-gray-400"
-                        dangerouslySetInnerHTML={{ __html: t('footer.copyright') }}
-                      />
-                  </div>
-              </div>
-          </motion.footer>
-          
-      </div>
-  );
-}
+export default CollaboraDocsInitialPage;
