@@ -2250,7 +2250,7 @@ const PeopleYouMightKnowPanel = ({
         })
         .filter(user => user.commonHobbiesCount > 0)
         .sort((a, b) => b.commonHobbiesCount - a.commonHobbiesCount)
-        .slice(0, 5) // Show top 5 suggestions
+        .slice(0, 5) 
         .filter(user => user.name.toLowerCase().includes(searchTerm.toLowerCase()) || user.username.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const textColor = theme === 'dark' ? 'text-white' : 'text-slate-800';
@@ -2319,7 +2319,7 @@ const TrendingHobbiesPanel = ({
         return Array.from(hobbyMap.entries())
             .map(([name, count]) => ({ name, count }))
             .sort((a, b) => b.count - a.count)
-            .slice(0, 10); // Show top 10 trending hobbies
+            .slice(0, 10); 
     };
 
     const trendingHobbies = getHobbyCounts().filter(hobby => hobby.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -2330,7 +2330,7 @@ const TrendingHobbiesPanel = ({
     const itemBorderColor = theme === 'dark' ? 'border-slate-600' : 'border-purple-200';
     const barColor = theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400';
     
-    // Define more prominent active styles
+    
     const activeItemOuterClasses = theme === 'dark' 
         ? 'bg-purple-600 border-purple-500' 
         : 'bg-purple-500 border-purple-600';
