@@ -1,1103 +1,1433 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { ThemeProvider, useTheme } from "next-themes";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-    UploadCloud,
-    BarChart2,
-    Calendar,
-    TrendingUp,
-    Database,
-    Bell,
-    Layers,
-    Droplet,
-    Bug,
-    Wrench,
-    PlusCircle,
-    Sun,
-    Moon,
-    BarChartBig,
-    X,
-    Tractor,
-} from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, Cell } from "recharts";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
+const BOARD_WIDTH = 10;
+const BOARD_HEIGHT = 20;
 
-interface MockNotification {
-    id: number;
-    text: string;
-    time: string;
-    icon: React.ElementType;
-    iconColor: string;
-}
+const INITIAL_SPEED = 1000;
 
-interface CropEntry {
-    id: string;
-    cropName: string;
-    plantingDate: string;
-    soilPh: string;
-    waterUsage: string;
-    submissionDate: string;
-}
+const CELL_SIZE_CLASSES = "w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9";
 
-interface ChartPointData {
-    plantingDate: string;
-    value: number;
-    cropName?: string;
-}
+const PREVIEW_CELL_SIZE_CLASSES = "w-6 h-6";
 
-interface ResourceUsageData {
-    name: string;
-    totalWater: number;
-}
+const LINE_CLEAR_POINTS = [0, 100, 300, 500, 800];
 
-interface SeasonalComparisonData {
-    year: string;
-    totalWater: number;
-}
-
-const initialMockCropEntries: CropEntry[] = [
-    { id: "2022-1", cropName: "Golden Corn", plantingDate: "2022-03-15", soilPh: "6.7", waterUsage: "5400", submissionDate: "2022-03-10" },
-    { id: "2022-2", cropName: "Golden Corn", plantingDate: "2022-06-10", soilPh: "6.8", waterUsage: "5600", submissionDate: "2022-06-05" },
-    { id: "2022-3", cropName: "Red Wheat", plantingDate: "2022-04-20", soilPh: "6.5", waterUsage: "4700", submissionDate: "2022-04-15" },
-    { id: "2022-4", cropName: "Red Wheat", plantingDate: "2022-09-18", soilPh: "6.4", waterUsage: "4800", submissionDate: "2022-09-12" },
-    { id: "2022-5", cropName: "Soybeans", plantingDate: "2022-05-25", soilPh: "6.2", waterUsage: "5900", submissionDate: "2022-05-20" },
-    { id: "2022-6", cropName: "Soybeans", plantingDate: "2022-08-30", soilPh: "6.3", waterUsage: "6000", submissionDate: "2022-08-25" },
-
-    { id: "2023-1", cropName: "Golden Corn", plantingDate: "2023-04-15", soilPh: "6.8", waterUsage: "5500", submissionDate: "2023-04-10" },
-    { id: "2023-2", cropName: "Golden Corn", plantingDate: "2023-05-20", soilPh: "6.7", waterUsage: "5650", submissionDate: "2023-05-18" },
-    { id: "2023-3", cropName: "Red Wheat", plantingDate: "2023-09-20", soilPh: "6.5", waterUsage: "4800", submissionDate: "2023-09-15" },
-    { id: "2023-4", cropName: "Red Wheat", plantingDate: "2023-10-05", soilPh: "6.6", waterUsage: "4700", submissionDate: "2023-10-02" },
-    { id: "2023-5", cropName: "Soybeans", plantingDate: "2023-06-01", soilPh: "6.1", waterUsage: "5900", submissionDate: "2023-05-28" },
-    { id: "2023-6", cropName: "Soybeans", plantingDate: "2023-08-15", soilPh: "6.3", waterUsage: "6050", submissionDate: "2023-08-10" },
-
-    { id: "2024-1", cropName: "Golden Corn", plantingDate: "2024-04-20", soilPh: "6.9", waterUsage: "5800", submissionDate: "2024-04-18" },
-    { id: "2024-2", cropName: "Golden Corn", plantingDate: "2024-05-25", soilPh: "7.0", waterUsage: "5950", submissionDate: "2024-05-22" },
-    { id: "2024-3", cropName: "Red Wheat", plantingDate: "2024-07-01", soilPh: "6.4", waterUsage: "5200", submissionDate: "2024-06-28" },
-    { id: "2024-4", cropName: "Red Wheat", plantingDate: "2024-08-15", soilPh: "6.3", waterUsage: "5100", submissionDate: "2024-08-10" },
-    { id: "2024-5", cropName: "Soybeans", plantingDate: "2024-05-10", soilPh: "6.2", waterUsage: "6000", submissionDate: "2024-05-05" },
-    { id: "2024-6", cropName: "Soybeans", plantingDate: "2024-06-20", soilPh: "6.4", waterUsage: "6200", submissionDate: "2024-06-18" },
-    { id: "2024-7", cropName: "Golden Corn", plantingDate: "2024-07-10", soilPh: "6.8", waterUsage: "5700", submissionDate: "2024-07-08" },
-    { id: "2024-8", cropName: "Red Wheat", plantingDate: "2024-09-05", soilPh: "6.5", waterUsage: "5000", submissionDate: "2024-09-01" },
-    { id: "2024-9", cropName: "Soybeans", plantingDate: "2024-07-20", soilPh: "6.2", waterUsage: "6050", submissionDate: "2024-07-15" },
+const SHAPES = [
+    { rotations: [[[1]]], color: "bg-pink-300", dimension: 1 },
+    { rotations: [[[1, 1]]], color: "bg-indigo-300", dimension: 2 },
+    { rotations: [[[1], [1]]], color: "bg-teal-300", dimension: 2 },
+    {
+        rotations: [
+            [
+                [1, 0],
+                [1, 1],
+            ],
+            [
+                [1, 1],
+                [1, 0],
+            ],
+            [
+                [1, 1],
+                [0, 1],
+            ],
+            [
+                [0, 1],
+                [1, 1],
+            ],
+        ],
+        color: "bg-amber-300",
+        dimension: 2,
+    },
+    { rotations: [[[1, 1, 1]], [[1], [1], [1]]], color: "bg-lime-300", dimension: 3 },
+    {
+        rotations: [
+            [
+                [0, 0, 0, 0],
+                [1, 1, 1, 1],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+            ],
+            [
+                [0, 1, 0, 0],
+                [0, 1, 0, 0],
+                [0, 1, 0, 0],
+                [0, 1, 0, 0],
+            ],
+        ],
+        color: "bg-cyan-500",
+        dimension: 4,
+    },
+    {
+        rotations: [
+            [
+                [1, 0, 0],
+                [1, 1, 1],
+                [0, 0, 0],
+            ],
+            [
+                [0, 1, 1],
+                [0, 1, 0],
+                [0, 1, 0],
+            ],
+            [
+                [0, 0, 0],
+                [1, 1, 1],
+                [0, 0, 1],
+            ],
+            [
+                [0, 1, 0],
+                [0, 1, 0],
+                [1, 1, 0],
+            ],
+        ],
+        color: "bg-blue-500",
+        dimension: 3,
+    },
+    {
+        rotations: [
+            [
+                [0, 0, 1],
+                [1, 1, 1],
+                [0, 0, 0],
+            ],
+            [
+                [0, 1, 0],
+                [0, 1, 0],
+                [0, 1, 1],
+            ],
+            [
+                [0, 0, 0],
+                [1, 1, 1],
+                [1, 0, 0],
+            ],
+            [
+                [1, 1, 0],
+                [0, 1, 0],
+                [0, 1, 0],
+            ],
+        ],
+        color: "bg-orange-500",
+        dimension: 3,
+    },
+    {
+        rotations: [
+            [
+                [1, 1],
+                [1, 1],
+            ],
+        ],
+        color: "bg-yellow-400",
+        dimension: 2,
+    },
+    {
+        rotations: [
+            [
+                [0, 1, 1],
+                [1, 1, 0],
+                [0, 0, 0],
+            ],
+            [
+                [0, 1, 0],
+                [0, 1, 1],
+                [0, 0, 1],
+            ],
+        ],
+        color: "bg-green-500",
+        dimension: 3,
+    },
+    {
+        rotations: [
+            [
+                [0, 1, 0],
+                [1, 1, 1],
+                [0, 0, 0],
+            ],
+            [
+                [0, 1, 0],
+                [0, 1, 1],
+                [0, 1, 0],
+            ],
+            [
+                [0, 0, 0],
+                [1, 1, 1],
+                [0, 1, 0],
+            ],
+            [
+                [0, 1, 0],
+                [1, 1, 0],
+                [0, 1, 0],
+            ],
+        ],
+        color: "bg-purple-500",
+        dimension: 3,
+    },
+    {
+        rotations: [
+            [
+                [1, 1, 0],
+                [0, 1, 1],
+                [0, 0, 0],
+            ],
+            [
+                [0, 0, 1],
+                [0, 1, 1],
+                [0, 1, 0],
+            ],
+        ],
+        color: "bg-red-500",
+        dimension: 3,
+    },
+    {
+        rotations: [
+            [
+                [0, 1, 0],
+                [1, 1, 1],
+                [0, 1, 0],
+            ],
+        ],
+        color: "bg-fuchsia-500",
+        dimension: 3,
+    },
+    {
+        rotations: [
+            [
+                [1, 0, 1],
+                [1, 1, 1],
+            ],
+            [
+                [1, 1],
+                [1, 0],
+                [1, 1],
+            ],
+            [
+                [1, 1, 1],
+                [1, 0, 1],
+            ],
+            [
+                [1, 1],
+                [0, 1],
+                [1, 1],
+            ],
+        ],
+        color: "bg-rose-500",
+        dimension: 3,
+    },
+    {
+        rotations: [
+            [
+                [1, 1, 1],
+                [0, 1, 0],
+                [0, 1, 0],
+            ],
+            [
+                [0, 0, 1],
+                [1, 1, 1],
+                [0, 0, 1],
+            ],
+            [
+                [0, 1, 0],
+                [0, 1, 0],
+                [1, 1, 1],
+            ],
+            [
+                [1, 0, 0],
+                [1, 1, 1],
+                [1, 0, 0],
+            ],
+        ],
+        color: "bg-emerald-500",
+        dimension: 3,
+    },
 ];
 
-const mockNotifications: MockNotification[] = [
-    { id: 1, text: "New soil data available for Field A.", time: "5 mins ago", icon: Layers, iconColor: "#12bf8e" },
-    { id: 2, text: "Low water levels detected in Sector 3.", time: "2 hours ago", icon: Droplet, iconColor: "#fe7600" },
-    { id: 3, text: "Pest alert: Aphids detected on Corn crops.", time: "1 day ago", icon: Bug, iconColor: "#f67b04" },
-    { id: 4, text: "Tractor #2 maintenance due tomorrow.", time: "1 day ago", icon: Wrench, iconColor: "#8f9190" },
-];
+type BoardCell = string | 0;
+type BoardGrid = BoardCell[][];
+type ShapeMatrix = number[][];
 
-const CropAnalysisToolInternal = () => {
-    const { theme, setTheme } = useTheme();
-    const [mounted, setMounted] = useState(false);
-    const [cropEntries, setCropEntries] = useState([]);
-    const [isNotificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
-    const [isLogCropModalOpen, setIsLogCropModalOpen] = useState(false);
-    const [comparisonYear, setComparisonYear] = useState("");
-    const notificationDropdownRef = useRef(null);
+interface Position {
+    x: number;
+    y: number;
+}
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-    useEffect(() => {
-        let loadedEntries = initialMockCropEntries;
-        const storedCropData = localStorage.getItem("farmVueCropData");
-        if (storedCropData) {
-            loadedEntries = JSON.parse(storedCropData);
-        } else {
-            localStorage.setItem("farmVueCropData", JSON.stringify(initialMockCropEntries));
-        }
-        setCropEntries(loadedEntries);
+interface ShapeData {
+    rotations: ShapeMatrix[];
+    color: string;
+    dimension: number;
+}
 
-        const years = [...new Set(loadedEntries.map((e) => new Date(e.plantingDate).getFullYear()))].sort((a, b) => b - a);
-        if (years.length > 1) {
-            setComparisonYear(years[1].toString());
-        } else if (years.length === 1) {
-            setComparisonYear(years[0].toString());
-        }
-    }, []);
+interface Piece {
+    shapeData: ShapeData;
+    color: string;
+}
 
-    useEffect(() => {
-        function handleClickOutside(event) {
-            if (notificationDropdownRef.current && event.target instanceof Node && !notificationDropdownRef.current.contains(event.target)) {
-                setNotificationDropdownOpen(false);
+interface CurrentPiece extends Piece {
+    pos: Position;
+    rotation: number;
+}
+
+type TouchControlAction = "left" | "right" | "down" | "rotate" | "drop" | "pause";
+
+function createEmptyBoard(): BoardGrid {
+    return Array(BOARD_HEIGHT)
+        .fill(0)
+        .map(() => Array(BOARD_WIDTH).fill(0));
+}
+
+/** Gets a random piece definition */
+function getRandomPieceData(): Piece {
+    const shapeIndex = Math.floor(Math.random() * SHAPES.length);
+    const shapeData = SHAPES[shapeIndex];
+    return {
+        shapeData: shapeData,
+        color: shapeData.color,
+    };
+}
+
+function getCurrentShapeMatrix(piece: CurrentPiece | null): ShapeMatrix | null {
+    if (!piece) return null;
+    return piece.shapeData.rotations[piece.rotation % piece.shapeData.rotations.length];
+}
+
+const TetrisGame = () => {
+    const [board, setBoard] = useState<BoardGrid>(() => createEmptyBoard());
+    const [currentPiece, setCurrentPiece] = useState<CurrentPiece | null>(null);
+    const [nextPiece, setNextPiece] = useState<Piece | null>(null);
+    const [gameOver, setGameOver] = useState(false);
+    const [score, setScore] = useState(0);
+    const [highScore, setHighScore] = useState(0);
+    const [level, setLevel] = useState(1);
+    const [linesCleared, setLinesCleared] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
+    const [clearingLines, setClearingLines] = useState<number[]>([]);
+    const [gameStarted, setGameStarted] = useState(false);
+    const [showGhost, setShowGhost] = useState(true);
+
+    const dropTimeRef = useRef(INITIAL_SPEED);
+    const gameIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const checkCollision = useCallback(
+        (piece: CurrentPiece | null, pos: Position, rotation: number): boolean => {
+            if (!piece) return true;
+
+            const shape = piece.shapeData.rotations[rotation % piece.shapeData.rotations.length];
+            if (!shape) return true;
+
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x] !== 0) {
+                        const boardX = pos.x + x;
+                        const boardY = pos.y + y;
+
+                        if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) {
+                            return true;
+                        }
+                        if (boardY >= 0 && board[boardY]?.[boardX] !== 0) {
+                            return true;
+                        }
+                    }
+                }
             }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
+            return false;
+        },
+        [board]
+    );
+
+    const spawnNewPiece = useCallback(() => {
+        const pieceToSpawn = nextPiece || getRandomPieceData();
+        const nextPieceToGenerate = getRandomPieceData();
+        setNextPiece(nextPieceToGenerate);
+
+        const startX = Math.floor(BOARD_WIDTH / 2) - Math.floor(pieceToSpawn.shapeData.dimension / 2);
+        const newPiece: CurrentPiece = {
+            ...pieceToSpawn,
+            pos: { x: startX, y: 0 },
+            rotation: 0,
         };
-    }, [notificationDropdownRef]);
 
-    const handleAddCropEntry = (newEntry) => {
-        const updatedEntries = [...cropEntries, newEntry];
-        setCropEntries(updatedEntries);
-        localStorage.setItem("farmVueCropData", JSON.stringify(updatedEntries));
-        toast.success('Crop data submitted successfully!', {
-            position: "top-right",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: theme === "dark" ? "dark" : "light",
-        });
-    };
-
-    const closeLogModal = () => {
-        setIsLogCropModalOpen(false);
-    };
-
-    const isDark = theme === "dark";
-
-    const inputBaseClasses = "w-full p-3 border rounded-md focus:ring-2 transition-colors duration-150 text-sm sm:text-base";
-    const lightInputClasses = "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-500 focus:border-green-500";
-    const darkInputClasses = "bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-green-400 focus:border-green-400";
-    const currentInputClasses = `${inputBaseClasses} ${isDark ? darkInputClasses : lightInputClasses}`;
-
-    const cardBaseClasses = "p-4 sm:p-5 rounded-2xl transition-all duration-300 hover:shadow-lg backdrop-blur-sm";
-    const lightCardClasses = "bg-white/80 text-gray-900 shadow-sm hover:shadow-gray-200/50 border border-gray-100";
-    const darkCardClasses = "bg-gray-800/80 text-gray-100 shadow-sm hover:shadow-gray-900/50 border border-gray-700";
-    const currentCardClasses = `${cardBaseClasses} ${isDark ? darkCardClasses : lightCardClasses}`;
-
-    const sectionTitleBaseClasses = "text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 flex items-center group";
-    const lightSectionTitleClasses = "text-gray-900";
-    const darkSectionTitleClasses = "text-gray-100";
-    const currentSectionTitleClasses = `${sectionTitleBaseClasses} ${isDark ? darkSectionTitleClasses : lightSectionTitleClasses}`;
-
-    const buttonPrimaryBaseClasses = "px-6 py-3 font-semibold rounded-xl hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 text-sm sm:text-base group";
-    const lightButtonPrimaryClasses = "bg-green-500 text-white hover:bg-green-600 hover:shadow-green-500/25 active:scale-95";
-    const darkButtonPrimaryClasses = "bg-green-400 text-gray-900 hover:bg-green-300 hover:shadow-green-400/25 active:scale-95";
-    const currentButtonPrimaryClasses = `${buttonPrimaryBaseClasses} ${isDark ? darkButtonPrimaryClasses : lightButtonPrimaryClasses}`;
-
-    const chartCardClasses = `h-auto rounded-xl p-6 border backdrop-blur-sm transition-all duration-300 hover:shadow-md ${
-        isDark 
-            ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600' 
-            : 'bg-white/50 border-gray-200 hover:border-gray-300'
-    }`;
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                when: "beforeChildren",
-                staggerChildren: 0.15
+        if (checkCollision(newPiece, newPiece.pos, newPiece.rotation)) {
+            setGameOver(true);
+            setGameStarted(false);
+            if (gameIntervalRef.current) {
+                clearInterval(gameIntervalRef.current);
+                gameIntervalRef.current = null;
             }
-        }
-    };
-
-    const itemVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: (i) => ({
-            opacity: 1,
-            y: 0,
-            transition: {
-                delay: i * 0.15,
-                duration: 0.4,
-                ease: [0.4, 0, 0.2, 1]
-            }
-        })
-    };
-
-    const availableYears = useMemo(
-        () => [...new Set(cropEntries.map((e) => new Date(e.plantingDate).getFullYear()))].sort((a, b) => b - a),
-        [cropEntries]
-    );
-
-    const latestYear = useMemo(() => availableYears[0]?.toString() || "", [availableYears]);
-
-    const baseChartDataProcessor = (dataKey) =>
-        useMemo(
-            () =>
-                cropEntries
-                    .map((entry) => ({ ...entry, plantingDateObj: new Date(entry.plantingDate) }))
-                    .sort((a, b) => a.plantingDateObj.getTime() - b.plantingDateObj.getTime())
-                    .map(
-                        (entry) =>
-                            ({
-                                plantingDate: new Date(entry.plantingDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-                                value: parseFloat(entry[dataKey]) || 0,
-                                cropName: entry.cropName,
-                            })
-                    ),
-            [cropEntries, dataKey]
-        );
-
-    const preparedWaterUsageChartData = baseChartDataProcessor("waterUsage");
-    const preparedSoilPhChartData = baseChartDataProcessor("soilPh");
-
-    const preparedResourceUsageData = cropEntries.reduce((acc, entry) => {
-        const water = parseFloat(entry.waterUsage) || 0;
-        const existing = acc.find((item) => item.name === entry.cropName);
-        if (existing) {
-            existing.totalWater += water;
         } else {
-            acc.push({ name: entry.cropName, totalWater: water });
+            setCurrentPiece(newPiece);
         }
-        return acc;
+    }, [nextPiece, checkCollision]);
+
+    /** Merges the current piece into the board grid */
+    const mergePiece = useCallback((pieceToMerge: CurrentPiece) => {
+        const shape = getCurrentShapeMatrix(pieceToMerge);
+        if (!shape) return;
+
+        setBoard((prevBoard) => {
+            const newBoard = prevBoard.map((row) => [...row]);
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x] !== 0) {
+                        const boardY = pieceToMerge.pos.y + y;
+                        const boardX = pieceToMerge.pos.x + x;
+
+                        if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+                            newBoard[boardY][boardX] = pieceToMerge.color;
+                        }
+                    }
+                }
+            }
+            return newBoard;
+        });
     }, []);
 
-    const preparedSeasonalComparisonData = useMemo(() => {
-        if (!latestYear || !comparisonYear) return [];
+    const clearLines = useCallback(() => {
+        const linesToClear: number[] = [];
 
-        const calculateTotalWater = (year) =>
-            cropEntries
-                .filter((e) => new Date(e.plantingDate).getFullYear().toString() === year)
-                .reduce((sum, e) => sum + (parseFloat(e.waterUsage) || 0), 0);
-
-        const comparisonData = [{ year: comparisonYear, totalWater: calculateTotalWater(comparisonYear) }];
-
-        if (latestYear !== comparisonYear) {
-            comparisonData.push({ year: latestYear, totalWater: calculateTotalWater(latestYear) });
-            comparisonData.sort((a, b) => parseInt(a.year) - parseInt(b.year));
+        for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
+            if (board[y] && board[y].every((cell) => cell !== 0)) {
+                linesToClear.push(y);
+            }
         }
 
-        return comparisonData;
-    }, [cropEntries, comparisonYear, latestYear]);
+        if (linesToClear.length > 0) {
+            setClearingLines(linesToClear);
+            setTimeout(() => {
+                setBoard((prevBoard) => {
+                    const cleanedBoard = prevBoard.filter((_, index) => !linesToClear.includes(index));
 
-    const GenericLineChart = React.memo(({ data, dataKey, lineName, lineColor }) => {
-        const { theme } = useTheme();
-        const isChartDark = theme === "dark";
-        const tickColor = isChartDark ? "#ebecf0" : "#041313";
-        const gridColor = isChartDark ? "rgba(235, 236, 240, 0.1)" : "rgba(4, 19, 19, 0.1)";
+                    const newEmptyLines = Array(linesToClear.length)
+                        .fill(0)
+                        .map(() => Array(BOARD_WIDTH).fill(0));
+                    return [...newEmptyLines, ...cleanedBoard];
+                });
+                const pieceSize = currentPiece ? SHAPES.find((s) => s.color === currentPiece.color)?.dimension ?? 4 : 4;
+                const sizeBonus = pieceSize <= 2 ? 1.5 : 1;
+                const pointsEarned = LINE_CLEAR_POINTS[linesToClear.length] * level * sizeBonus;
+                const newTotalLinesCleared = linesCleared + linesToClear.length;
+                const newLevel = Math.floor(newTotalLinesCleared / 10) + 1;
 
-        if (!data || data.length === 0) {
-            return (
-                <div className={`h-80 flex items-center justify-center text-sm ${isChartDark ? 'text-gray-400' : 'text-gray-500'}`}>No data to display.</div>
-            );
+                setScore((prev) => prev + pointsEarned);
+                setLinesCleared(newTotalLinesCleared);
+
+                if (newLevel > level) {
+                    setLevel(newLevel);
+                    dropTimeRef.current = Math.max(100, INITIAL_SPEED - (newLevel - 1) * 50);
+                }
+                setClearingLines([]);
+                spawnNewPiece();
+            }, 200);
+        } else {
+            spawnNewPiece();
+        }
+    }, [board, level, linesCleared, currentPiece, spawnNewPiece]);
+
+    const dropPiece = useCallback(() => {
+        if (gameOver || !currentPiece || isPaused || clearingLines.length > 0) return;
+
+        const newPos: Position = { ...currentPiece.pos, y: currentPiece.pos.y + 1 };
+
+        if (checkCollision(currentPiece, newPos, currentPiece.rotation)) {
+            mergePiece(currentPiece);
+            setCurrentPiece(null);
+            clearLines();
+        } else {
+            setCurrentPiece((prev) => (prev ? { ...prev, pos: newPos } : null));
+        }
+    }, [currentPiece, isPaused, gameOver, checkCollision, mergePiece, clearLines, clearingLines]);
+
+    const resetGame = useCallback(() => {
+        if (score > highScore) {
+            setHighScore(score);
         }
 
-            return (
-                <ResponsiveContainer width="100%" height={320}>
-                    <LineChart data={data} margin={{ top: 30, right: 20, left: -20, bottom: 10 }}>
-                        <Legend verticalAlign="top" align="center" wrapperStyle={{ width: "100%", display: "flex", justifyContent: "center", color: tickColor, fontSize: 12, paddingBottom: 10 }} />
-                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                        <XAxis dataKey="plantingDate" tick={{ fill: tickColor, fontSize: 10 }} angle={-30} textAnchor="end" height={50} />
-                        <YAxis tick={{ fill: tickColor, fontSize: 10 }} />
-                        <Tooltip
-                            contentStyle={{
-                                backgroundColor: isChartDark ? "#0F1F1F" : "#FFFFFF",
-                                borderColor: isChartDark ? "#12bf8e" : "#041313",
-                                borderRadius: "0.5rem",
-                                fontSize: "12px",
-                            }}
-                            labelStyle={{ color: tickColor, fontWeight: "bold" }}
-                            itemStyle={{ color: lineColor }}
-                        />
-                        <Line
-                            type="monotone"
-                            dataKey="value"
-                            name={lineName}
-                            stroke={lineColor}
-                            strokeWidth={2}
-                            activeDot={{ r: 5 }}
-                            dot={{ r: 2 }}
-                        />
-                    </LineChart>
-                </ResponsiveContainer>
-            );
-        }, (prevProps, nextProps) => {
-            return (
-                prevProps.data === nextProps.data &&
-                prevProps.dataKey === nextProps.dataKey &&
-                prevProps.lineName === nextProps.lineName &&
-                prevProps.lineColor === nextProps.lineColor
-            );
+        setBoard(createEmptyBoard());
+        const firstPiece = getRandomPieceData();
+        setNextPiece(getRandomPieceData());
+        const startX = Math.floor(BOARD_WIDTH / 2) - Math.floor(firstPiece.shapeData.dimension / 2);
+        setCurrentPiece({
+            ...firstPiece,
+            pos: { x: startX, y: 0 },
+            rotation: 0,
         });
+        setScore(0);
+        setLevel(1);
+        setLinesCleared(0);
+        setGameOver(false);
+        dropTimeRef.current = INITIAL_SPEED;
+        setGameStarted(true);
+        setIsPaused(false);
+        setClearingLines([]);
+        if (gameIntervalRef.current) clearInterval(gameIntervalRef.current);
+        gameIntervalRef.current = null;
+    }, [score, highScore]);
 
-    const ResourceUsageChart = React.memo(({ data }) => {
-        const { theme } = useTheme();
-        const isChartDark = theme === "dark";
-        const tickColor = isChartDark ? "#ebecf0" : "#041313";
-        const gridColor = isChartDark ? "rgba(235, 236, 240, 0.1)" : "rgba(4, 19, 19, 0.1)";
+    /** Rotates the current piece clockwise */
+    const rotatePiece = useCallback(() => {
+        if (gameOver || !currentPiece || isPaused || clearingLines.length > 0) return;
 
-        if (!data || data.length === 0) {
-            return (
-                <div className={`h-80 flex items-center justify-center text-sm ${isChartDark ? 'text-gray-400' : 'text-gray-500'}`}>No data to display.</div>
-            );
+        const rotationsCount = currentPiece.shapeData.rotations.length;
+        if (rotationsCount <= 1) return;
+
+        const newRotation = (currentPiece.rotation + 1) % rotationsCount;
+        const newPos = currentPiece.pos;
+
+        if (!checkCollision(currentPiece, newPos, newRotation)) {
+            setCurrentPiece((prev) => (prev ? { ...prev, rotation: newRotation } : null));
+            return;
         }
-
-        return (
-            <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={data} margin={{ top: 30, right: 20, left: -20, bottom: 10 }}>
-                    <Legend verticalAlign="top" align="center" wrapperStyle={{ width: "100%", display: "flex", justifyContent: "center", color: tickColor, fontSize: 12, paddingBottom: 10 }} />
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis dataKey="name" tick={{ fill: tickColor, fontSize: 10 }} angle={-30} textAnchor="end" height={50} interval={0} />
-                    <YAxis tick={{ fill: tickColor, fontSize: 10 }} />
-                    <Tooltip
-                        cursor={{ fill: isChartDark ? "rgba(254, 118, 0, 0.1)" : "rgba(254, 118, 0, 0.2)" }}
-                        contentStyle={{
-                            backgroundColor: isChartDark ? "#0F1F1F" : "#FFFFFF",
-                            borderColor: isChartDark ? "#fe7600" : "#041313",
-                            borderRadius: "0.5rem",
-                            fontSize: "12px",
-                        }}
-                        labelStyle={{ color: tickColor, fontWeight: "bold" }}
-                        itemStyle={{ color: "#f67b04" }}
-                    />
-                    <Bar dataKey="totalWater" name="Total Water Usage (L)" fill="#f67b04" radius={[4, 4, 0, 0]} />
-                </BarChart>
-            </ResponsiveContainer>
-        );
-    }, (prevProps, nextProps) => prevProps.data === nextProps.data);
-    const SeasonalComparisonChart = React.memo(({ data }) => {
-        const { theme } = useTheme();
-        const isChartDark = theme === "dark";
-        const tickColor = isChartDark ? "#ebecf0" : "#041313";
-        const gridColor = isChartDark ? "rgba(235, 236, 240, 0.1)" : "rgba(4, 19, 19, 0.1)";
-
-        if (!data || data.length === 0)
-            return (
-                <div className={`h-48 flex items-center justify-center text-sm ${isChartDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Select a year to compare.
-                </div>
-            );
-
-        return (
-            <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={data} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis dataKey="year" tick={{ fill: tickColor, fontSize: 10 }} />
-                    <YAxis tick={{ fill: tickColor, fontSize: 10 }} />
-                    <Tooltip
-                        cursor={{ fill: isChartDark ? "rgba(254, 118, 0, 0.1)" : "rgba(254, 118, 0, 0.2)" }}
-                        contentStyle={{
-                            backgroundColor: isChartDark ? "#0F1F1F" : "#FFFFFF",
-                            borderColor: isChartDark ? "#fe7600" : "#041313",
-                            borderRadius: "0.5rem",
-                            fontSize: "12px",
-                        }}
-                        labelStyle={{ color: tickColor, fontWeight: "bold" }}
-                        itemStyle={{ color: "#fe7600" }}
-                    />
-                    <Bar dataKey="totalWater" name="Total Water (L)" fill="#fe7600" radius={[4, 4, 0, 0]} />
-                </BarChart>
-            </ResponsiveContainer>
-        );
-    }, (prevProps, nextProps) => prevProps.data === nextProps.data);
-
-    const predictedNextWaterUsage = useMemo(() => {
-        const data = preparedWaterUsageChartData;
-        if (data.length < 2) return null;
-
-        const lastPoint = data[data.length - 1];
-        const secondLastPoint = data[data.length - 2];
-        let avgChange = lastPoint.value - secondLastPoint.value;
-
-        if (data.length >= 3) {
-            const thirdLastPoint = data[data.length - 3];
-            const change1 = lastPoint.value - secondLastPoint.value;
-            const change2 = secondLastPoint.value - thirdLastPoint.value;
-            avgChange = (change1 + change2) / 2;
+        const kicks = [1, -1];
+        for (const kick of kicks) {
+            const kickedPos = { ...newPos, x: newPos.x + kick };
+            if (!checkCollision(currentPiece, kickedPos, newRotation)) {
+                setCurrentPiece((prev) => (prev ? { ...prev, pos: kickedPos, rotation: newRotation } : null));
+                return;
+            }
         }
+    }, [currentPiece, isPaused, gameOver, checkCollision, clearingLines]);
 
-        const predicted = lastPoint.value + avgChange;
+    /** Moves the current piece horizontally */
+    const movePiece = useCallback(
+        (direction: "left" | "right") => {
+            if (gameOver || !currentPiece || isPaused || clearingLines.length > 0) return;
 
-        const variation = Math.random() * 0.2 - 0.1;
-        const finalPrediction = predicted * (1 + variation);
+            const deltaX = direction === "left" ? -1 : 1;
+            const newPos: Position = { ...currentPiece.pos, x: currentPiece.pos.x + deltaX };
 
-        return Math.max(0, Math.round(finalPrediction));
-    }, [preparedWaterUsageChartData]);
-
-    const lastActualWaterUsage = useMemo(() => {
-        if (preparedWaterUsageChartData.length === 0) return null;
-        return preparedWaterUsageChartData[preparedWaterUsageChartData.length - 1].value;
-    }, [preparedWaterUsageChartData]);
-    const ForecastVisualization = React.memo(({ lastActual, predictedNext }) => {
-        const { theme } = useTheme();
-        const isChartDark = theme === "dark";
-        const tickColor = isChartDark ? "#ebecf0" : "#041313";
-
-        if (lastActual === null || predictedNext === null) {
-            return (
-                <p className={`${isChartDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Not enough data for a forecast visualization (requires at least 2 entries).
-                </p>
-            );
-        }
-
-        const data = [
-            { name: "Last Actual", value: lastActual, color: isChartDark ? "#3b82f6" : "#2563eb" },
-            { name: "Predicted Next", value: predictedNext, color: isChartDark ? "#22c55e" : "#16a34a" },
-        ];
-
-        return (
-            <ResponsiveContainer width="100%" height={150}>
-                <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={isChartDark ? "rgba(235, 236, 240, 0.1)" : "rgba(4, 19, 19, 0.1)"} />
-                    <XAxis type="number" tick={{ fill: tickColor, fontSize: 10 }} />
-                    <YAxis type="category" dataKey="name" tick={{ fill: tickColor, fontSize: 10 }} width={80} />
-                    <Tooltip
-                        cursor={{ fill: isChartDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)" }}
-                        contentStyle={{
-                            backgroundColor: isChartDark ? "#0F1F1F" : "#FFFFFF",
-                            borderColor: isChartDark ? "#4A5568" : "#CBD5E0",
-                            borderRadius: "0.5rem",
-                            fontSize: "12px",
-                        }}
-                        labelStyle={{ color: tickColor, fontWeight: "bold" }}
-                    />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                        {data.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                    </Bar>
-                </BarChart>
-            </ResponsiveContainer>
-        );
-    }, (prevProps, nextProps) => 
-        prevProps.lastActual === nextProps.lastActual && 
-        prevProps.predictedNext === nextProps.predictedNext
+            if (!checkCollision(currentPiece, newPos, currentPiece.rotation)) {
+                setCurrentPiece((prev) => (prev ? { ...prev, pos: newPos } : null));
+            }
+        },
+        [currentPiece, isPaused, gameOver, checkCollision, clearingLines]
     );
-    const LogCropDataModal = React.memo(
-        ({
-            isOpen,
-            onClose,
-            onSubmitCrop,
-            inputBaseClasses: receivedInputClasses,
-            buttonPrimaryClasses: receivedButtonPrimaryClasses,
-            sectionTitleClasses: receivedSectionTitleClasses,
-        }) => {
-            const { theme: modalTheme } = useTheme();
-            const isModalDark = modalTheme === 'dark';
 
-            const [internalAnimate, setInternalAnimate] = useState(false);
+    /** Instantly drops the piece to the lowest possible position (Hard Drop) */
+    const hardDrop = useCallback(() => {
+        if (gameOver || !currentPiece || isPaused || clearingLines.length > 0) return;
 
-            useEffect(() => {
-                if (isOpen) {
-                    const timer = setTimeout(() => {
-                        setInternalAnimate(true);
-                    }, 50);
-                    return () => clearTimeout(timer);
-                } else {
-                    setInternalAnimate(false);
+        const newPos = { ...currentPiece.pos };
+        while (!checkCollision(currentPiece, { ...newPos, y: newPos.y + 1 }, currentPiece.rotation)) {
+            newPos.y += 1;
+        }
+        const landedPiece = { ...currentPiece, pos: newPos };
+        mergePiece(landedPiece);
+        setCurrentPiece(null);
+        clearLines();
+        if (gameIntervalRef.current) clearInterval(gameIntervalRef.current);
+        gameIntervalRef.current = null;
+    }, [currentPiece, isPaused, gameOver, checkCollision, mergePiece, clearLines, clearingLines]);
+
+    /** Toggles the pause state */
+    const togglePause = useCallback(() => {
+        if (gameOver || !gameStarted) return;
+        setIsPaused((prev) => !prev);
+    }, [gameOver, gameStarted]);
+
+    const handleKeyDown = useCallback(
+        (e: KeyboardEvent) => {
+            if (!gameStarted || gameOver || e.metaKey || e.altKey || e.ctrlKey) return;
+            if (e.key === "p" || e.key === "P") {
+                togglePause();
+                return;
+            }
+            if (isPaused || clearingLines.length > 0) return;
+
+            switch (e.key) {
+                case "ArrowLeft":
+                    e.preventDefault();
+                    movePiece("left");
+                    break;
+                case "ArrowRight":
+                    e.preventDefault();
+                    movePiece("right");
+                    break;
+                case "ArrowDown":
+                    e.preventDefault();
+                    dropPiece();
+                    if (gameIntervalRef.current) clearInterval(gameIntervalRef.current);
+                    gameIntervalRef.current = null;
+                    break;
+                case "ArrowUp":
+                    e.preventDefault();
+                    rotatePiece();
+                    break;
+                case " ":
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+                default:
+                    break;
+            }
+        },
+        [gameStarted, gameOver, isPaused, clearingLines, movePiece, dropPiece, rotatePiece, hardDrop, togglePause]
+    );
+
+    /** Handles touch control input */
+    const handleTouchControl = useCallback(
+        (action: TouchControlAction) => {
+            if (!gameStarted || gameOver) return;
+
+            if (action === "pause") {
+                togglePause();
+                return;
+            }
+
+            if (isPaused || clearingLines.length > 0) return;
+
+            switch (action) {
+                case "left":
+                    movePiece("left");
+                    break;
+                case "right":
+                    movePiece("right");
+                    break;
+                case "down":
+                    dropPiece();
+                    break;
+                case "rotate":
+                    rotatePiece();
+                    break;
+                case "drop":
+                    hardDrop();
+                    break;
+            }
+        },
+        [gameStarted, gameOver, isPaused, clearingLines, movePiece, dropPiece, rotatePiece, hardDrop, togglePause]
+    );
+
+    useEffect(() => {
+        if (!gameStarted && !currentPiece && !gameOver) {
+            const firstPiece = getRandomPieceData();
+            setNextPiece(getRandomPieceData());
+            const startX = Math.floor(BOARD_WIDTH / 2) - Math.floor(firstPiece.shapeData.dimension / 2);
+            setCurrentPiece({
+                ...firstPiece,
+                pos: { x: startX, y: 0 },
+                rotation: 0,
+            });
+        }
+    }, [gameStarted, currentPiece, gameOver]);
+
+    useEffect(() => {
+        if (gameIntervalRef.current) {
+            clearInterval(gameIntervalRef.current);
+            gameIntervalRef.current = null;
+        }
+        if (gameStarted && !isPaused && !gameOver && clearingLines.length === 0) {
+            
+            gameIntervalRef.current = setInterval(() => {
+                dropPiece();
+            }, dropTimeRef.current);
+        }
+
+        return () => {
+            if (gameIntervalRef.current) {
+                clearInterval(gameIntervalRef.current);
+                gameIntervalRef.current = null;
+            }
+        };
+    }, [gameStarted, isPaused, gameOver, dropPiece, dropTimeRef, clearingLines]); 
+
+    useEffect(() => {
+        window.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [handleKeyDown]);
+
+    const NextPiecePreview = React.memo(({ piece }: { piece: Piece | null }) => {
+        if (!piece) return <div className="w-28 h-28 bg-gray-900/80 rounded-lg flex items-center justify-center text-gray-600">...</div>;
+
+        const shape = piece.shapeData.rotations[0];
+        const previewGridSize = 5;
+
+        const yOffset = Math.floor((previewGridSize - shape.length) / 2);
+        const xOffset = Math.floor((previewGridSize - (shape[0]?.length ?? 0)) / 2);
+
+        return (
+            <div className="bg-gray-900/80 p-3 rounded-lg inline-block shadow-md backdrop-blur-sm border border-slate-800">
+                <div
+                    className="grid gap-px relative"
+                    style={{
+                        gridTemplateColumns: `repeat(${previewGridSize}, 1fr)`,
+                        gridTemplateRows: `repeat(${previewGridSize}, 1fr)`,
+                    }}
+                >
+                    
+                    <div
+                        className="absolute inset-0 grid"
+                        style={{
+                            gridTemplateColumns: `repeat(${previewGridSize}, 1fr)`,
+                            gridTemplateRows: `repeat(${previewGridSize}, 1fr)`,
+                            opacity: 0.1,
+                            pointerEvents: "none",
+                        }}
+                    >
+                        {Array.from({ length: previewGridSize * previewGridSize }).map((_, i) => (
+                            <div key={`preview-grid-${i}`} className="border border-white/20"></div>
+                        ))}
+                    </div>
+
+                    {Array.from({ length: previewGridSize }).map((_, y) =>
+                        Array.from({ length: previewGridSize }).map((_, x) => {
+                            const shapeY = y - yOffset;
+                            const shapeX = x - xOffset;
+
+                            const isFilled =
+                                shapeY >= 0 &&
+                                shapeY < shape.length &&
+                                shapeX >= 0 &&
+                                shapeX < shape[shapeY]?.length &&
+                                shape[shapeY][shapeX] !== 0;
+
+                            return (
+                                <div
+                                    key={`next-${y}-${x}`}
+                                    className={`
+                    ${PREVIEW_CELL_SIZE_CLASSES}
+                    ${isFilled ? `${piece.color} shadow-inner shadow-[inset_0_0_4px_rgba(0,0,0,0.3)]` : "bg-transparent"}
+                    ${isFilled ? "border border-white/20" : ""}
+                    transition-colors
+                  `}
+                                />
+                            );
+                        })
+                    )}
+                </div>
+            </div>
+        );
+    });
+    NextPiecePreview.displayName = "NextPiecePreview";
+
+    const GameInfoPanel = React.memo(() => {
+        return (
+            <div className="flex flex-col gap-5 w-full max-w-xs bg-gray-900/90 p-5 rounded-xl shadow-xl backdrop-blur-sm border border-slate-800">
+                
+                <div className="text-center">
+                    <h2 className="text-lg font-semibold mb-3 text-gray-300">Next Piece</h2>
+                    <div className="flex justify-center items-center min-h-[7rem]">
+                        <NextPiecePreview piece={nextPiece} />
+                    </div>
+                </div>
+
+                
+                <div className="grid grid-cols-2 gap-3 text-center">
+                    <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-3 rounded-lg shadow-lg border border-slate-800">
+                        <p className="text-xs text-gray-400 uppercase tracking-wider font-medium">Score</p>
+                        <p className="text-2xl font-bold text-white mt-1">{score}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-3 rounded-lg shadow-lg border border-slate-800">
+                        <p className="text-xs text-gray-400 uppercase tracking-wider font-medium">Level</p>
+                        <p className="text-2xl font-bold text-white mt-1">{level}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-3 rounded-lg shadow-lg border border-slate-800">
+                        <p className="text-xs text-gray-400 uppercase tracking-wider font-medium">Lines</p>
+                        <p className="text-2xl font-bold text-white mt-1">{linesCleared}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-3 rounded-lg shadow-lg border border-slate-800">
+                        <p className="text-xs text-gray-400 uppercase tracking-wider font-medium">High Score</p>
+                        <p className="text-2xl font-bold text-white mt-1">{Math.max(score, highScore)}</p>
+                    </div>
+                </div>
+
+                
+                <div className="flex justify-center space-x-3 mt-2">
+                    {gameStarted && (
+                        <button
+                            onClick={togglePause}
+                            className={`
+                px-5 py-2.5 cursor-pointer rounded-lg font-semibold transition-all text-white shadow-lg text-sm
+                ${
+                    isPaused
+                        ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                        : "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600"
                 }
-            }, [isOpen]);
+                transform hover:-translate-y-0.5 active:translate-y-0
+              `}
+                        >
+                            {isPaused ? "Resume" : "Pause"}
+                        </button>
+                    )}
+                    <button
+                        onClick={resetGame}
+                        className="
+              px-5 py-2.5 cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg font-semibold 
+              text-white hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg text-sm
+              transform hover:-translate-y-0.5 active:translate-y-0
+            "
+                    >
+                        {gameStarted ? "Restart" : "Start Game"}
+                    </button>
+                </div>
 
-            const [cropNameValue, changeCropName] = useState("");
-            const [dateOfPlanting, updateDateOfPlanting] = useState("");
-            const [soilPhValue, setSoilPhReading] = useState("");
-            const [waterQuantityUsed, recordWaterQuantity] = useState("");
+                
+                <div className="mt-2 flex justify-center">
+                    <button
+                        onClick={() => setShowGhost((prev) => !prev)}
+                        className={`
+              flex items-center cursor-pointer justify-center px-3 py-1.5 rounded-md text-xs
+              ${showGhost ? "bg-indigo-600 hover:bg-indigo-700" : "bg-gray-700 hover:bg-gray-600"}
+              transition-colors
+            `}
+                    >
+                        <span className="mr-1">Ghost Piece</span>
+                        <span className={`inline-block w-3 h-3 rounded-full ${showGhost ? "bg-green-400" : "bg-gray-400"}`}></span>
+                    </button>
+                </div>
 
-            if (!isOpen) return null;
+                
+                <div className="hidden md:block mt-4 border-t border-slate-700 pt-4">
+                    <h3 className="text-center font-semibold mb-3 text-gray-400 text-sm">Controls</h3>
+                    <div className="space-y-2"> 
+                        
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-2 pl-4">
+                            <div className="flex items-center gap-1"> 
+                                <kbd className="font-sans border rounded px-2 py-1 bg-gray-800 text-gray-300 shadow-sm">←</kbd> <span className="text-gray-400 text-xs">Move Left</span>
+                            </div>
+                            <div className="flex items-center gap-1"> 
+                                <kbd className="font-sans border rounded px-2 py-1 bg-gray-800 text-gray-300 shadow-sm">→</kbd> <span className="text-gray-400 text-xs">Move Right</span>
+                            </div>
+                            <div className="flex items-center gap-1"> 
+                                <kbd className="font-sans border rounded px-2 py-1 bg-gray-800 text-gray-300 shadow-sm">↑</kbd> <span className="text-gray-400 text-xs">Rotate</span>
+                            </div>
+                            <div className="flex items-center gap-1"> 
+                                <kbd className="font-sans border rounded px-2 py-1 bg-gray-800 text-gray-300 shadow-sm">↓</kbd> <span className="text-gray-400 text-xs">Drop</span>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-1 pl-16"> 
+                            <kbd className="font-sans border rounded px-2 py-1 bg-gray-800 text-gray-300 shadow-sm whitespace-nowrap">Space</kbd> <span className="text-gray-400 text-xs">Hard Drop</span>
+                        </div>
+                        <div className="flex items-center gap-1 pl-16"> 
+                            <kbd className="font-sans border rounded px-2 py-1 bg-gray-800 text-gray-300 shadow-sm">P</kbd> <span className="text-gray-400 text-xs">Pause/Resume</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    });
+    GameInfoPanel.displayName = "GameInfoPanel";
 
-            const handleSubmit = (event) => {
-                event.preventDefault();
-                if (!cropNameValue || !dateOfPlanting || !soilPhValue || !waterQuantityUsed) {
-                    toast.error('Please fill in all fields before submitting.', {
-                        position: "top-right",
-                        autoClose: 3000,
-                        hideProgressBar: false,
-                        closeOnClick: true,
-                        pauseOnHover: true,
-                        draggable: true,
-                        progress: undefined,
-                        theme: isDark ? "dark" : "light",
-                    });
-                    return;
-                }
-                if (isNaN(parseFloat(waterQuantityUsed)) || isNaN(parseFloat(soilPhValue))) {
-                    toast.error('Water Usage and Soil pH must be valid numbers.', {
-                        position: "top-right",
-                        autoClose: 3000,
-                        hideProgressBar: false,
-                        closeOnClick: true,
-                        pauseOnHover: true,
-                        draggable: true,
-                        progress: undefined,
-                        theme: isDark ? "dark" : "light",
-                    });
-                    return;
-                }
-                const newEntry = {
-                    id: new Date().toISOString(),
-                    cropName: cropNameValue,
-                    plantingDate: dateOfPlanting,
-                    soilPh: soilPhValue,
-                    waterUsage: waterQuantityUsed,
-                    submissionDate: new Date().toLocaleDateString(),
-                };
-                onSubmitCrop(newEntry);
-                changeCropName("");
-                updateDateOfPlanting("");
-                setSoilPhReading("");
-                recordWaterQuantity("");
-                onClose();
-            };
+    const TouchControlsPanel = React.memo(
+        ({ onControl, disabled }: { onControl: (action: TouchControlAction) => void; disabled?: boolean }) => {
+            const buttonBaseClass = `
+        p-4 bg-gray-800/80 backdrop-blur-sm rounded-xl text-white font-bold text-2xl
+        hover:bg-gray-700/90 active:bg-gray-600 transition-all 
+        disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center
+        shadow-lg border border-slate-700 transform hover:-translate-y-0.5 active:translate-y-0
+      `;
+            const iconClass = "w-6 h-6";
 
             return (
-                <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ease-in-out ${isModalDark ? 'bg-black/70' : 'bg-black/50'} ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                    <div
-                        className={`rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 transform transition-all duration-300 ease-in-out ${isModalDark ? 'bg-gray-800' : 'bg-white'} ${internalAnimate ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
-                    >
-                        <div className="flex justify-between items-center mb-4 sm:mb-6">
-                            <h2 className={`${receivedSectionTitleClasses} !mb-0`}>
-                                <Database size={26} className="mr-3 text-green-500" />
-                                Log New Crop Data
-                            </h2>
-                            <button
-                                onClick={onClose}
-                                className={`p-2 rounded-full cursor-pointer transition-colors ${isModalDark ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
-                            >
-                                <X size={24} className={`${isModalDark ? 'text-gray-300' : 'text-gray-600'}`} />
-                            </button>
-                        </div>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="modalCropName" className={`block text-sm font-medium mb-1.5 ${isModalDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                                        Crop Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="modalCropName"
-                                        value={cropNameValue}
-                                        onChange={(e) => changeCropName(e.target.value)}
-                                        className={`${receivedInputClasses}`}
-                                        placeholder="e.g., Golden Corn, Red Wheat"
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="modalPlantingDate" className={`block text-sm font-medium mb-1.5 ${isModalDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                                        Planting Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        id="modalPlantingDate"
-                                        value={dateOfPlanting}
-                                        onChange={(e) => updateDateOfPlanting(e.target.value)}
-                                        className={`${receivedInputClasses}`}
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="modalSoilPh" className={`block text-sm font-medium mb-1.5 ${isModalDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                                        Soil pH
-                                    </label>
-                                    <input
-                                        type="number"
-                                        id="modalSoilPh"
-                                        step="0.1"
-                                        value={soilPhValue}
-                                        onChange={(e) => setSoilPhReading(e.target.value)}
-                                        className={`${receivedInputClasses}`}
-                                        placeholder="e.g., 6.5"
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="modalWaterUsage" className={`block text-sm font-medium mb-1.5 ${isModalDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                                        Water Usage (Liters/hectare)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        id="modalWaterUsage"
-                                        value={waterQuantityUsed}
-                                        onChange={(e) => recordWaterQuantity(e.target.value)}
-                                        className={`${receivedInputClasses}`}
-                                        placeholder="e.g., 5000"
-                                    />
-                                </div>
-                            </div>
-                            <button type="submit" className={`${receivedButtonPrimaryClasses} w-full sm:w-auto mt-2`}>
-                                <UploadCloud size={20} />
-                                <span>Save Crop Data</span>
-                            </button>
-                        </form>
+                <div className="md:hidden mt-8 w-full max-w-xs">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                        
+                        <button onClick={() => onControl("left")} className={buttonBaseClass} aria-label="Move Left" disabled={disabled}>
+                            <svg className={iconClass} fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                    fillRule="evenodd"
+                                    d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z"
+                                    clipRule="evenodd"
+                                />
+                            </svg>
+                        </button>
+                        <button onClick={() => onControl("rotate")} className={buttonBaseClass} aria-label="Rotate" disabled={disabled}>
+                            <svg className={iconClass} fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                    fillRule="evenodd"
+                                    d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm12 14a1 1 0 01-1-1v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 111.885-.666A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 01-1 1z"
+                                    clipRule="evenodd"
+                                />
+                            </svg>
+                        </button>
+                        <button onClick={() => onControl("right")} className={buttonBaseClass} aria-label="Move Right" disabled={disabled}>
+                            <svg className={iconClass} fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                    fillRule="evenodd"
+                                    d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
+                                    clipRule="evenodd"
+                                />
+                            </svg>
+                        </button>
+
+                        
+                        <button
+                            onClick={() => onControl("down")}
+                            className={`${buttonBaseClass} col-span-1`}
+                            aria-label="Move Down"
+                            disabled={disabled}
+                        >
+                            <svg className={iconClass} fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                    fillRule="evenodd"
+                                    d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z"
+                                    clipRule="evenodd"
+                                />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={() => onControl("drop")}
+                            className={`${buttonBaseClass} col-span-2 bg-blue-600/80 hover:bg-blue-700/90 active:bg-blue-800`}
+                            aria-label="Hard Drop"
+                            disabled={disabled}
+                        >
+                            <svg className={`${iconClass} mr-1`} fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                    fillRule="evenodd"
+                                    d="M10 3a1 1 0 011 1v5.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414L9 9.586V4a1 1 0 011-1zm-7 9a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                                    clipRule="evenodd"
+                                />
+                            </svg>
+                            Drop
+                        </button>
+                    </div>
+
+                    
+                    <div className="mt-4 flex justify-center">
+                        <button
+                            onClick={() => onControl("pause")}
+                            className={`
+                px-5 py-2.5 rounded-lg font-semibold transition-all text-white shadow-lg text-sm
+                ${isPaused ? "bg-green-600" : "bg-yellow-500"}
+                w-full max-w-xs
+              `}
+                            disabled={disabled && !isPaused}
+                        >
+                            {isPaused ? "Resume Game" : "Pause Game"}
+                        </button>
                     </div>
                 </div>
             );
         }
     );
+    TouchControlsPanel.displayName = "TouchControlsPanel";
 
-   
-    const handleThemeToggle = useCallback(() => {
-        setTheme(theme === "dark" ? "light" : "dark");
-    }, [theme, setTheme]);
+    const GameBoardDisplay = React.memo(() => {
+        const visibleBoard = useMemo(() => {
+            const newVisibleBoard = board.map((row) => [...row]);
+            const shape = getCurrentShapeMatrix(currentPiece);
 
-    const handleNotificationToggle = useCallback(() => {
-        setNotificationDropdownOpen(!isNotificationDropdownOpen);
-    }, [isNotificationDropdownOpen]);
+            if (currentPiece && shape) {
+                const { pos } = currentPiece;
+                for (let y = 0; y < shape.length; y++) {
+                    for (let x = 0; x < shape[y].length; x++) {
+                        if (shape[y][x] !== 0) {
+                            const boardY = pos.y + y;
+                            const boardX = pos.x + x;
 
-    const handleAddCropClick = useCallback(() => {
-        setIsLogCropModalOpen(true);
-    }, []);
+                            if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+                                newVisibleBoard[boardY][boardX] = currentPiece.color;
+                            }
+                        }
+                    }
+                }
+            }
+            return newVisibleBoard;
+        }, [board, currentPiece]);
 
-    if (!mounted) {
+        
+        const ghostPiecePosition = useMemo(() => {
+            if (!currentPiece || gameOver || isPaused || !showGhost) return null;
+
+            const shape = getCurrentShapeMatrix(currentPiece);
+            if (!shape) return null; 
+
+            let determinedLandingPosY = currentPiece.pos.y; 
+
+            
+            for (let testY = currentPiece.pos.y; testY < BOARD_HEIGHT; testY++) {
+                let collisionAtThisTestY = false;
+                
+                for (let y_offset = 0; y_offset < shape.length; y_offset++) {
+                    for (let x_offset = 0; x_offset < shape[y_offset].length; x_offset++) {
+                        if (shape[y_offset][x_offset] !== 0) { 
+                            const boardY = testY + y_offset; 
+                            const boardX = currentPiece.pos.x + x_offset; 
+
+                            if (
+                                boardX < 0 ||
+                                boardX >= BOARD_WIDTH ||
+                                boardY >= BOARD_HEIGHT ||
+                                (boardY >= 0 && board[boardY]?.[boardX] !== 0) 
+                            ) {
+                                collisionAtThisTestY = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (collisionAtThisTestY) break;
+                }
+
+                if (collisionAtThisTestY) {
+                    
+                    
+                    
+                    break; 
+                } else {
+                    
+                    
+                    determinedLandingPosY = testY; 
+                }
+            }
+
+            
+            return determinedLandingPosY !== currentPiece.pos.y
+                ? {
+                      pos: { x: currentPiece.pos.x, y: determinedLandingPosY },
+                      rotation: currentPiece.rotation,
+                      shape: shape,
+                  }
+                : null;
+        }, [currentPiece, gameOver, isPaused, showGhost, board]);
+
         return (
-            <div className="flex items-center justify-center h-screen">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5 }}
-                    className="text-center"
+            <div className="relative self-center sm:self-start">
+                
+                <div
+                    className="grid border-4 border-slate-700 rounded-lg overflow-hidden shadow-2xl bg-gray-900/90"
+                    style={{
+                        gridTemplateColumns: `repeat(${BOARD_WIDTH}, 1fr)`,
+                        gridTemplateRows: `repeat(${BOARD_HEIGHT}, 1fr)`,
+                        boxShadow: "0 0 20px rgba(59, 130, 246, 0.3), inset 0 0 10px rgba(0, 0, 0, 0.5)",
+                    }}
                 >
-                    <h1 className="text-2xl font-bold">
-                        <span className="text-green-500">Farm</span>
-                        <span className="text-orange-500">Vue</span>
-                    </h1>
-                </motion.div>
+                    
+                    <div
+                        className="absolute inset-0 grid"
+                        style={{
+                            gridTemplateColumns: `repeat(${BOARD_WIDTH}, 1fr)`,
+                            gridTemplateRows: `repeat(${BOARD_HEIGHT}, 1fr)`,
+                            pointerEvents: "none",
+                            opacity: 0.1,
+                        }}
+                    >
+                        {Array.from({ length: BOARD_WIDTH * BOARD_HEIGHT }).map((_, i) => (
+                            <div key={`grid-${i}`} className="border border-white/20"></div>
+                        ))}
+                    </div>
+
+                    
+                    {ghostPiecePosition && ghostPiecePosition.shape && !clearingLines.length && (
+                        <>
+                            {ghostPiecePosition.shape.map((row, y) =>
+                                row.map((cell, x) => {
+                                    if (cell !== 0) {
+                                        const boardY = ghostPiecePosition.pos.y + y;
+                                        const boardX = ghostPiecePosition.pos.x + x;
+
+                                        if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+                                            const color = currentPiece?.color || "";
+                                            const ghostColor = color.replace(/bg-(\w+)-(\d+)/, "bg-$1-$2/30");
+
+                                            return (
+                                                <div
+                                                    key={`ghost-${boardY}-${boardX}`}
+                                                    className={`${CELL_SIZE_CLASSES} border-2 border-dashed ${ghostColor} border-white/30`}
+                                                    style={{
+                                                        gridRowStart: boardY + 1,
+                                                        gridColumnStart: boardX + 1,
+                                                        zIndex: 1,
+                                                    }}
+                                                />
+                                            );
+                                        }
+                                    }
+                                    return null;
+                                })
+                            )}
+                        </>
+                    )}
+
+                    
+                    {visibleBoard.map((row, y_idx) =>
+                        row.map((cell, x_idx) => {
+                            const isClearingLine = clearingLines.includes(y_idx);
+                            return (
+                                <div
+                                    key={`cell-${y_idx}-${x_idx}`}
+                                    className={`
+                    ${CELL_SIZE_CLASSES}
+                    ${cell ? `${cell} shadow-inner` : "bg-gray-900/80"}
+                    ${
+                        isClearingLine
+                            ? "animate-pulse bg-white border-white"
+                            : cell
+                            ? "border border-white/20"
+                            : "border border-gray-800/40"
+                    }
+                    ${cell ? "shadow-[inset_0_0_5px_rgba(0,0,0,0.3)]" : ""}
+                    transition-colors duration-100
+                  `}
+                                    style={{
+                                        gridRowStart: y_idx + 1,
+                                        gridColumnStart: x_idx + 1,
+                                        ...(isClearingLine ? { animation: "pulse 0.5s infinite" } : {}),
+                                    }}
+                                />
+                            );
+                        })
+                    )}
+                </div>
+
+                
+                {gameOver && (
+                    <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center rounded-lg text-center p-4 z-10 backdrop-blur-sm">
+                        <h2 className="text-4xl font-extrabold text-red-500 mb-5 animate-bounce">Game Over</h2>
+                        <p className="text-xl text-gray-300 mb-2">Score: {score}</p>
+                        <p className="text-lg text-gray-400 mb-6">High Score: {Math.max(score, highScore)}</p>
+                        <button
+                            onClick={resetGame}
+                            className="px-7 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg text-white font-bold hover:from-purple-700 hover:to-indigo-700 transition-all shadow-lg text-lg"
+                        >
+                            Play Again
+                        </button>
+                    </div>
+                )}
+
+                
+                {isPaused && !gameOver && (
+                    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center rounded-lg text-yellow-400 z-10 backdrop-blur-sm">
+                        <svg
+                            className="w-16 h-16 mb-4 opacity-80"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                        </svg>
+                        <h2 className="text-3xl font-bold tracking-wider">PAUSED</h2>
+                        <button
+                            onClick={togglePause}
+                            className="mt-6 px-5 py-2 bg-yellow-500 hover:bg-yellow-600 rounded-md font-semibold text-white transition-colors shadow-md text-sm"
+                        >
+                            Resume Game
+                        </button>
+                    </div>
+                )}
+
+                
+                {!gameStarted && !gameOver && (
+                    <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center rounded-lg text-center p-4 z-10 backdrop-blur-sm">
+                        <div className="mb-6 relative">
+                            <h1 
+                                className="text-4xl sm:text-6xl font-extrabold text-center bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent filter drop-shadow-lg bg-[size:200%_auto] animate-[gradient-flow_5s_ease-in-out_infinite]"
+                            >
+                                Tetris
+                            </h1>
+                            <div className="absolute -inset-2 bg-gradient-to-r from-pink-400/10 via-purple-400/10 to-indigo-400/10 blur-xl opacity-50 rounded-full"></div>
+                        </div>
+                        <p className="text-md text-gray-300 mb-8">
+                            Experience classic block-stacking with pieces <br /> from 1 to 5 squares!
+                        </p>
+                        <button
+                            onClick={resetGame}
+                            className="group relative px-8 py-4 bg-gradient-to-r from-green-500 to-cyan-500 rounded-lg text-white font-bold hover:from-green-600 hover:to-cyan-600 transition-all shadow-xl text-xl"
+                        >
+                            <span className="relative z-10">Start Game</span>
+                            <span className="absolute inset-0 -z-10 rounded-lg bg-gradient-to-r from-green-400 to-cyan-400 opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-50"></span>
+                        </button>
+                    </div>
+                )}
             </div>
         );
-    }
+    });
+    GameBoardDisplay.displayName = "GameBoardDisplay";
 
     return (
-        <>
-            <style jsx global>{`
-                @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap");
-                body {
-                    font-family: "Roboto", sans-serif;
-                }
-                h1,
-                h2,
-                h3,
-                h4,
-                h5,
-                h6 {
-                    font-family: "Montserrat", sans-serif;
-                }
-                p,
-                span,
-                a,
-                div,
-                li,
-                label,
-                option,
-                select,
-                input,
-                button,
-                textarea {
-                    font-family: "Roboto", sans-serif;
-                }
-                .font-heading {
-                    font-family: "Montserrat", sans-serif !important;
-                }
-                .font-body {
-                    font-family: "Roboto", sans-serif !important;
-                }
-                html {
-                    scroll-behavior: smooth;
-                }
-                ::-webkit-scrollbar {
-                    width: 8px;
-                    height: 8px;
-                }
-                ::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                ::-webkit-scrollbar-thumb {
-                    background: #888;
-                    border-radius: 4px;
-                }
-                ::-webkit-scrollbar-thumb:hover {
-                    background: #666;
-                }
-                /* Add glass morphism effect */
-                .glass-effect {
-                    backdrop-filter: blur(8px);
-                    -webkit-backdrop-filter: blur(8px);
-                }
-                /* Smooth transitions */
-                * {
-                    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
-                    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-                    transition-duration: 150ms;
-                }
-            `}</style>
-            <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={containerVariants}
-                className={`flex h-screen transition-colors duration-300 overflow-hidden ${
-                    isDark ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-900"
-                }`}
-            >
-                <motion.div variants={itemVariants} custom={1} className="flex-1 flex flex-col overflow-y-auto">
-                    <main className="flex-1 p-6 sm:p-8 lg:p-10 space-y-8 sm:space-y-10 max-w-[1440px] mx-auto w-full">
-                        <motion.div variants={itemVariants} custom={2} className="flex flex-col space-y-6">
-                            <div className="flex justify-between items-center">
-                                <div 
-                                    className={`text-2xl font-bold flex items-center cursor-pointer select-none`}
-                                    onClick={() => window.location.href = '/'}
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 text-white py-8 px-4 font-sans select-none">
+            
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+                
+                <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full filter blur-3xl opacity-30 animate-blob"></div>
+                <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+                <div className="absolute top-1/2 left-1/3 w-96 h-96 bg-cyan-500/10 rounded-full filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+
+                
+                <div className="absolute inset-0 bg-grid-white/[0.03]"></div>
+            </div>
+
+            
+            <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-6xl mx-auto">
+                
+                <div className="w-full mb-8">
+                    <div className="flex flex-col sm:flex-row items-center justify-between mb-4">
+                        
+                        <div className="mb-4 sm:mb-0 relative">
+                            <h1 
+                                className="text-4xl sm:text-6xl font-extrabold text-center bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent filter drop-shadow-lg bg-[size:200%_auto] animate-[gradient-flow_5s_ease-in-out_infinite]"
+                            >
+                                Tetris
+                            </h1>
+                            <div className="hidden sm:block absolute -inset-2 bg-gradient-to-r from-pink-400/10 via-purple-400/10 to-indigo-400/10 blur-xl opacity-50 rounded-full"></div>
+                        </div>
+
+                        
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => document.getElementById("howToPlayModal")?.classList.remove("hidden")}
+                                className="px-4 cursor-pointer py-2 bg-indigo-600/60 hover:bg-indigo-600/80 rounded-lg text-sm font-medium flex items-center gap-2 backdrop-blur-sm border border-indigo-500/20 transition-colors"
+                            >
+                                <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
                                 >
-                                    <Tractor size={28} className={`mr-2 text-[#12bf8e]`} />
-                                    <span style={{ color: "#12bf8e" }}>Farm</span>
-                                    <span style={{ color: "#fe7600" }}>Vue</span>
-                                </div>
-                                <div className="flex items-center space-x-3 sm:space-x-4">
-                                    <div className="relative" ref={notificationDropdownRef}>
-                                        <div className="flex items-center">
-                                            <div
-                                                className="cursor-pointer p-1"
-                                                onClick={handleNotificationToggle}
-                                            >
-                                                <Bell size={18} className={`${isDark ? "text-gray-200" : "text-gray-800"}`} />
-                                                {mockNotifications.length > 0 && (
-                                                    <span
-                                                        className={`absolute top-0.5 right-0.5 block h-2 w-2 rounded-full bg-orange-500 ring-1 ${
-                                                            isDark ? "ring-gray-900" : "ring-white"
-                                                        }`}
-                                                    ></span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {isNotificationDropdownOpen && (
-                                            <div
-                                                className={`absolute right-0 mt-2 w-72 sm:w-80 rounded-md border shadow-xl z-50 overflow-hidden ${
-                                                    isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
-                                                }`}
-                                            >
-                                                <div className={`p-3 border-b ${isDark ? "border-gray-700" : "border-gray-200"}`}>
-                                                    <h3 className={`text-md font-semibold ${isDark ? "text-gray-100" : "text-gray-900"}`}>
-                                                        Notifications
-                                                    </h3>
-                                                </div>
-                                                {mockNotifications.length > 0 ? (
-                                                    <ul className="py-1 max-h-80 overflow-y-auto">
-                                                        {mockNotifications.map((notification) => (
-                                                            <li key={notification.id}>
-                                                                <a
-                                                                    href="#"
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        toast.info(`Notification acknowledged: ${notification.text}`, {
-                                                                            position: "top-right",
-                                                                            autoClose: 3000,
-                                                                            hideProgressBar: false,
-                                                                            closeOnClick: true,
-                                                                            pauseOnHover: true,
-                                                                            draggable: true,
-                                                                            progress: undefined,
-                                                                            theme: isDark ? "dark" : "light",
-                                                                        });
-                                                                        setNotificationDropdownOpen(false);
-                                                                    }}
-                                                                    className={`flex items-start px-4 py-2.5 text-sm transition-colors ${
-                                                                        isDark
-                                                                            ? "text-gray-300 hover:bg-gray-700"
-                                                                            : "text-gray-700 hover:bg-gray-100"
-                                                                    }`}
-                                                                >
-                                                                    <notification.icon
-                                                                        size={18}
-                                                                        className="mr-3 mt-0.5 shrink-0"
-                                                                        style={{ color: notification.iconColor }}
-                                                                    />
-                                                                    <div>
-                                                                        <p className="font-medium leading-snug">{notification.text}</p>
-                                                                        <p
-                                                                            className={`text-xs mt-0.5 ${
-                                                                                isDark ? "text-gray-400" : "text-gray-500"
-                                                                            }`}
-                                                                        >
-                                                                            {notification.time}
-                                                                        </p>
-                                                                    </div>
-                                                                </a>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                ) : (
-                                                    <p className={`p-4 text-sm text-center ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                                                        No new notifications.
-                                                    </p>
-                                                )}
-                                                <div className={`p-2 border-t text-center ${isDark ? "border-gray-700" : "border-gray-200"}`}>
-                                                    <a href="#" className="text-xs text-[#12bf8e] hover:underline">
-                                                        View all notifications
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={handleThemeToggle}
-                                        className={`p-2 rounded-full cursor-pointer transition-colors ${
-                                            isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"
-                                        }`}
-                                    >
-                                        {theme === "dark" ? (
-                                            <Sun size={22} className="text-yellow-400" />
-                                        ) : (
-                                            <Moon size={22} className="text-blue-500" />
-                                        )}
-                                    </button>
-                                    <div className="hidden sm:flex items-center space-x-2 cursor-pointer">
-                                        <img
-                                            src="https://plus.unsplash.com/premium_photo-1708110921381-5da0d7eb2e0f?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                                            alt="Carla Stanton profile picture"
-                                            className={`w-8 h-8 rounded-full object-cover ${isDark ? "bg-gray-600" : "bg-gray-300"}`}
-                                        />
-                                        <div>
-                                            <p className={`font-semibold text-xs ${isDark ? "text-gray-100" : "text-gray-900"}`}>Carla Stanton</p>
-                                            <p className={`text-xs leading-tight ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                                                Farm Operations Lead
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="mt-12 flex justify-between items-center">
-                                <div className="flex flex-col justify-center">
-                                    <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>Hi Carla,</p>
-                                    <h2 className={`text-2xl sm:text-3xl font-bold ${isDark ? "text-gray-100" : "text-gray-900"}`}>
-                                        Welcome Back
-                                    </h2>
-                                </div>
-                                <button onClick={handleAddCropClick} className={`${currentButtonPrimaryClasses}`}>
-                                    <PlusCircle size={20} />
-                                    <span>Add Crop Data</span>
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
+                                How to Play
+                            </button>
+                            <div className="relative">
+                                <button
+                                    onClick={resetGame}
+                                    className="px-4 py-2 cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
+                                >
+                                    {gameStarted ? "Restart" : "Play Now"}
                                 </button>
-                            </div>
-                        </motion.div>
-
-                        <motion.div variants={itemVariants} custom={4} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-                            <motion.div variants={itemVariants} custom={4} className={`${currentCardClasses}`}>
-                                <h2 className={`text-2xl lg:text-xl font-bold flex items-center group ${isDark ? "text-gray-100" : "text-gray-900"}`}>
-                                    <Droplet size={28} className="mr-3 text-blue-500 group-hover:scale-110 transition-transform" />
-                                    Water Usage Over Time
-                                </h2>
-                                <GenericLineChart
-                                    data={preparedWaterUsageChartData}
-                                    dataKey="value"
-                                    lineName="Water Usage (L)"
-                                    lineColor="#12bf8e"
-                                />
-                            </motion.div>
-
-                            <motion.div variants={itemVariants} custom={5} className={`${currentCardClasses}`}>
-                                <h2 className={`text-2xl lg:text-xl font-bold flex items-center group ${isDark ? "text-gray-100" : "text-gray-900"}`}>
-                                    <Layers size={28} className="mr-3 text-orange-500 group-hover:scale-110 transition-transform" />
-                                    Soil pH Over Time
-                                </h2>
-                                <GenericLineChart
-                                    data={preparedSoilPhChartData}
-                                    dataKey="value"
-                                    lineName="Soil pH"
-                                    lineColor="#fe7600"
-                                />
-                            </motion.div>
-
-                            <motion.div variants={itemVariants} custom={6} className={`${currentCardClasses}`}>
-                                <h2 className={`text-2xl lg:text-xl font-bold flex items-center group ${isDark ? "text-gray-100" : "text-gray-900"}`}>
-                                    <Database size={28} className="mr-3 text-green-500 group-hover:scale-110 transition-transform" />
-                                    Total Water Usage by Crop
-                                </h2>
-                                <ResourceUsageChart data={preparedResourceUsageData} />
-                            </motion.div>
-                        </motion.div>
-
-                        <motion.section variants={itemVariants} custom={7} className={`${currentCardClasses}`}>
-                            <h2 className={`${currentSectionTitleClasses}`}>
-                                <Calendar size={28} className="mr-3 text-orange-500 group-hover:scale-110 transition-transform" />
-                                Seasonal Analysis & Comparison
-                            </h2>
-                            <motion.p
-                                variants={itemVariants}
-                                custom={8}
-                                className={`text-sm mb-6 ${isDark ? "text-gray-300" : "text-gray-600"}`}
-                            >
-                                Compare total water usage between the latest year and a selected past year.
-                            </motion.p>
-                            <motion.div variants={itemVariants} custom={9} className="flex flex-col sm:flex-row gap-4 items-end mb-6">
-                                <div className="flex-grow w-full sm:w-auto">
-                                    <label
-                                        htmlFor="compareSeason"
-                                        className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
-                                    >
-                                        Select Year to Compare
-                                    </label>
-                                    <select
-                                        id="compareSeason"
-                                        value={comparisonYear}
-                                        onChange={(e) => setComparisonYear(e.target.value)}
-                                        className={`${currentInputClasses} rounded-xl focus:ring-2 focus:ring-green-500/20`}
-                                        disabled={availableYears.length < 2}
-                                    >
-                                        {availableYears.length < 2 ? (
-                                            <option>Not enough data</option>
-                                        ) : availableYears.filter((year) => year.toString() !== latestYear).length === 0 ? (
-                                            <option disabled>No other years</option>
-                                        ) : (
-                                            availableYears
-                                                .filter((year) => year.toString() !== latestYear)
-                                                .map((year) => (
-                                                    <option key={year} value={year}>
-                                                        {year}
-                                                    </option>
-                                                ))
-                                        )}
-                                    </select>
-                                </div>
-                            </motion.div>
-                            <motion.div variants={itemVariants} custom={10} className={chartCardClasses}>
-                                <h4
-                                    className={`text-lg font-semibold mb-4 flex items-center ${isDark ? "text-gray-100" : "text-gray-900"}`}
-                                >
-                                    <BarChartBig size={18} className="mr-2 text-orange-500" />
-                                    Total Water Usage Comparison: {latestYear} vs {comparisonYear}
-                                </h4>
-                                <SeasonalComparisonChart data={preparedSeasonalComparisonData} />
-                            </motion.div>
-                        </motion.section>
-
-                        <motion.section variants={itemVariants} custom={11} className={`${currentCardClasses}`}>
-                            <h2 className={`${currentSectionTitleClasses}`}>
-                                <TrendingUp size={28} className="mr-3 text-green-500 group-hover:scale-110 transition-transform" />
-                                Future Performance Forecast
-                            </h2>
-                            <motion.p
-                                variants={itemVariants}
-                                custom={12}
-                                className={`text-sm mb-6 ${isDark ? "text-gray-300" : "text-gray-600"}`}
-                            >
-                                Simple forecast based on recent water usage trends.
-                            </motion.p>
-                            <motion.div variants={itemVariants} custom={11} className={chartCardClasses}>
-                                {predictedNextWaterUsage !== null && lastActualWaterUsage !== null ? (
-                                    <ForecastVisualization lastActual={lastActualWaterUsage} predictedNext={predictedNextWaterUsage} />
-                                ) : (
-                                    <p className={`${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                                        Not enough data for a forecast (requires at least 2 entries).
-                                    </p>
+                                {!gameStarted && !gameOver && (
+                                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                    </span>
                                 )}
-                            </motion.div>
-                        </motion.section>
-                    </main>
-
-                    <motion.footer
-                        variants={itemVariants}
-                        custom={12}
-                        className={`text-center p-8 border-t shrink-0 ${
-                            isDark ? "text-gray-400 border-gray-700 bg-gray-800/50" : "text-gray-500 border-gray-200 bg-white/50"
-                        }`}
-                    >
-                        <div className="max-w-[1440px] mx-auto">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-                                <div className="text-left">
-                                    <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-gray-200" : "text-gray-800"}`}>
-                                        About FarmVue
-                                    </h3>
-                                    <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                                        Empowering farmers with data-driven insights for sustainable agriculture and optimal crop management.
-                                    </p>
-                                </div>
-                                <div className="text-left">
-                                    <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-gray-200" : "text-gray-800"}`}>
-                                        Quick Links
-                                    </h3>
-                                    <ul className="space-y-2">
-                                        <li>
-                                            <a 
-                                                href="#" 
-                                                className={`text-sm hover:text-[#12bf8e] transition-colors ${isDark ? "text-gray-400" : "text-gray-600"}`}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    toast.info('Documentation coming soon!', {
-                                                        theme: isDark ? "dark" : "light"
-                                                    });
-                                                }}
-                                            >
-                                                Documentation
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a 
-                                                href="#" 
-                                                className={`text-sm hover:text-[#12bf8e] transition-colors ${isDark ? "text-gray-400" : "text-gray-600"}`}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    toast.info('Support portal coming soon!', {
-                                                        theme: isDark ? "dark" : "light"
-                                                    });
-                                                }}
-                                            >
-                                                Support
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a 
-                                                href="#" 
-                                                className={`text-sm hover:text-[#12bf8e] transition-colors ${isDark ? "text-gray-400" : "text-gray-600"}`}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    toast.info('Privacy policy coming soon!', {
-                                                        theme: isDark ? "dark" : "light"
-                                                    });
-                                                }}
-                                            >
-                                                Privacy Policy
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div className="text-left">
-                                    <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-gray-200" : "text-gray-800"}`}>
-                                        Contact
-                                    </h3>
-                                    <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                                        Have questions? Reach out to our support team at{' '}
-                                        <a 
-                                            href="mailto:support@farmvue.com" 
-                                            className="text-[#12bf8e] hover:underline"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                toast.info('Email support coming soon!', {
-                                                    theme: isDark ? "dark" : "light"
-                                                });
-                                            }}
-                                        >
-                                            support@farmvue.com
-                                        </a>
-                                    </p>
-                                </div>
-                            </div>
-                            <div className={`pt-6 border-t ${isDark ? "border-gray-700" : "border-gray-200"}`}>
-                                <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                                    © {new Date().getFullYear()} FarmVue. All rights reserved. Empowering Farmers with Data.
-                                </p>
                             </div>
                         </div>
-                    </motion.footer>
-                </motion.div>
+                    </div>
 
-                <AnimatePresence>
-                    {isLogCropModalOpen && (
-                        <LogCropDataModal
-                            isOpen={isLogCropModalOpen}
-                            onClose={closeLogModal}
-                            onSubmitCrop={handleAddCropEntry}
-                            inputBaseClasses={currentInputClasses}
-                            buttonPrimaryClasses={currentButtonPrimaryClasses}
-                            sectionTitleClasses={currentSectionTitleClasses}
+                    
+                    <div className="w-full bg-gray-800/60 backdrop-blur-sm rounded-xl p-3 border border-gray-700/30">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs text-gray-400 uppercase tracking-wider">Score</span>
+                                <span className="text-xl font-bold">{score}</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs text-gray-400 uppercase tracking-wider">High Score</span>
+                                <span className="text-xl font-bold">{Math.max(score, highScore)}</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs text-gray-400 uppercase tracking-wider">Level</span>
+                                <span className="text-xl font-bold">{level}</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs text-gray-400 uppercase tracking-wider">Lines</span>
+                                <span className="text-xl font-bold">{linesCleared}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div className="flex flex-col md:flex-row gap-8 items-center md:items-start justify-center w-full">
+                    
+                    <div className="flex flex-col items-center w-full md:w-auto">
+                        <GameBoardDisplay />
+                        <TouchControlsPanel
+                            onControl={handleTouchControl}
+                            disabled={!gameStarted || gameOver || isPaused || clearingLines.length > 0}
                         />
-                    )}
-                </AnimatePresence>
-                <ToastContainer
-                    position="top-right"
-                    autoClose={3000}
-                    hideProgressBar={false}
-                    newestOnTop
-                    closeOnClick
-                    rtl={false}
-                    pauseOnFocusLoss
-                    draggable
-                    pauseOnHover
-                    theme={isDark ? "dark" : "light"}
-                />
-            </motion.div>
-        </>
+                    </div>
+
+                    
+                    <GameInfoPanel />
+                </div>
+
+                
+                <div className="mt-10 text-gray-400 text-sm text-center max-w-2xl">
+                    <div className="mb-3 flex items-center justify-center">
+                        <div className="h-px w-16 bg-gray-700"></div>
+                        <span className="mx-4 text-gray-500">Game Features</span>
+                        <div className="h-px w-16 bg-gray-700"></div>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-2 mb-4">
+                        <span className="inline-block px-3 py-1 bg-gray-800/60 rounded-full backdrop-blur-sm text-xs border border-gray-700/50">
+                            Ghost Piece Preview
+                        </span>
+                        <span className="inline-block px-3 py-1 bg-gray-800/60 rounded-full backdrop-blur-sm text-xs border border-gray-700/50">
+                            Mobile Controls
+                        </span>
+                        <span className="inline-block px-3 py-1 bg-gray-800/60 rounded-full backdrop-blur-sm text-xs border border-gray-700/50">
+                            Multi-Sized Pieces
+                        </span>
+                        <span className="inline-block px-3 py-1 bg-gray-800/60 rounded-full backdrop-blur-sm text-xs border border-gray-700/50">
+                            High Score Tracking
+                        </span>
+                        <span className="inline-block px-3 py-1 bg-gray-800/60 rounded-full backdrop-blur-sm text-xs border border-gray-700/50">
+                            Progressive Difficulty
+                        </span>
+                    </div>
+                    <p className="text-gray-500 text-xs">© 2023 Tetris Game • Keyboard controls on Desktop • Touch controls on Mobile</p>
+                </div>
+            </div>
+
+            
+            <div id="howToPlayModal" className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center hidden">
+                <div className="bg-gray-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4 shadow-2xl border border-gray-800">
+                    <div className="p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-2xl font-bold text-white">How to Play</h2>
+                            <button
+                                onClick={() => document.getElementById("howToPlayModal")?.classList.add("hidden")}
+                                className="text-gray-400 hover:text-white"
+                            >
+                                <svg
+                                    className="w-6 h-6"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div>
+                                <h3 className="text-lg font-semibold text-indigo-400 mb-2">Game Objective</h3>
+                                <p className="text-gray-300">
+                                    Arrange falling pieces to create complete horizontal lines. When a line is completed, it disappears, and
+                                    you earn points. The game ends when the pieces stack up to the top of the board.
+                                </p>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lg font-semibold text-indigo-400 mb-2">Controls</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-gray-800/60 p-3 rounded-lg">
+                                        <h4 className="text-white font-medium mb-2">Desktop</h4>
+                                        <ul className="space-y-2 text-gray-300 text-sm">
+                                            <li className="flex items-center gap-2">
+                                                <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">←</kbd>
+                                                <span>Move Left</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">→</kbd>
+                                                <span>Move Right</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">↓</kbd>
+                                                <span>Move Down</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">↑</kbd>
+                                                <span>Rotate</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">Space</kbd>
+                                                <span>Hard Drop</span>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <kbd className="px-2 py-1 bg-gray-700 rounded text-xs">P</kbd>
+                                                <span>Pause/Resume</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <div className="bg-gray-800/60 p-3 rounded-lg">
+                                        <h4 className="text-white font-medium mb-2">Mobile</h4>
+                                        <div className="text-gray-300 text-sm">
+                                            Use the on-screen buttons to control the game:
+                                            <ul className="mt-2 space-y-1 text-gray-300 text-sm">
+                                                <li>• Tap left/right arrows to move</li>
+                                                <li>• Tap rotate button to rotate piece</li>
+                                                <li>• Tap down arrow for soft drop</li>
+                                                <li>• Tap Drop for hard drop</li>
+                                                <li>• Tap Pause to pause the game</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lg font-semibold text-indigo-400 mb-2">Scoring</h3>
+                                <ul className="space-y-1 text-gray-300">
+                                    <li>• 1 line cleared: 100 points × level</li>
+                                    <li>• 2 lines cleared: 300 points × level</li>
+                                    <li>• 3 lines cleared: 500 points × level</li>
+                                    <li>• 4 lines cleared: 800 points × level</li>
+                                    <li>• Small pieces (1-2 blocks) have a 1.5× score multiplier</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lg font-semibold text-indigo-400 mb-2">Features</h3>
+                                <ul className="space-y-1 text-gray-300">
+                                    <li>• Ghost piece shows where your piece will land</li>
+                                    <li>• Next piece preview helps you plan ahead</li>
+                                    <li>• Variety of pieces from 1 to 5 blocks</li>
+                                    <li>• Level increases every 10 lines cleared</li>
+                                    <li>• Higher levels = faster falling speed</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 text-center">
+                            <button
+                                onClick={() => document.getElementById("howToPlayModal")?.classList.add("hidden")}
+                                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium transition-colors"
+                            >
+                                Got it
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <style jsx global>{`
+                @keyframes blob {
+                    0% {
+                        transform: scale(1);
+                    }
+                    33% {
+                        transform: scale(1.1) translate(50px, -20px) rotate(20deg);
+                    }
+                    66% {
+                        transform: scale(0.9) translate(-20px, 30px) rotate(-20deg);
+                    }
+                    100% {
+                        transform: scale(1);
+                    }
+                }
+                .animate-blob {
+                    animation: blob 15s infinite alternate;
+                }
+                .animation-delay-2000 {
+                    animation-delay: 2s;
+                }
+                .animation-delay-4000 {
+                    animation-delay: 4s;
+                }
+                .bg-grid-white {
+                    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(255,255,255)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
+                }
+                @keyframes gradient-flow {
+                  0% {
+                    background-position: 0% 50%;
+                  }
+                  50% {
+                    background-position: 100% 50%;
+                  }
+                  100% {
+                    background-position: 0% 50%;
+                  }
+                }
+            `}</style>
+        </div>
     );
 };
 
-const CropAnalysisTool = () => (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <CropAnalysisToolInternal />
-    </ThemeProvider>
-);
-
-export default CropAnalysisTool;
+export default TetrisGame;
