@@ -1,1588 +1,1103 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { motion } from "framer-motion";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend } from "recharts";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { ThemeProvider, useTheme } from "next-themes";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-    ThermometerSun,
-    Waves,
-    Snowflake,
-    Info,
-    ArrowRight,
-    Cloud,
-    Factory,
-    Car,
-    Trees,
-    Trash2,
-    AlertTriangle,
-    CheckCircle2,
+    UploadCloud,
+    BarChart2,
+    Calendar,
+    TrendingUp,
+    Database,
+    Bell,
+    Layers,
+    Droplet,
+    Bug,
+    Wrench,
+    PlusCircle,
     Sun,
     Moon,
-    RotateCcw,
-    Twitter,
-    Linkedin,
-    Facebook,
-    Instagram,
-    Download,
+    BarChartBig,
+    X,
+    Tractor,
 } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, Cell } from "recharts";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-const GlobalStyles = () => (
-    <style jsx global>{`
-        @import url("https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&display=swap");
-        body {
-            font-family: "Libre Baskerville", serif;
-        }
-        .font-league-spartan {
-            font-family: "League Spartan", sans-serif;
-        }
-    `}</style>
-);
 
-const CustomSlider = ({
-    value,
-    max = 100,
-    step = 1,
-    reportValueChange,
-    rangeColor = "bg-[#3e3fba]",
-    ariaLabel,
-    isDarkMode,
-}) => {
-    const sliderRef = useRef(null);
-    const [isDragging, setIsDragging] = useState(false);
-
-    const thumbColorClass = isDarkMode ? "bg-[#f3f5f4]" : "bg-[#2c2d84]";
-    const trackColorClass = isDarkMode ? "bg-gray-700" : "bg-[#edf4f8]";
-
-    const calculateValueFromPosition = useCallback(
-        (clientX) => {
-            if (!sliderRef.current) return value;
-
-            const { left, width } = sliderRef.current.getBoundingClientRect();
-            const percentage = Math.max(0, Math.min(1, (clientX - left) / width));
-            let newValue = percentage * max;
-
-            if (step) {
-                newValue = Math.round(newValue / step) * step;
-            }
-            return Math.max(0, Math.min(max, newValue));
-        },
-        [max, step, value]
-    );
-
-    const initiateSliderDrag = (clientX) => {
-        setIsDragging(true);
-        const newValue = calculateValueFromPosition(clientX);
-        reportValueChange([newValue]);
-    };
-
-    const updateSliderPosition = useCallback(
-        (clientX) => {
-            if (!isDragging || !sliderRef.current) return;
-            const newValue = calculateValueFromPosition(clientX);
-            reportValueChange([newValue]);
-        },
-        [isDragging, calculateValueFromPosition, reportValueChange]
-    );
-
-    const finalizeSliderDrag = useCallback(() => {
-        setIsDragging(false);
-    }, []);
-
-    useEffect(() => {
-        const mouseMoveUpdate = (event) => updateSliderPosition(event.clientX);
-        const mouseUpFinalize = () => finalizeSliderDrag();
-        const touchMoveUpdate = (event) => updateSliderPosition(event.touches[0].clientX);
-        const touchEndFinalize = () => finalizeSliderDrag();
-
-        if (isDragging) {
-            document.addEventListener("mousemove", mouseMoveUpdate);
-            document.addEventListener("mouseup", mouseUpFinalize);
-            document.addEventListener("touchmove", touchMoveUpdate);
-            document.addEventListener("touchend", touchEndFinalize);
-        }
-
-        return () => {
-            document.removeEventListener("mousemove", mouseMoveUpdate);
-            document.removeEventListener("mouseup", mouseUpFinalize);
-            document.removeEventListener("touchmove", touchMoveUpdate);
-            document.removeEventListener("touchend", touchEndFinalize);
-        };
-    }, [isDragging, updateSliderPosition, finalizeSliderDrag]);
-
-    const percentageValue = (value / max) * 100;
-
-    return (
-        <div
-            ref={sliderRef}
-            className={`relative flex items-center select-none touch-none w-full h-5 cursor-pointer`}
-            onMouseDown={(e) => initiateSliderDrag(e.clientX)}
-            onTouchStart={(e) => initiateSliderDrag(e.touches[0].clientX)}
-            onClick={(e) => {
-                if (!isDragging) {
-                    const newValue = calculateValueFromPosition(e.clientX);
-                    reportValueChange([newValue]);
-                }
-            }}
-        >
-            <div className={`relative grow rounded-full h-[3px] ${trackColorClass} transition-colors duration-300 ease-in-out`}>
-                <div className={`absolute rounded-full h-full ${rangeColor}`} style={{ width: `${percentageValue}%` }} />
-            </div>
-            <div
-                className={`block w-5 h-5 ${thumbColorClass} rounded-full focus:outline-none absolute transition-colors duration-300 ease-in-out`}
-                style={{ left: `calc(${percentageValue}% - 10px)` }}
-                role="slider"
-                aria-valuenow={value}
-                aria-valuemin={0}
-                aria-valuemax={max}
-                aria-label={ariaLabel || "Slider thumb"}
-                tabIndex={0}
-            />
-        </div>
-    );
-};
-
-type PolicySettings = {
-    renewableEnergy: number;
-    carbonTax: number;
-    reforestation: number;
-    electricVehicles: number;
-    wasteReduction: number;
-};
-
-type ClimateMetrics = {
-    year: number;
-    temperature: number;
-    seaLevel: number;
-    iceCap: number;
-    bauTemperature?: number; 
-    bauSeaLevel?: number;    
-    bauIceCap?: number;      
-    regionalEffects?: RegionalClimateEffect[];
-};
-
-interface RegionalClimateEffect {
-    regionName: string;
-    temperature: number;
-    seaLevel: number;
-    bauTemperature: number;
-    bauSeaLevel: number;
-    
+interface MockNotification {
+    id: number;
+    text: string;
+    time: string;
+    icon: React.ElementType;
+    iconColor: string;
 }
 
-const regionDefinitions = [
-    { name: "North America", tempFactor: 1.1, seaLevelOffsetCm: 5 },
-    { name: "Europe", tempFactor: 1.0, seaLevelOffsetCm: 3 },
-    { name: "Southeast Asia", tempFactor: 1.2, seaLevelOffsetCm: 10 },
-    { name: "Small Island Nations", tempFactor: 1.0, seaLevelOffsetCm: 15 },
+interface CropEntry {
+    id: string;
+    cropName: string;
+    plantingDate: string;
+    soilPh: string;
+    waterUsage: string;
+    submissionDate: string;
+}
+
+interface ChartPointData {
+    plantingDate: string;
+    value: number;
+    cropName?: string;
+}
+
+interface ResourceUsageData {
+    name: string;
+    totalWater: number;
+}
+
+interface SeasonalComparisonData {
+    year: string;
+    totalWater: number;
+}
+
+const initialMockCropEntries: CropEntry[] = [
+    { id: "2022-1", cropName: "Golden Corn", plantingDate: "2022-03-15", soilPh: "6.7", waterUsage: "5400", submissionDate: "2022-03-10" },
+    { id: "2022-2", cropName: "Golden Corn", plantingDate: "2022-06-10", soilPh: "6.8", waterUsage: "5600", submissionDate: "2022-06-05" },
+    { id: "2022-3", cropName: "Red Wheat", plantingDate: "2022-04-20", soilPh: "6.5", waterUsage: "4700", submissionDate: "2022-04-15" },
+    { id: "2022-4", cropName: "Red Wheat", plantingDate: "2022-09-18", soilPh: "6.4", waterUsage: "4800", submissionDate: "2022-09-12" },
+    { id: "2022-5", cropName: "Soybeans", plantingDate: "2022-05-25", soilPh: "6.2", waterUsage: "5900", submissionDate: "2022-05-20" },
+    { id: "2022-6", cropName: "Soybeans", plantingDate: "2022-08-30", soilPh: "6.3", waterUsage: "6000", submissionDate: "2022-08-25" },
+
+    { id: "2023-1", cropName: "Golden Corn", plantingDate: "2023-04-15", soilPh: "6.8", waterUsage: "5500", submissionDate: "2023-04-10" },
+    { id: "2023-2", cropName: "Golden Corn", plantingDate: "2023-05-20", soilPh: "6.7", waterUsage: "5650", submissionDate: "2023-05-18" },
+    { id: "2023-3", cropName: "Red Wheat", plantingDate: "2023-09-20", soilPh: "6.5", waterUsage: "4800", submissionDate: "2023-09-15" },
+    { id: "2023-4", cropName: "Red Wheat", plantingDate: "2023-10-05", soilPh: "6.6", waterUsage: "4700", submissionDate: "2023-10-02" },
+    { id: "2023-5", cropName: "Soybeans", plantingDate: "2023-06-01", soilPh: "6.1", waterUsage: "5900", submissionDate: "2023-05-28" },
+    { id: "2023-6", cropName: "Soybeans", plantingDate: "2023-08-15", soilPh: "6.3", waterUsage: "6050", submissionDate: "2023-08-10" },
+
+    { id: "2024-1", cropName: "Golden Corn", plantingDate: "2024-04-20", soilPh: "6.9", waterUsage: "5800", submissionDate: "2024-04-18" },
+    { id: "2024-2", cropName: "Golden Corn", plantingDate: "2024-05-25", soilPh: "7.0", waterUsage: "5950", submissionDate: "2024-05-22" },
+    { id: "2024-3", cropName: "Red Wheat", plantingDate: "2024-07-01", soilPh: "6.4", waterUsage: "5200", submissionDate: "2024-06-28" },
+    { id: "2024-4", cropName: "Red Wheat", plantingDate: "2024-08-15", soilPh: "6.3", waterUsage: "5100", submissionDate: "2024-08-10" },
+    { id: "2024-5", cropName: "Soybeans", plantingDate: "2024-05-10", soilPh: "6.2", waterUsage: "6000", submissionDate: "2024-05-05" },
+    { id: "2024-6", cropName: "Soybeans", plantingDate: "2024-06-20", soilPh: "6.4", waterUsage: "6200", submissionDate: "2024-06-18" },
+    { id: "2024-7", cropName: "Golden Corn", plantingDate: "2024-07-10", soilPh: "6.8", waterUsage: "5700", submissionDate: "2024-07-08" },
+    { id: "2024-8", cropName: "Red Wheat", plantingDate: "2024-09-05", soilPh: "6.5", waterUsage: "5000", submissionDate: "2024-09-01" },
+    { id: "2024-9", cropName: "Soybeans", plantingDate: "2024-07-20", soilPh: "6.2", waterUsage: "6050", submissionDate: "2024-07-15" },
 ];
 
-const generateNarrativeInsights = (policies, finalMetrics) => {
-    if (!finalMetrics) return "Adjust policies to see their impact.";
+const mockNotifications: MockNotification[] = [
+    { id: 1, text: "New soil data available for Field A.", time: "5 mins ago", icon: Layers, iconColor: "#12bf8e" },
+    { id: 2, text: "Low water levels detected in Sector 3.", time: "2 hours ago", icon: Droplet, iconColor: "#fe7600" },
+    { id: 3, text: "Pest alert: Aphids detected on Corn crops.", time: "1 day ago", icon: Bug, iconColor: "#f67b04" },
+    { id: 4, text: "Tractor #2 maintenance due tomorrow.", time: "1 day ago", icon: Wrench, iconColor: "#8f9190" },
+];
 
-    let insights = "";
-    const { temperature, seaLevel, iceCap } = finalMetrics;
-    const { renewableEnergy, carbonTax, reforestation, electricVehicles, wasteReduction } = policies;
-
-    if (temperature > 16.5) {
-        insights += `High global temperatures (${temperature.toFixed(1)}°C) are a major concern. `;
-    } else if (temperature < 15.5) {
-        insights += `Global temperature is well-controlled (${temperature.toFixed(1)}°C). `;
-    } else {
-        insights += `Global temperature is ${temperature.toFixed(1)}°C. `;
-    }
-
-    if (seaLevel > 50) {
-        insights += `Significant sea level rise (+${seaLevel.toFixed(1)}cm) poses a threat to coastal regions. `;
-    } else if (seaLevel < 15) {
-        insights += `Sea level rise (+${seaLevel.toFixed(1)}cm) appears manageable. `;
-    } else {
-        insights += `Sea levels have risen by +${seaLevel.toFixed(1)}cm. `;
-    }
-
-    if (iceCap < 30) {
-        insights += `Critically low ice cap thickness (${iceCap.toFixed(1)}%) indicates severe melting. `;
-    } else if (iceCap > 70) {
-        insights += `Ice caps remain relatively stable (${iceCap.toFixed(1)}%). `;
-    } else {
-        insights += `Ice cap thickness is at ${iceCap.toFixed(1)}%. `;
-    }
-
-    insights += "\n\nPolicy contributions: ";
-
-    let positivePolicyCount = 0;
-    let concerns = [];
-
-    if (renewableEnergy > 70) {
-        insights += "Strong renewable energy adoption is key. ";
-        positivePolicyCount++;
-    } else if (renewableEnergy < 30) {
-        concerns.push("low renewable energy focus");
-    }
-
-    if (carbonTax > 60) {
-        insights += "A robust carbon tax is effectively curbing emissions. ";
-        positivePolicyCount++;
-    } else if (carbonTax < 25) {
-        concerns.push("insufficient carbon tax");
-    }
-
-    if (reforestation > 65) {
-        insights += "Aggressive reforestation is boosting carbon capture. ";
-        positivePolicyCount++;
-    } else if (reforestation < 30) {
-        concerns.push("limited reforestation efforts");
-    }
-
-    if (electricVehicles > 70) {
-        insights += "Widespread EV adoption significantly reduces transport emissions. ";
-        positivePolicyCount++;
-    } else if (electricVehicles < 30) {
-        concerns.push("slow EV transition");
-    }
-
-    if (wasteReduction > 60) {
-        insights += "Effective waste reduction minimizes methane and resource use. ";
-        positivePolicyCount++;
-    } else if (wasteReduction < 30) {
-        concerns.push("inadequate waste reduction measures");
-    }
-
-    if (positivePolicyCount >= 3) {
-        insights += "This balanced and ambitious approach is yielding positive results overall. ";
-    } else if (concerns.length > 0) {
-        insights += `However, ${concerns.join(", ")} may be undermining progress. `;
-    }
-
-    if (temperature > 16 && positivePolicyCount < 2 && concerns.length > 1) {
-        insights +=
-            "The current policy mix is insufficient to address the climate challenge effectively. Stronger, more comprehensive action is urgently needed across multiple sectors. ";
-    }
-
-    return insights.trim();
-};
-
-const ClimateApp = () => {
-    const [isDarkMode, setIsDarkMode] = useState(false);
+const CropAnalysisToolInternal = () => {
+    const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
-    const [toastInfo, setToastInfo] = useState({ message: '', show: false });
-    const [currentView, setCurrentView] = useState('global');
-    const [focusedRegion, setFocusedRegion] = useState(regionDefinitions[0]?.name || "");
+    const [cropEntries, setCropEntries] = useState([]);
+    const [isNotificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+    const [isLogCropModalOpen, setIsLogCropModalOpen] = useState(false);
+    const [comparisonYear, setComparisonYear] = useState("");
+    const notificationDropdownRef = useRef(null);
 
     useEffect(() => {
         setMounted(true);
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        setIsDarkMode(systemPrefersDark);
-        if (systemPrefersDark) {
-            document.documentElement.classList.add('dark');
+    }, []);
+    useEffect(() => {
+        let loadedEntries = initialMockCropEntries;
+        const storedCropData = localStorage.getItem("farmVueCropData");
+        if (storedCropData) {
+            loadedEntries = JSON.parse(storedCropData);
         } else {
-            document.documentElement.classList.remove('dark');
+            localStorage.setItem("farmVueCropData", JSON.stringify(initialMockCropEntries));
+        }
+        setCropEntries(loadedEntries);
+
+        const years = [...new Set(loadedEntries.map((e) => new Date(e.plantingDate).getFullYear()))].sort((a, b) => b - a);
+        if (years.length > 1) {
+            setComparisonYear(years[1].toString());
+        } else if (years.length === 1) {
+            setComparisonYear(years[0].toString());
         }
     }, []);
 
     useEffect(() => {
-        if (!mounted) return;
-        if (isDarkMode) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
+        function handleClickOutside(event) {
+            if (notificationDropdownRef.current && event.target instanceof Node && !notificationDropdownRef.current.contains(event.target)) {
+                setNotificationDropdownOpen(false);
+            }
         }
-    }, [isDarkMode, mounted]);
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [notificationDropdownRef]);
 
-    const triggerToastDisplay = (message: string) => {
-        setToastInfo({ message, show: true });
-        setTimeout(() => {
-            setToastInfo({ message: '', show: false });
-        }, 3000);
-    };
-
-    const performThemeToggle = () => {
-        setIsDarkMode(prev => !prev);
-    };
-
-    const [policies, updatePolicySettings] = useState<PolicySettings>({
-        renewableEnergy: 30,
-        carbonTax: 25,
-        reforestation: 40,
-        electricVehicles: 35,
-        wasteReduction: 45,
-    });
-    const [climateData, setClimateProjections] = useState([]);
-    const [activeTab, setActiveChartTab] = useState("temperature");
-    const [narrativeInsights, setScenarioText] = useState("");
-    const [activePresetKey, setActivePresetKey] = useState("");
-
-    const years = useMemo(() => Array.from({ length: 9 }, (_, i) => 2020 + i * 10), []);
-    const [startYearIndex, setStartYearIndex] = useState(0);
-    const [endYearIndex, setEndYearIndex] = useState(years.length - 1);
-    
-    const selectedStartYear = years[startYearIndex];
-    const selectedEndYear = years[endYearIndex];
-
-    const handleStartYearChange = (newStartIndexArray) => {
-        const newStartIndex = newStartIndexArray[0];
-        setStartYearIndex(newStartIndex);
-        if (newStartIndex > endYearIndex) {
-            setEndYearIndex(newStartIndex);
-        }
-    };
-
-    const handleEndYearChange = (newEndIndexArray) => {
-        const newEndIndex = newEndIndexArray[0];
-        setEndYearIndex(newEndIndex);
-        if (newEndIndex < startYearIndex) {
-            setStartYearIndex(newEndIndex);
-        }
-    };
-
-    const policyPresets = {
-        ambitious: {
-            name: "Ambitious Action",
-            settings: { renewableEnergy: 80, carbonTax: 70, reforestation: 75, electricVehicles: 85, wasteReduction: 70 }
-        },
-        balanced: {
-            name: "Balanced Approach",
-            settings: { renewableEnergy: 60, carbonTax: 50, reforestation: 55, electricVehicles: 60, wasteReduction: 50 }
-        },
-        current: {
-            name: "Current Efforts",
-            settings: { renewableEnergy: 35, carbonTax: 30, reforestation: 40, electricVehicles: 40, wasteReduction: 30 }
-        }
-    };
-
-    const selectPolicyPreset = (presetKey: keyof typeof policyPresets | "") => {
-        if (presetKey === "") {
-            setActivePresetKey("");
-            return;
-        }
-        updatePolicySettings(policyPresets[presetKey].settings);
-        setActivePresetKey(presetKey);
-    };
-
-    const resetPolicySettings = () => {
-        updatePolicySettings(policyPresets.current.settings);
-        setActivePresetKey("");
-        triggerToastDisplay("Policies reset to default values.");
-    };
-
-    const generateSimulationData = (settings: PolicySettings): ClimateMetrics[] => {
-        const baseTemp = 14.5;
-        const baseSeaLevel = 0;
-        const baseIceCap = 100;
-
-        const renewableImpact = (settings.renewableEnergy / 100) * 1.5;
-        const carbonTaxImpact = (settings.carbonTax / 100) * 1.2;
-        const reforestationImpact = (settings.reforestation / 100) * 0.8;
-        const evImpact = (settings.electricVehicles / 100) * 0.7;
-        const wasteImpact = (settings.wasteReduction / 100) * 0.6;
-
-        const totalPositiveImpact = renewableImpact + carbonTaxImpact + reforestationImpact + evImpact + wasteImpact;
-
-        return Array.from({ length: 9 }, (_, i) => {
-            const year = 2020 + i * 10;
-            const businessAsUsualTempGlobal = baseTemp + i * 0.4;
-            const businessAsUsualSeaLevelGlobal = baseSeaLevel + i * 10;
-            const businessAsUsualIceCapGlobal = Math.max(0, baseIceCap - i * 12);
-
-            const globalTemperature = Math.max(baseTemp, businessAsUsualTempGlobal - totalPositiveImpact * (i * 0.05));
-            const globalSeaLevel = Math.max(baseSeaLevel, businessAsUsualSeaLevelGlobal - totalPositiveImpact * (i * 1.2));
-            const globalIceCap = Math.min(baseIceCap, Math.max(0, businessAsUsualIceCapGlobal + totalPositiveImpact * (i * 1.5)));
-            
-            const regionalEffectsData: RegionalClimateEffect[] = regionDefinitions.map(region => {
-                const bauRegionalTemp = baseTemp + (businessAsUsualTempGlobal - baseTemp) * region.tempFactor;
-                const bauRegionalSeaLevel = businessAsUsualSeaLevelGlobal + region.seaLevelOffsetCm; 
-                
-                const policyGlobalTempChange = globalTemperature - baseTemp;
-                const regionalPolicyTemperature = baseTemp + policyGlobalTempChange * region.tempFactor;
-                const regionalPolicySeaLevel = globalSeaLevel + region.seaLevelOffsetCm;
-
-                return {
-                    regionName: region.name,
-                    temperature: regionalPolicyTemperature,
-                    seaLevel: regionalPolicySeaLevel,
-                    bauTemperature: bauRegionalTemp,
-                    bauSeaLevel: bauRegionalSeaLevel,
-                };
-            });
-
-            return { 
-                year, 
-                temperature: globalTemperature, 
-                seaLevel: globalSeaLevel, 
-                iceCap: globalIceCap, 
-                bauTemperature: businessAsUsualTempGlobal,
-                bauSeaLevel: businessAsUsualSeaLevelGlobal,
-                bauIceCap: businessAsUsualIceCapGlobal,
-                regionalEffects: regionalEffectsData,
-            };
+    const handleAddCropEntry = (newEntry) => {
+        const updatedEntries = [...cropEntries, newEntry];
+        setCropEntries(updatedEntries);
+        localStorage.setItem("farmVueCropData", JSON.stringify(updatedEntries));
+        toast.success('Crop data submitted successfully!', {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            theme: theme === "dark" ? "dark" : "light",
         });
     };
-    
-    useEffect(() => {
-        const simulationResults = generateSimulationData(policies);
-        setClimateProjections(simulationResults);
-    }, [policies]);
-    const setRenewableLevel = (value) => {
-        updatePolicySettings({ ...policies, renewableEnergy: value[0] });
-        setActivePresetKey("");
+
+    const closeLogModal = () => {
+        setIsLogCropModalOpen(false);
     };
 
-    const alterCarbonPolicyValue = (value) => {
-        updatePolicySettings({ ...policies, carbonTax: value[0] });
-        setActivePresetKey("");
-    };
+    const isDark = theme === "dark";
 
-    const updateForestryEfforts = (value) => {
-        updatePolicySettings({ ...policies, reforestation: value[0] });
-        setActivePresetKey("");
-    };
+    const inputBaseClasses = "w-full p-3 border rounded-md focus:ring-2 transition-colors duration-150 text-sm sm:text-base";
+    const lightInputClasses = "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-500 focus:border-green-500";
+    const darkInputClasses = "bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-green-400 focus:border-green-400";
+    const currentInputClasses = `${inputBaseClasses} ${isDark ? darkInputClasses : lightInputClasses}`;
 
-    const modifyEVAdoptionRate = (value) => {
-        updatePolicySettings({ ...policies, electricVehicles: value[0] });
-        setActivePresetKey("");
-    };
+    const cardBaseClasses = "p-4 sm:p-5 rounded-2xl transition-all duration-300 hover:shadow-lg backdrop-blur-sm";
+    const lightCardClasses = "bg-white/80 text-gray-900 shadow-sm hover:shadow-gray-200/50 border border-gray-100";
+    const darkCardClasses = "bg-gray-800/80 text-gray-100 shadow-sm hover:shadow-gray-900/50 border border-gray-700";
+    const currentCardClasses = `${cardBaseClasses} ${isDark ? darkCardClasses : lightCardClasses}`;
 
-    const setWasteReductionTarget = (value) => {
-        updatePolicySettings({ ...policies, wasteReduction: value[0] });
-        setActivePresetKey("");
-    };
+    const sectionTitleBaseClasses = "text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 flex items-center group";
+    const lightSectionTitleClasses = "text-gray-900";
+    const darkSectionTitleClasses = "text-gray-100";
+    const currentSectionTitleClasses = `${sectionTitleBaseClasses} ${isDark ? darkSectionTitleClasses : lightSectionTitleClasses}`;
 
-    const currentYearMetrics = useMemo(() => {
-        return climateData.find(d => d.year === selectedEndYear);
-    }, [climateData, selectedEndYear]);
+    const buttonPrimaryBaseClasses = "px-6 py-3 font-semibold rounded-xl hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 text-sm sm:text-base group";
+    const lightButtonPrimaryClasses = "bg-green-500 text-white hover:bg-green-600 hover:shadow-green-500/25 active:scale-95";
+    const darkButtonPrimaryClasses = "bg-green-400 text-gray-900 hover:bg-green-300 hover:shadow-green-400/25 active:scale-95";
+    const currentButtonPrimaryClasses = `${buttonPrimaryBaseClasses} ${isDark ? darkButtonPrimaryClasses : lightButtonPrimaryClasses}`;
 
-    const displayedClimateData = useMemo(() => {
-        const startIndex = climateData.findIndex(d => d.year === selectedStartYear);
-        const endIndex = climateData.findIndex(d => d.year === selectedEndYear);
-        if (startIndex === -1 || endIndex === -1) return [];
-        return climateData.slice(startIndex, endIndex + 1);
-    }, [climateData, selectedStartYear, selectedEndYear]);
-
-    const selectedRegionData = useMemo(() => {
-        if (!climateData || climateData.length === 0) return [];
-        return climateData.map(yearlyData => {
-            const regionalMetric = yearlyData.regionalEffects?.find(effect => effect.regionName === focusedRegion);
-            return {
-                year: yearlyData.year,
-                temperature: regionalMetric?.temperature,
-                bauTemperature: regionalMetric?.bauTemperature,
-                seaLevel: regionalMetric?.seaLevel,
-                bauSeaLevel: regionalMetric?.bauSeaLevel,
-            };
-        }).filter(data => data.temperature !== undefined && data.seaLevel !== undefined);
-    }, [climateData, focusedRegion]);
-
-    const displayedSelectedRegionData = useMemo(() => {
-        if (!selectedRegionData || selectedRegionData.length === 0) return [];
-        const startIndex = selectedRegionData.findIndex(d => d.year === selectedStartYear);
-        const endIndex = selectedRegionData.findIndex(d => d.year === selectedEndYear);
-        
-        if (startIndex === -1 || endIndex === -1) {
-            if (climateData.length > 0 && selectedRegionData.length > 0) {
-                const overallStartIndex = climateData.findIndex(d => d.year === selectedStartYear);
-                const overallEndIndex = climateData.findIndex(d => d.year === selectedEndYear);
-                if (overallStartIndex !== -1 && overallEndIndex !== -1) {
-                    const regionStartIndex = selectedRegionData.findIndex(d => d.year === climateData[overallStartIndex].year);
-                    const regionEndIndex = selectedRegionData.findIndex(d => d.year === climateData[overallEndIndex].year);
-                    if (regionStartIndex !== -1 && regionEndIndex !== -1 && regionStartIndex <= regionEndIndex) {
-                        return selectedRegionData.slice(regionStartIndex, regionEndIndex + 1);
-                    }
-                }
+    const chartCardClasses = `h-auto rounded-xl p-6 border backdrop-blur-sm transition-all duration-300 hover:shadow-md ${
+        isDark 
+            ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600' 
+            : 'bg-white/50 border-gray-200 hover:border-gray-300'
+    }`;
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                when: "beforeChildren",
+                staggerChildren: 0.15
             }
-            return [];
         }
-        return selectedRegionData.slice(startIndex, endIndex + 1);
-    }, [selectedRegionData, selectedStartYear, selectedEndYear, climateData]);
-    
-    const getImpactSummary = () => {
-        if (!currentYearMetrics || climateData.length === 0) return null;
-    
-        const startYearData = climateData.find(d => d.year === selectedStartYear);
-        if (!startYearData) return null; 
-    
-        const tempChange = currentYearMetrics.temperature - startYearData.temperature;
-        const seaChange = currentYearMetrics.seaLevel - startYearData.seaLevel;
-        const iceChange = currentYearMetrics.iceCap - startYearData.iceCap;
-    
-        return {
-            tempChange: tempChange.toFixed(1),
-            seaChange: seaChange.toFixed(1),
-            iceChange: iceChange.toFixed(1),
-        };
     };
-    const impactSummary = getImpactSummary();
 
-    useEffect(() => {
-        if (currentYearMetrics) {
-            setScenarioText(generateNarrativeInsights(policies, currentYearMetrics));
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: (i) => ({
+            opacity: 1,
+            y: 0,
+            transition: {
+                delay: i * 0.15,
+                duration: 0.4,
+                ease: [0.4, 0, 0.2, 1]
+            }
+        })
+    };
+
+    const availableYears = useMemo(
+        () => [...new Set(cropEntries.map((e) => new Date(e.plantingDate).getFullYear()))].sort((a, b) => b - a),
+        [cropEntries]
+    );
+
+    const latestYear = useMemo(() => availableYears[0]?.toString() || "", [availableYears]);
+
+    const baseChartDataProcessor = (dataKey) =>
+        useMemo(
+            () =>
+                cropEntries
+                    .map((entry) => ({ ...entry, plantingDateObj: new Date(entry.plantingDate) }))
+                    .sort((a, b) => a.plantingDateObj.getTime() - b.plantingDateObj.getTime())
+                    .map(
+                        (entry) =>
+                            ({
+                                plantingDate: new Date(entry.plantingDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                                value: parseFloat(entry[dataKey]) || 0,
+                                cropName: entry.cropName,
+                            })
+                    ),
+            [cropEntries, dataKey]
+        );
+
+    const preparedWaterUsageChartData = baseChartDataProcessor("waterUsage");
+    const preparedSoilPhChartData = baseChartDataProcessor("soilPh");
+
+    const preparedResourceUsageData = cropEntries.reduce((acc, entry) => {
+        const water = parseFloat(entry.waterUsage) || 0;
+        const existing = acc.find((item) => item.name === entry.cropName);
+        if (existing) {
+            existing.totalWater += water;
+        } else {
+            acc.push({ name: entry.cropName, totalWater: water });
         }
-    }, [policies, currentYearMetrics]);
+        return acc;
+    }, []);
+
+    const preparedSeasonalComparisonData = useMemo(() => {
+        if (!latestYear || !comparisonYear) return [];
+
+        const calculateTotalWater = (year) =>
+            cropEntries
+                .filter((e) => new Date(e.plantingDate).getFullYear().toString() === year)
+                .reduce((sum, e) => sum + (parseFloat(e.waterUsage) || 0), 0);
+
+        const comparisonData = [{ year: comparisonYear, totalWater: calculateTotalWater(comparisonYear) }];
+
+        if (latestYear !== comparisonYear) {
+            comparisonData.push({ year: latestYear, totalWater: calculateTotalWater(latestYear) });
+            comparisonData.sort((a, b) => parseInt(a.year) - parseInt(b.year));
+        }
+
+        return comparisonData;
+    }, [cropEntries, comparisonYear, latestYear]);
+
+    const GenericLineChart = React.memo(({ data, dataKey, lineName, lineColor }) => {
+        const { theme } = useTheme();
+        const isChartDark = theme === "dark";
+        const tickColor = isChartDark ? "#ebecf0" : "#041313";
+        const gridColor = isChartDark ? "rgba(235, 236, 240, 0.1)" : "rgba(4, 19, 19, 0.1)";
+
+        if (!data || data.length === 0) {
+            return (
+                <div className={`h-80 flex items-center justify-center text-sm ${isChartDark ? 'text-gray-400' : 'text-gray-500'}`}>No data to display.</div>
+            );
+        }
+
+            return (
+                <ResponsiveContainer width="100%" height={320}>
+                    <LineChart data={data} margin={{ top: 30, right: 20, left: -20, bottom: 10 }}>
+                        <Legend verticalAlign="top" align="center" wrapperStyle={{ width: "100%", display: "flex", justifyContent: "center", color: tickColor, fontSize: 12, paddingBottom: 10 }} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                        <XAxis dataKey="plantingDate" tick={{ fill: tickColor, fontSize: 10 }} angle={-30} textAnchor="end" height={50} />
+                        <YAxis tick={{ fill: tickColor, fontSize: 10 }} />
+                        <Tooltip
+                            contentStyle={{
+                                backgroundColor: isChartDark ? "#0F1F1F" : "#FFFFFF",
+                                borderColor: isChartDark ? "#12bf8e" : "#041313",
+                                borderRadius: "0.5rem",
+                                fontSize: "12px",
+                            }}
+                            labelStyle={{ color: tickColor, fontWeight: "bold" }}
+                            itemStyle={{ color: lineColor }}
+                        />
+                        <Line
+                            type="monotone"
+                            dataKey="value"
+                            name={lineName}
+                            stroke={lineColor}
+                            strokeWidth={2}
+                            activeDot={{ r: 5 }}
+                            dot={{ r: 2 }}
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            );
+        }, (prevProps, nextProps) => {
+            return (
+                prevProps.data === nextProps.data &&
+                prevProps.dataKey === nextProps.dataKey &&
+                prevProps.lineName === nextProps.lineName &&
+                prevProps.lineColor === nextProps.lineColor
+            );
+        });
+
+    const ResourceUsageChart = React.memo(({ data }) => {
+        const { theme } = useTheme();
+        const isChartDark = theme === "dark";
+        const tickColor = isChartDark ? "#ebecf0" : "#041313";
+        const gridColor = isChartDark ? "rgba(235, 236, 240, 0.1)" : "rgba(4, 19, 19, 0.1)";
+
+        if (!data || data.length === 0) {
+            return (
+                <div className={`h-80 flex items-center justify-center text-sm ${isChartDark ? 'text-gray-400' : 'text-gray-500'}`}>No data to display.</div>
+            );
+        }
+
+        return (
+            <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={data} margin={{ top: 30, right: 20, left: -20, bottom: 10 }}>
+                    <Legend verticalAlign="top" align="center" wrapperStyle={{ width: "100%", display: "flex", justifyContent: "center", color: tickColor, fontSize: 12, paddingBottom: 10 }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                    <XAxis dataKey="name" tick={{ fill: tickColor, fontSize: 10 }} angle={-30} textAnchor="end" height={50} interval={0} />
+                    <YAxis tick={{ fill: tickColor, fontSize: 10 }} />
+                    <Tooltip
+                        cursor={{ fill: isChartDark ? "rgba(254, 118, 0, 0.1)" : "rgba(254, 118, 0, 0.2)" }}
+                        contentStyle={{
+                            backgroundColor: isChartDark ? "#0F1F1F" : "#FFFFFF",
+                            borderColor: isChartDark ? "#fe7600" : "#041313",
+                            borderRadius: "0.5rem",
+                            fontSize: "12px",
+                        }}
+                        labelStyle={{ color: tickColor, fontWeight: "bold" }}
+                        itemStyle={{ color: "#f67b04" }}
+                    />
+                    <Bar dataKey="totalWater" name="Total Water Usage (L)" fill="#f67b04" radius={[4, 4, 0, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
+        );
+    }, (prevProps, nextProps) => prevProps.data === nextProps.data);
+    const SeasonalComparisonChart = React.memo(({ data }) => {
+        const { theme } = useTheme();
+        const isChartDark = theme === "dark";
+        const tickColor = isChartDark ? "#ebecf0" : "#041313";
+        const gridColor = isChartDark ? "rgba(235, 236, 240, 0.1)" : "rgba(4, 19, 19, 0.1)";
+
+        if (!data || data.length === 0)
+            return (
+                <div className={`h-48 flex items-center justify-center text-sm ${isChartDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Select a year to compare.
+                </div>
+            );
+
+        return (
+            <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={data} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                    <XAxis dataKey="year" tick={{ fill: tickColor, fontSize: 10 }} />
+                    <YAxis tick={{ fill: tickColor, fontSize: 10 }} />
+                    <Tooltip
+                        cursor={{ fill: isChartDark ? "rgba(254, 118, 0, 0.1)" : "rgba(254, 118, 0, 0.2)" }}
+                        contentStyle={{
+                            backgroundColor: isChartDark ? "#0F1F1F" : "#FFFFFF",
+                            borderColor: isChartDark ? "#fe7600" : "#041313",
+                            borderRadius: "0.5rem",
+                            fontSize: "12px",
+                        }}
+                        labelStyle={{ color: tickColor, fontWeight: "bold" }}
+                        itemStyle={{ color: "#fe7600" }}
+                    />
+                    <Bar dataKey="totalWater" name="Total Water (L)" fill="#fe7600" radius={[4, 4, 0, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
+        );
+    }, (prevProps, nextProps) => prevProps.data === nextProps.data);
+
+    const predictedNextWaterUsage = useMemo(() => {
+        const data = preparedWaterUsageChartData;
+        if (data.length < 2) return null;
+
+        const lastPoint = data[data.length - 1];
+        const secondLastPoint = data[data.length - 2];
+        let avgChange = lastPoint.value - secondLastPoint.value;
+
+        if (data.length >= 3) {
+            const thirdLastPoint = data[data.length - 3];
+            const change1 = lastPoint.value - secondLastPoint.value;
+            const change2 = secondLastPoint.value - thirdLastPoint.value;
+            avgChange = (change1 + change2) / 2;
+        }
+
+        const predicted = lastPoint.value + avgChange;
+
+        const variation = Math.random() * 0.2 - 0.1;
+        const finalPrediction = predicted * (1 + variation);
+
+        return Math.max(0, Math.round(finalPrediction));
+    }, [preparedWaterUsageChartData]);
+
+    const lastActualWaterUsage = useMemo(() => {
+        if (preparedWaterUsageChartData.length === 0) return null;
+        return preparedWaterUsageChartData[preparedWaterUsageChartData.length - 1].value;
+    }, [preparedWaterUsageChartData]);
+    const ForecastVisualization = React.memo(({ lastActual, predictedNext }) => {
+        const { theme } = useTheme();
+        const isChartDark = theme === "dark";
+        const tickColor = isChartDark ? "#ebecf0" : "#041313";
+
+        if (lastActual === null || predictedNext === null) {
+            return (
+                <p className={`${isChartDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Not enough data for a forecast visualization (requires at least 2 entries).
+                </p>
+            );
+        }
+
+        const data = [
+            { name: "Last Actual", value: lastActual, color: isChartDark ? "#3b82f6" : "#2563eb" },
+            { name: "Predicted Next", value: predictedNext, color: isChartDark ? "#22c55e" : "#16a34a" },
+        ];
+
+        return (
+            <ResponsiveContainer width="100%" height={150}>
+                <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={isChartDark ? "rgba(235, 236, 240, 0.1)" : "rgba(4, 19, 19, 0.1)"} />
+                    <XAxis type="number" tick={{ fill: tickColor, fontSize: 10 }} />
+                    <YAxis type="category" dataKey="name" tick={{ fill: tickColor, fontSize: 10 }} width={80} />
+                    <Tooltip
+                        cursor={{ fill: isChartDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)" }}
+                        contentStyle={{
+                            backgroundColor: isChartDark ? "#0F1F1F" : "#FFFFFF",
+                            borderColor: isChartDark ? "#4A5568" : "#CBD5E0",
+                            borderRadius: "0.5rem",
+                            fontSize: "12px",
+                        }}
+                        labelStyle={{ color: tickColor, fontWeight: "bold" }}
+                    />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                        {data.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                    </Bar>
+                </BarChart>
+            </ResponsiveContainer>
+        );
+    }, (prevProps, nextProps) => 
+        prevProps.lastActual === nextProps.lastActual && 
+        prevProps.predictedNext === nextProps.predictedNext
+    );
+    const LogCropDataModal = React.memo(
+        ({
+            isOpen,
+            onClose,
+            onSubmitCrop,
+            inputBaseClasses: receivedInputClasses,
+            buttonPrimaryClasses: receivedButtonPrimaryClasses,
+            sectionTitleClasses: receivedSectionTitleClasses,
+        }) => {
+            const { theme: modalTheme } = useTheme();
+            const isModalDark = modalTheme === 'dark';
+
+            const [internalAnimate, setInternalAnimate] = useState(false);
+
+            useEffect(() => {
+                if (isOpen) {
+                    const timer = setTimeout(() => {
+                        setInternalAnimate(true);
+                    }, 50);
+                    return () => clearTimeout(timer);
+                } else {
+                    setInternalAnimate(false);
+                }
+            }, [isOpen]);
+
+            const [cropNameValue, changeCropName] = useState("");
+            const [dateOfPlanting, updateDateOfPlanting] = useState("");
+            const [soilPhValue, setSoilPhReading] = useState("");
+            const [waterQuantityUsed, recordWaterQuantity] = useState("");
+
+            if (!isOpen) return null;
+
+            const handleSubmit = (event) => {
+                event.preventDefault();
+                if (!cropNameValue || !dateOfPlanting || !soilPhValue || !waterQuantityUsed) {
+                    toast.error('Please fill in all fields before submitting.', {
+                        position: "top-right",
+                        autoClose: 3000,
+                        hideProgressBar: false,
+                        closeOnClick: true,
+                        pauseOnHover: true,
+                        draggable: true,
+                        progress: undefined,
+                        theme: isDark ? "dark" : "light",
+                    });
+                    return;
+                }
+                if (isNaN(parseFloat(waterQuantityUsed)) || isNaN(parseFloat(soilPhValue))) {
+                    toast.error('Water Usage and Soil pH must be valid numbers.', {
+                        position: "top-right",
+                        autoClose: 3000,
+                        hideProgressBar: false,
+                        closeOnClick: true,
+                        pauseOnHover: true,
+                        draggable: true,
+                        progress: undefined,
+                        theme: isDark ? "dark" : "light",
+                    });
+                    return;
+                }
+                const newEntry = {
+                    id: new Date().toISOString(),
+                    cropName: cropNameValue,
+                    plantingDate: dateOfPlanting,
+                    soilPh: soilPhValue,
+                    waterUsage: waterQuantityUsed,
+                    submissionDate: new Date().toLocaleDateString(),
+                };
+                onSubmitCrop(newEntry);
+                changeCropName("");
+                updateDateOfPlanting("");
+                setSoilPhReading("");
+                recordWaterQuantity("");
+                onClose();
+            };
+
+            return (
+                <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ease-in-out ${isModalDark ? 'bg-black/70' : 'bg-black/50'} ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                    <div
+                        className={`rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 transform transition-all duration-300 ease-in-out ${isModalDark ? 'bg-gray-800' : 'bg-white'} ${internalAnimate ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+                    >
+                        <div className="flex justify-between items-center mb-4 sm:mb-6">
+                            <h2 className={`${receivedSectionTitleClasses} !mb-0`}>
+                                <Database size={26} className="mr-3 text-green-500" />
+                                Log New Crop Data
+                            </h2>
+                            <button
+                                onClick={onClose}
+                                className={`p-2 rounded-full cursor-pointer transition-colors ${isModalDark ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+                            >
+                                <X size={24} className={`${isModalDark ? 'text-gray-300' : 'text-gray-600'}`} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="modalCropName" className={`block text-sm font-medium mb-1.5 ${isModalDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        Crop Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="modalCropName"
+                                        value={cropNameValue}
+                                        onChange={(e) => changeCropName(e.target.value)}
+                                        className={`${receivedInputClasses}`}
+                                        placeholder="e.g., Golden Corn, Red Wheat"
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="modalPlantingDate" className={`block text-sm font-medium mb-1.5 ${isModalDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        Planting Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        id="modalPlantingDate"
+                                        value={dateOfPlanting}
+                                        onChange={(e) => updateDateOfPlanting(e.target.value)}
+                                        className={`${receivedInputClasses}`}
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="modalSoilPh" className={`block text-sm font-medium mb-1.5 ${isModalDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        Soil pH
+                                    </label>
+                                    <input
+                                        type="number"
+                                        id="modalSoilPh"
+                                        step="0.1"
+                                        value={soilPhValue}
+                                        onChange={(e) => setSoilPhReading(e.target.value)}
+                                        className={`${receivedInputClasses}`}
+                                        placeholder="e.g., 6.5"
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="modalWaterUsage" className={`block text-sm font-medium mb-1.5 ${isModalDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        Water Usage (Liters/hectare)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        id="modalWaterUsage"
+                                        value={waterQuantityUsed}
+                                        onChange={(e) => recordWaterQuantity(e.target.value)}
+                                        className={`${receivedInputClasses}`}
+                                        placeholder="e.g., 5000"
+                                    />
+                                </div>
+                            </div>
+                            <button type="submit" className={`${receivedButtonPrimaryClasses} w-full sm:w-auto mt-2`}>
+                                <UploadCloud size={20} />
+                                <span>Save Crop Data</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+    );
+
+   
+    const handleThemeToggle = useCallback(() => {
+        setTheme(theme === "dark" ? "light" : "dark");
+    }, [theme, setTheme]);
+
+    const handleNotificationToggle = useCallback(() => {
+        setNotificationDropdownOpen(!isNotificationDropdownOpen);
+    }, [isNotificationDropdownOpen]);
+
+    const handleAddCropClick = useCallback(() => {
+        setIsLogCropModalOpen(true);
+    }, []);
 
     if (!mounted) {
-        return null;
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-center"
+                >
+                    <h1 className="text-2xl font-bold">
+                        <span className="text-green-500">Farm</span>
+                        <span className="text-orange-500">Vue</span>
+                    </h1>
+                </motion.div>
+            </div>
+        );
     }
-    const convertToCSV = (data, isGlobal) => {
-        if (!data || data.length === 0) return "";
-
-        const headers = isGlobal 
-            ? ["Year", "Temperature (°C)", "Baseline Temperature (°C)", "Sea Level (cm)", "Baseline Sea Level (cm)", "Ice Cap (%)", "Baseline Ice Cap (%)"] 
-            : ["Year", "Temperature (°C)", "Baseline Temperature (°C)", "Sea Level (cm)", "Baseline Sea Level (cm)"];
-        
-        const rows = data.map(item => {
-            const year = item.year;
-            const temp = item.temperature?.toFixed(2) || "N/A";
-            const bauTemp = item.bauTemperature?.toFixed(2) || "N/A";
-            const sea = item.seaLevel?.toFixed(2) || "N/A";
-            const bauSea = item.bauSeaLevel?.toFixed(2) || "N/A";
-            if (isGlobal) {
-                const ice = item.iceCap?.toFixed(2) || "N/A";
-                const bauIce = item.bauIceCap?.toFixed(2) || "N/A";
-                return [year, temp, bauTemp, sea, bauSea, ice, bauIce].join(",");
-            }
-            return [year, temp, bauTemp, sea, bauSea].join(",");
-        });
-
-        return [headers.join(","), ...rows].join("\n");
-    };
-
-    const triggerDownload = (csvString, filename) => {
-        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        if (link.download !== undefined) {
-            const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", filename);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        }
-    };
-
-    const exportGlobalDataToCSV = () => {
-        const csvData = convertToCSV(climateData, true);
-        if (csvData) {
-            triggerDownload(csvData, "global_climate_data.csv");
-            triggerToastDisplay("Global climate data exported as CSV.");
-        } else {
-            triggerToastDisplay("No global data available to export.");
-        }
-    };
-
-    const exportRegionalDataToCSV = () => {
-        const csvData = convertToCSV(selectedRegionData, false);
-        if (csvData) {
-            const filename = `regional_data_${focusedRegion.replace(/\s+/g, '_')}.csv`;
-            triggerDownload(csvData, filename);
-            triggerToastDisplay(`${focusedRegion} climate data exported as CSV.`);
-        } else {
-            triggerToastDisplay(`No data available for ${focusedRegion} to export.`);
-        }
-    };
-
-    const openLearnMoreInfo = () => {
-        triggerToastDisplay("Feature coming soon");
-    };
-
-    const handleFooterLinkClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
-        event.preventDefault();
-        triggerToastDisplay("Feature coming soon");
-    };
-
-    const chartTickAndLabelColor = isDarkMode ? "#cbd5e1" : "#374151";
-    const sliderThumbColor = isDarkMode ? "bg-[#f3f5f4]" : "bg-[#2c2d84]";
-    const mainBgColor = isDarkMode ? "bg-slate-900" : "bg-[#b1daf5]";
-    const mainTextColor = isDarkMode ? "text-gray-100" : "text-gray-800";
-    const cardBgColor = isDarkMode ? "bg-gray-800" : "bg-white";
-    const headerTextColor = isDarkMode ? "text-gray-100" : "text-black";
-    const policyControlTitleColor = isDarkMode ? "text-[#b4daf2]" : "text-[#8e4e9d]";
-    const scenarioAnalysisBgColor = isDarkMode ? "bg-slate-700" : "bg-[#e2f0fc]";
-    const scenarioAnalysisTextColor = isDarkMode ? "text-gray-300" : "text-gray-700";
-    const scenarioAnalysisTitleColor = isDarkMode ? "text-gray-100" : "text-gray-900";
-    const tabBorderColor = isDarkMode ? "border-[#b4daf2]" : "border-[#3e3fba]";
-    const tabTextColor = isDarkMode ? "text-[#b4daf2]" : "text-[#3e3fba]";
-    const tabInactiveTextColor = isDarkMode ? "text-gray-400" : "text-gray-500";
-    const chartStrokeColor = isDarkMode ? "#4b5563" : "#d1d5db";
-    const tooltipBgColor = isDarkMode ? "rgba(31, 41, 55, 0.8)" : "rgba(255, 255, 255, 0.8)";
-    const tooltipBorderColor = isDarkMode ? "#4b5563" : "#d1d5db";
-    const impactCardBgColor = isDarkMode ? "bg-gray-800" : "bg-[#a5ceeb]";
-    const impactCardTitleColor = isDarkMode ? "text-[#b4daf2]" : "text-[#3e3fba]";
-    const impactCardValueColor = isDarkMode ? "text-[#a5ceeb]" : "text-[#010053]";
-    const impactCardSubTextColor = isDarkMode ? "text-gray-300" : "text-gray-700";
-    const learnMoreLinkColor = isDarkMode ? "text-[#b4daf2]" : "text-[#3e3fba]";
-    const footerBgColor = isDarkMode ? "bg-slate-800/60" : "bg-[#3e3fba]/10";
-    const footerSubTextColor = isDarkMode ? "text-gray-400" : "text-gray-600";
-    const buttonHoverBg = isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-200";
-    const buttonTextColor = isDarkMode ? "text-gray-300" : "text-gray-700";
-    const iceCapAreaStopColor1 = isDarkMode ? "#b4daf2" : "#3e3fba";
-    const iceCapAreaStrokeColor = isDarkMode ? "#b4daf2" : "#3e3fba";
-    const activeDotStrokeColor = isDarkMode ? "#f3f5f4" : "#fff";
 
     return (
         <>
-            <GlobalStyles />
-            <div className={`min-h-screen ${mainBgColor} ${mainTextColor} transition-colors duration-300 ease-in-out`}>
-                <div className="max-w-7xl mx-auto px-4 md:px-6">
-                    <motion.header 
-                        className="py-4 md:py-6"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.1 }}
-                    >
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <h1 className={`text-2xl md:text-3xl font-bold font-montserrat ${headerTextColor} transition-colors duration-300 ease-in-out`}>
-                                    Climate Future Simulator
-                                </h1>
-                                <p className={`text-sm md:text-base opacity-90 ${headerTextColor} transition-colors duration-300 ease-in-out`}>
-                                    Interactive Policy & Environmental Impact Visualization
-                                </p>
-                            </div>
-                            <button
-                                onClick={performThemeToggle}
-                                className={`p-2 rounded-full ${buttonHoverBg} ${buttonTextColor} cursor-pointer transition-all duration-300 ease-in-out`}
-                                title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
-                            >
-                                {isDarkMode ? <Sun size={22} /> : <Moon size={22} />}
-                            </button>
-                        </div>
-                    </motion.header>
-
-                    <main className="py-4 md:py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <motion.div 
-                            className={`lg:col-span-1 ${cardBgColor} rounded-3xl p-5 transition-colors duration-300 ease-in-out`}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                        >
-                            <h2 className={`text-xl font-montserrat font-bold mb-4 ${policyControlTitleColor} transition-colors duration-300 ease-in-out`}>
-                                Environmental Policy Controls
-                            </h2>
-
-                            <div className="mb-6 space-y-2">
-                                <label htmlFor="policy-preset-select" className={`block text-sm font-medium ${mainTextColor} mb-1 transition-colors duration-300 ease-in-out`}>Quick Scenarios</label>
-                                <div className="flex items-center gap-3">
-                                    <select 
-                                        id="policy-preset-select"
-                                        value={activePresetKey}
-                                        onChange={(e) => selectPolicyPreset(e.target.value as keyof typeof policyPresets | "")}
-                                        className={`flex-grow p-2.5 border rounded-lg text-sm cursor-pointer transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 ${isDarkMode ? `bg-slate-700 border-slate-600 text-slate-100 focus:ring-slate-500 placeholder-slate-400` : `bg-white border-gray-300 text-gray-900 focus:ring-indigo-500 placeholder-gray-400`}`}
+            <style jsx global>{`
+                @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap");
+                body {
+                    font-family: "Roboto", sans-serif;
+                }
+                h1,
+                h2,
+                h3,
+                h4,
+                h5,
+                h6 {
+                    font-family: "Montserrat", sans-serif;
+                }
+                p,
+                span,
+                a,
+                div,
+                li,
+                label,
+                option,
+                select,
+                input,
+                button,
+                textarea {
+                    font-family: "Roboto", sans-serif;
+                }
+                .font-heading {
+                    font-family: "Montserrat", sans-serif !important;
+                }
+                .font-body {
+                    font-family: "Roboto", sans-serif !important;
+                }
+                html {
+                    scroll-behavior: smooth;
+                }
+                ::-webkit-scrollbar {
+                    width: 8px;
+                    height: 8px;
+                }
+                ::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                ::-webkit-scrollbar-thumb {
+                    background: #888;
+                    border-radius: 4px;
+                }
+                ::-webkit-scrollbar-thumb:hover {
+                    background: #666;
+                }
+                /* Add glass morphism effect */
+                .glass-effect {
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                }
+                /* Smooth transitions */
+                * {
+                    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+                    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+                    transition-duration: 150ms;
+                }
+            `}</style>
+            <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={containerVariants}
+                className={`flex h-screen transition-colors duration-300 overflow-hidden ${
+                    isDark ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-900"
+                }`}
+            >
+                <motion.div variants={itemVariants} custom={1} className="flex-1 flex flex-col overflow-y-auto">
+                    <main className="flex-1 p-6 sm:p-8 lg:p-10 space-y-8 sm:space-y-10 max-w-[1440px] mx-auto w-full">
+                        <motion.div variants={itemVariants} custom={2} className="flex flex-col space-y-6">
+                            <div className="flex justify-between items-center">
+                                <div 
+                                    className={`text-2xl font-bold flex items-center cursor-pointer select-none`}
+                                    onClick={() => window.location.href = '/'}
+                                >
+                                    <Tractor size={28} className={`mr-2 text-[#12bf8e]`} />
+                                    <span style={{ color: "#12bf8e" }}>Farm</span>
+                                    <span style={{ color: "#fe7600" }}>Vue</span>
+                                </div>
+                                <div className="flex items-center space-x-3 sm:space-x-4">
+                                    <div className="relative" ref={notificationDropdownRef}>
+                                        <div className="flex items-center">
+                                            <div
+                                                className="cursor-pointer p-1"
+                                                onClick={handleNotificationToggle}
+                                            >
+                                                <Bell size={18} className={`${isDark ? "text-gray-200" : "text-gray-800"}`} />
+                                                {mockNotifications.length > 0 && (
+                                                    <span
+                                                        className={`absolute top-0.5 right-0.5 block h-2 w-2 rounded-full bg-orange-500 ring-1 ${
+                                                            isDark ? "ring-gray-900" : "ring-white"
+                                                        }`}
+                                                    ></span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {isNotificationDropdownOpen && (
+                                            <div
+                                                className={`absolute right-0 mt-2 w-72 sm:w-80 rounded-md border shadow-xl z-50 overflow-hidden ${
+                                                    isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+                                                }`}
+                                            >
+                                                <div className={`p-3 border-b ${isDark ? "border-gray-700" : "border-gray-200"}`}>
+                                                    <h3 className={`text-md font-semibold ${isDark ? "text-gray-100" : "text-gray-900"}`}>
+                                                        Notifications
+                                                    </h3>
+                                                </div>
+                                                {mockNotifications.length > 0 ? (
+                                                    <ul className="py-1 max-h-80 overflow-y-auto">
+                                                        {mockNotifications.map((notification) => (
+                                                            <li key={notification.id}>
+                                                                <a
+                                                                    href="#"
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        toast.info(`Notification acknowledged: ${notification.text}`, {
+                                                                            position: "top-right",
+                                                                            autoClose: 3000,
+                                                                            hideProgressBar: false,
+                                                                            closeOnClick: true,
+                                                                            pauseOnHover: true,
+                                                                            draggable: true,
+                                                                            progress: undefined,
+                                                                            theme: isDark ? "dark" : "light",
+                                                                        });
+                                                                        setNotificationDropdownOpen(false);
+                                                                    }}
+                                                                    className={`flex items-start px-4 py-2.5 text-sm transition-colors ${
+                                                                        isDark
+                                                                            ? "text-gray-300 hover:bg-gray-700"
+                                                                            : "text-gray-700 hover:bg-gray-100"
+                                                                    }`}
+                                                                >
+                                                                    <notification.icon
+                                                                        size={18}
+                                                                        className="mr-3 mt-0.5 shrink-0"
+                                                                        style={{ color: notification.iconColor }}
+                                                                    />
+                                                                    <div>
+                                                                        <p className="font-medium leading-snug">{notification.text}</p>
+                                                                        <p
+                                                                            className={`text-xs mt-0.5 ${
+                                                                                isDark ? "text-gray-400" : "text-gray-500"
+                                                                            }`}
+                                                                        >
+                                                                            {notification.time}
+                                                                        </p>
+                                                                    </div>
+                                                                </a>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                ) : (
+                                                    <p className={`p-4 text-sm text-center ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                                                        No new notifications.
+                                                    </p>
+                                                )}
+                                                <div className={`p-2 border-t text-center ${isDark ? "border-gray-700" : "border-gray-200"}`}>
+                                                    <a href="#" className="text-xs text-[#12bf8e] hover:underline">
+                                                        View all notifications
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={handleThemeToggle}
+                                        className={`p-2 rounded-full cursor-pointer transition-colors ${
+                                            isDark ? "hover:bg-gray-700" : "hover:bg-gray-200"
+                                        }`}
                                     >
-                                        <option value="">Select a Preset...</option>
-                                        {Object.entries(policyPresets).map(([key, preset]) => (
-                                            <option key={key} value={key}>{preset.name}</option>
-                                        ))}
-                                    </select>
-                                    <button 
-                                        onClick={resetPolicySettings}
-                                        title="Reset all policies to default values"
-                                        className={`p-2.5 rounded-lg cursor-pointer transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-opacity-50 ${isDarkMode ? `bg-slate-600 hover:bg-slate-500 text-slate-100 focus:ring-slate-400` : `bg-gray-200 hover:bg-gray-300 text-gray-700 focus:ring-gray-400`}`}
-                                    >
-                                        <RotateCcw size={20} />
+                                        {theme === "dark" ? (
+                                            <Sun size={22} className="text-yellow-400" />
+                                        ) : (
+                                            <Moon size={22} className="text-blue-500" />
+                                        )}
                                     </button>
+                                    <div className="hidden sm:flex items-center space-x-2 cursor-pointer">
+                                        <img
+                                            src="https://plus.unsplash.com/premium_photo-1708110921381-5da0d7eb2e0f?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                                            alt="Carla Stanton profile picture"
+                                            className={`w-8 h-8 rounded-full object-cover ${isDark ? "bg-gray-600" : "bg-gray-300"}`}
+                                        />
+                                        <div>
+                                            <p className={`font-semibold text-xs ${isDark ? "text-gray-100" : "text-gray-900"}`}>Carla Stanton</p>
+                                            <p className={`text-xs leading-tight ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                                                Farm Operations Lead
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-
-                            <div className="mb-3 space-y-1">
-                                <label htmlFor="start-year-slider" className={`block text-xs font-medium ${mainTextColor} transition-colors duration-300 ease-in-out`}>
-                                    Start Year: <span className="font-bold">{selectedStartYear}</span>
-                                </label>
-                                <CustomSlider
-                                    value={startYearIndex}
-                                    max={years.length - 1}
-                                    step={1}
-                                    reportValueChange={handleStartYearChange}
-                                    ariaLabel="Start Year Selection Slider"
-                                    rangeColor="bg-[#4caf50]"
-                                    isDarkMode={isDarkMode}
-                                />
-                            </div>
-                            <div className="mb-6 space-y-1">
-                                <label htmlFor="end-year-slider" className={`block text-xs font-medium ${mainTextColor} transition-colors duration-300 ease-in-out`}>
-                                    End Year: <span className="font-bold">{selectedEndYear}</span>
-                                </label>
-                                <CustomSlider
-                                    value={endYearIndex}
-                                    max={years.length - 1}
-                                    step={1}
-                                    reportValueChange={handleEndYearChange}
-                                    ariaLabel="End Year Selection Slider"
-                                    rangeColor="bg-[#2196f3]"
-                                    isDarkMode={isDarkMode}
-                                />
-                            </div>
-
-                            <div className="space-y-6">
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="flex items-center gap-2">
-                                            <Factory size={18} className="text-[#3e3fba]" />
-                                            <span>Renewable Energy Adoption</span>
-                                        </span>
-                                        <span className="font-medium">{policies.renewableEnergy}%</span>
-                                    </div>
-                                    <CustomSlider
-                                        value={policies.renewableEnergy}
-                                        reportValueChange={setRenewableLevel}
-                                        ariaLabel="Renewable Energy Adoption"
-                                        rangeColor="bg-[#3e3fba]"
-                                        isDarkMode={isDarkMode}
-                                    />
+                            <div className="mt-12 flex justify-between items-center">
+                                <div className="flex flex-col justify-center">
+                                    <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>Hi Carla,</p>
+                                    <h2 className={`text-2xl sm:text-3xl font-bold ${isDark ? "text-gray-100" : "text-gray-900"}`}>
+                                        Welcome Back
+                                    </h2>
                                 </div>
-
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="flex items-center gap-2">
-                                            <Waves size={18} className="text-[#3e3fba]" />
-                                            <span>Carbon Tax Policy</span>
-                                        </span>
-                                        <span className="font-medium">{policies.carbonTax}%</span>
-                                    </div>
-                                    <CustomSlider
-                                        value={policies.carbonTax}
-                                        reportValueChange={alterCarbonPolicyValue}
-                                        ariaLabel="Carbon Tax Policy"
-                                        rangeColor="bg-[#3e3fba]"
-                                        isDarkMode={isDarkMode}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="flex items-center gap-2">
-                                            <Trees size={18} className="text-[#42be4f]" />
-                                            <span>Reforestation Efforts</span>
-                                        </span>
-                                        <span className="font-medium">{policies.reforestation}%</span>
-                                    </div>
-                                    <CustomSlider
-                                        value={policies.reforestation}
-                                        reportValueChange={updateForestryEfforts}
-                                        ariaLabel="Reforestation Efforts"
-                                        rangeColor="bg-[#42be4f]"
-                                        isDarkMode={isDarkMode}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="flex items-center gap-2">
-                                            <Car size={18} className="text-[#3e3fba]" />
-                                            <span>Electric Vehicle Transition</span>
-                                        </span>
-                                        <span className="font-medium">{policies.electricVehicles}%</span>
-                                    </div>
-                                    <CustomSlider
-                                        value={policies.electricVehicles}
-                                        reportValueChange={modifyEVAdoptionRate}
-                                        ariaLabel="Electric Vehicle Transition"
-                                        rangeColor="bg-[#3e3fba]"
-                                        isDarkMode={isDarkMode}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="flex items-center gap-2">
-                                            <Trash2 size={18} className="text-[#8e4e9d]" />
-                                            <span>Waste Reduction Initiatives</span>
-                                        </span>
-                                        <span className="font-medium">{policies.wasteReduction}%</span>
-                                    </div>
-                                    <CustomSlider
-                                        value={policies.wasteReduction}
-                                        reportValueChange={setWasteReductionTarget}
-                                        ariaLabel="Waste Reduction Initiatives"
-                                        rangeColor="bg-[#8e4e9d]"
-                                        isDarkMode={isDarkMode}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className={`mt-6 ${scenarioAnalysisBgColor} p-4 rounded-2xl transition-colors duration-300 ease-in-out`}>
-                                <h3 className={`text-lg font-montserrat font-medium mb-3 flex items-center gap-2 ${scenarioAnalysisTitleColor} transition-colors duration-300 ease-in-out`}>
-                                    {narrativeInsights.includes("concern") ||
-                                    narrativeInsights.includes("insufficient") ||
-                                    narrativeInsights.includes("undermining") ? (
-                                        <AlertTriangle size={20} className="text-red-500 flex-shrink-0" />
-                                    ) : (
-                                        <CheckCircle2 size={20} className="text-[#42be4f] flex-shrink-0" />
-                                    )}
-                                    Scenario Analysis
-                                </h3>
-                                <p className={`text-sm leading-relaxed whitespace-pre-line ${scenarioAnalysisTextColor} transition-colors duration-300 ease-in-out`}>
-                                    {narrativeInsights}
-                                </p>
+                                <button onClick={handleAddCropClick} className={`${currentButtonPrimaryClasses}`}>
+                                    <PlusCircle size={20} />
+                                    <span>Add Crop Data</span>
+                                </button>
                             </div>
                         </motion.div>
 
-                        <motion.div 
-                            className="lg:col-span-2 space-y-6"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.3 }}
-                        >
-                            <div className={`flex mb-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-300'} justify-start transition-colors duration-300 ease-in-out`}>
-                                <button
-                                    onClick={() => setCurrentView('global')}
-                                    className={`pb-3 px-5 font-montserrat font-medium cursor-pointer transition-all duration-300 ease-in-out ${
-                                        currentView === 'global'
-                                            ? `border-b-2 ${tabBorderColor} ${tabTextColor}`
-                                            : tabInactiveTextColor + ' hover:text-opacity-80'
-                                    }`}
-                                >
-                                    Global Overview
-                                </button>
-                                <button
-                                    onClick={() => setCurrentView('regional')}
-                                    className={`pb-3 px-5 font-montserrat font-medium cursor-pointer transition-all duration-300 ease-in-out ${
-                                        currentView === 'regional'
-                                            ? `border-b-2 ${tabBorderColor} ${tabTextColor}`
-                                            : tabInactiveTextColor + ' hover:text-opacity-80'
-                                    }`}
-                                >
-                                    Regional Impacts
-                                </button>
-                            </div>
-
-                            {currentView === 'global' && (
-                                <>
-                                    <div className={`${cardBgColor} rounded-3xl p-5 transition-colors duration-300 ease-in-out`}>
-                                        <div className={`flex mb-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} justify-between items-center transition-colors duration-300 ease-in-out`}>
-                                            <div className="flex justify-around md:justify-start">
-                                                <button
-                                                    onClick={() => setActiveChartTab("temperature")}
-                                                    className={`pb-2 px-3 md:px-4 font-montserrat font-medium cursor-pointer transition-all duration-300 ease-in-out ${
-                                                        activeTab === "temperature"
-                                                            ? `border-b-2 ${tabBorderColor} ${tabTextColor}`
-                                                            : tabInactiveTextColor
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <ThermometerSun size={18} />
-                                                        <span className="hidden md:inline">Temperature</span>
-                                                    </div>
-                                                </button>
-                                                <button
-                                                    onClick={() => setActiveChartTab("seaLevel")}
-                                                    className={`pb-2 px-3 md:px-4 font-montserrat font-medium cursor-pointer transition-all duration-300 ease-in-out ${
-                                                        activeTab === "seaLevel"
-                                                            ? `border-b-2 ${tabBorderColor} ${tabTextColor}`
-                                                            : tabInactiveTextColor
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <Waves size={18} />
-                                                        <span className="hidden md:inline">Sea Level</span>
-                                                    </div>
-                                                </button>
-                                                <button
-                                                    onClick={() => setActiveChartTab("iceCap")}
-                                                    className={`pb-2 px-3 md:px-4 font-montserrat font-medium cursor-pointer transition-all duration-300 ease-in-out ${
-                                                        activeTab === "iceCap"
-                                                            ? `border-b-2 ${tabBorderColor} ${tabTextColor}`
-                                                            : tabInactiveTextColor
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <Snowflake size={18} />
-                                                        <span className="hidden md:inline">Ice Caps</span>
-                                                    </div>
-                                                </button>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={exportGlobalDataToCSV}
-                                                    title="Export Global Data to CSV"
-                                                    className={`p-2 rounded-lg cursor-pointer transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-opacity-50 flex items-center gap-2 text-sm ${isDarkMode ? `bg-slate-700 hover:bg-slate-600 text-slate-200 focus:ring-slate-500` : `bg-gray-100 hover:bg-gray-200 text-gray-700 focus:ring-gray-300`}`}
-                                                >
-                                                    <Download size={16} />
-                                                    <span className="hidden sm:inline">Export Global Data</span>
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="h-72">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                {activeTab === "temperature" ? (
-                                                    <LineChart data={displayedClimateData} margin={{ top: 5, right: 20, bottom: 20, left: 30 }}>
-                                                        <XAxis
-                                                            dataKey="year"
-                                                            tick={{ fill: chartTickAndLabelColor, fontSize: 12, fontFamily: 'Arial, sans-serif' }}
-                                                            label={{
-                                                                value: "Year",
-                                                                position: "insideBottom",
-                                                                offset: -5,
-                                                                style: { fill: chartTickAndLabelColor, fontFamily: 'Arial, sans-serif' },
-                                                            }}
-                                                            stroke={chartStrokeColor}
-                                                        />
-                                                        <YAxis
-                                                            tickFormatter={(value) => parseFloat(value as string).toFixed(2)}
-                                                            tick={{ fill: chartTickAndLabelColor, fontSize: 12, fontFamily: 'Arial, sans-serif' }}
-                                                            label={{
-                                                                value: "Global Temperature (°C)",
-                                                                angle: -90,
-                                                                position: "insideLeft",
-                                                                offset: -20,
-                                                                style: { textAnchor: "middle", fill: chartTickAndLabelColor, fontFamily: 'Arial, sans-serif' },
-                                                            }}
-                                                            stroke={chartStrokeColor}
-                                                        />
-                                                        <Tooltip
-                                                            contentStyle={{
-                                                                backgroundColor: tooltipBgColor,
-                                                                borderColor: tooltipBorderColor,
-                                                                borderRadius: "0.5rem",
-                                                            }}
-                                                            itemStyle={{ color: chartTickAndLabelColor }}
-                                                            labelFormatter={(label) => (
-                                                                <span style={{ color: chartTickAndLabelColor }}>{`Year: ${label}`}</span>
-                                                            )}
-                                                            formatter={(value, name, props) => {
-                                                                const formattedValue = parseFloat(value as string).toFixed(2);
-                                                                let label = "";
-                                                                if (props.dataKey === "temperature") label = "Projected Temp";
-                                                                if (props.dataKey === "bauTemperature") label = "Baseline Scenario";
-                                                                return [
-                                                                    <span style={{ color: chartTickAndLabelColor }}>{`${formattedValue}°C`}</span>,
-                                                                    <span style={{ color: props.stroke }}>{label}</span>
-                                                                ];
-                                                            }}
-                                                        />
-                                                        <Line
-                                                            type="monotone"
-                                                            dataKey="temperature"
-                                                            name="Projected Temperature"
-                                                            stroke="#3e3fba"
-                                                            strokeWidth={2}
-                                                            activeDot={{
-                                                                r: 6,
-                                                                fill: "#3e3fba",
-                                                                stroke: activeDotStrokeColor,
-                                                                strokeWidth: 2,
-                                                            }}
-                                                            dot={{ r: 3, fill: "#3e3fba" }}
-                                                        />
-                                                        <Line
-                                                            type="monotone"
-                                                            dataKey="bauTemperature"
-                                                            name="Baseline Scenario"
-                                                            stroke={isDarkMode ? "#6b7280" : "#9ca3af"}
-                                                            strokeWidth={2}
-                                                            strokeDasharray="5 5"
-                                                            dot={false}
-                                                            activeDot={false}
-                                                        />
-                                                        <Legend wrapperStyle={{ paddingTop: '10px' }} formatter={(value, entry) => <span style={{ color: chartTickAndLabelColor }}>{value}</span>} />
-                                                    </LineChart>
-                                                ) : activeTab === "seaLevel" ? (
-                                                    <AreaChart data={displayedClimateData} margin={{ top: 5, right: 20, bottom: 20, left: 30 }}>
-                                                        <defs>
-                                                            <linearGradient id="seaLevelColor" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor="#b4daf2" stopOpacity={0.8} />
-                                                                <stop offset="95%" stopColor="#b4daf2" stopOpacity={0.1} />
-                                                            </linearGradient>
-                                                        </defs>
-                                                        <XAxis
-                                                            dataKey="year"
-                                                            tick={{ fill: chartTickAndLabelColor, fontSize: 12, fontFamily: 'Arial, sans-serif' }}
-                                                            label={{
-                                                                value: "Year",
-                                                                position: "insideBottom",
-                                                                offset: -5,
-                                                                style: { fill: chartTickAndLabelColor, fontFamily: 'Arial, sans-serif' },
-                                                            }}
-                                                            stroke={chartStrokeColor}
-                                                        />
-                                                        <YAxis
-                                                            tickFormatter={(value) => parseFloat(value as string).toFixed(2)}
-                                                            tick={{ fill: chartTickAndLabelColor, fontSize: 12, fontFamily: 'Arial, sans-serif' }}
-                                                            label={{
-                                                                value: "Sea Level Rise (cm)",
-                                                                angle: -90,
-                                                                position: "insideLeft",
-                                                                offset: -20,
-                                                                style: { textAnchor: "middle", fill: chartTickAndLabelColor, fontFamily: 'Arial, sans-serif' },
-                                                            }}
-                                                            stroke={chartStrokeColor}
-                                                        />
-                                                        <Tooltip
-                                                            contentStyle={{
-                                                                backgroundColor: tooltipBgColor,
-                                                                borderColor: tooltipBorderColor,
-                                                                borderRadius: "0.5rem",
-                                                            }}
-                                                            itemStyle={{ color: chartTickAndLabelColor }}
-                                                            labelFormatter={(label) => (
-                                                                <span style={{ color: chartTickAndLabelColor }}>{`Year: ${label}`}</span>
-                                                            )}
-                                                            formatter={(value, name, props) => {
-                                                                const formattedValue = parseFloat(value as string).toFixed(2);
-                                                                let label = "";
-                                                                if (props.dataKey === "seaLevel") label = "Projected Sea Level";
-                                                                if (props.dataKey === "bauSeaLevel") label = "Baseline Scenario";
-                                                                return [
-                                                                    <span style={{ color: chartTickAndLabelColor }}>{`${formattedValue}cm`}</span>,
-                                                                    <span style={{ color: props.stroke }}>{label}</span>
-                                                                ];
-                                                            }}
-                                                        />
-                                                        <Area
-                                                            type="monotone"
-                                                            dataKey="seaLevel"
-                                                            name="Projected Sea Level"
-                                                            stroke="#8e4e9d"
-                                                            fill="url(#seaLevelColor)"
-                                                            strokeWidth={2}
-                                                            activeDot={{
-                                                                r: 6,
-                                                                fill: "#8e4e9d",
-                                                                stroke: activeDotStrokeColor,
-                                                                strokeWidth: 2,
-                                                            }}
-                                                            dot={{ r: 3, fill: "#8e4e9d" }}
-                                                        />
-                                                        <Area
-                                                            type="monotone"
-                                                            dataKey="bauSeaLevel"
-                                                            name="Baseline Scenario"
-                                                            stroke={isDarkMode ? "#6b7280" : "#9ca3af"}
-                                                            fill="transparent"
-                                                            strokeWidth={2}
-                                                            strokeDasharray="5 5"
-                                                            dot={false}
-                                                            activeDot={false}
-                                                        />
-                                                        <Legend wrapperStyle={{ paddingTop: '10px' }} formatter={(value, entry) => <span style={{ color: chartTickAndLabelColor }}>{value}</span>} />
-                                                    </AreaChart>
-                                                ) : (
-                                                    <AreaChart data={displayedClimateData} margin={{ top: 5, right: 20, bottom: 20, left: 30 }}>
-                                                        <defs>
-                                                            <linearGradient id="iceCapColor" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop
-                                                                    offset="5%"
-                                                                    stopColor={iceCapAreaStopColor1}
-                                                                    stopOpacity={0.7}
-                                                                />
-                                                                <stop
-                                                                    offset="95%"
-                                                                    stopColor={iceCapAreaStopColor1}
-                                                                    stopOpacity={0.1}
-                                                                />
-                                                            </linearGradient>
-                                                        </defs>
-                                                        <XAxis
-                                                            dataKey="year"
-                                                            tick={{ fill: chartTickAndLabelColor, fontSize: 12, fontFamily: 'Arial, sans-serif' }}
-                                                            label={{
-                                                                value: "Year",
-                                                                position: "insideBottom",
-                                                                offset: -5,
-                                                                style: { fill: chartTickAndLabelColor, fontFamily: 'Arial, sans-serif' },
-                                                            }}
-                                                            stroke={chartStrokeColor}
-                                                        />
-                                                        <YAxis
-                                                            tickFormatter={(value) => parseFloat(value as string).toFixed(2)}
-                                                            tick={{ fill: chartTickAndLabelColor, fontSize: 12, fontFamily: 'Arial, sans-serif' }}
-                                                            label={{
-                                                                value: "Ice Cap Thickness (%)",
-                                                                angle: -90,
-                                                                position: "insideLeft",
-                                                                offset: -20,
-                                                                style: { textAnchor: "middle", fill: chartTickAndLabelColor, fontFamily: 'Arial, sans-serif' },
-                                                            }}
-                                                            stroke={chartStrokeColor}
-                                                        />
-                                                        <Tooltip
-                                                            contentStyle={{
-                                                                backgroundColor: tooltipBgColor,
-                                                                borderColor: tooltipBorderColor,
-                                                                borderRadius: "0.5rem",
-                                                            }}
-                                                            itemStyle={{ color: chartTickAndLabelColor }}
-                                                            labelFormatter={(label) => (
-                                                                <span style={{ color: chartTickAndLabelColor }}>{`Year: ${label}`}</span>
-                                                            )}
-                                                            formatter={(value, name, props) => {
-                                                                const formattedValue = parseFloat(value as string).toFixed(2);
-                                                                let label = "";
-                                                                if (props.dataKey === "iceCap") label = "Projected Ice Cap";
-                                                                if (props.dataKey === "bauIceCap") label = "Baseline Scenario";
-                                                                return [
-                                                                    <span style={{ color: chartTickAndLabelColor }}>{`${formattedValue}%`}</span>,
-                                                                    <span style={{ color: props.stroke }}>{label}</span>
-                                                                ];
-                                                            }}
-                                                        />
-                                                        <Area
-                                                            type="monotone"
-                                                            dataKey="iceCap"
-                                                            name="Projected Ice Cap"
-                                                            stroke={iceCapAreaStrokeColor}
-                                                            fill="url(#iceCapColor)"
-                                                            strokeWidth={2}
-                                                            activeDot={{
-                                                                r: 6,
-                                                                fill: iceCapAreaStrokeColor,
-                                                                stroke: activeDotStrokeColor,
-                                                                strokeWidth: 2,
-                                                            }}
-                                                            dot={{ r: 3, fill: iceCapAreaStrokeColor }}
-                                                        />
-                                                        <Area
-                                                            type="monotone"
-                                                            dataKey="bauIceCap"
-                                                            name="Baseline Scenario"
-                                                            stroke={isDarkMode ? "#6b7280" : "#9ca3af"}
-                                                            fill="transparent"
-                                                            strokeWidth={2}
-                                                            strokeDasharray="5 5"
-                                                            dot={false}
-                                                            activeDot={false}
-                                                        />
-                                                        <Legend wrapperStyle={{ paddingTop: '10px' }} formatter={(value, entry) => <span style={{ color: chartTickAndLabelColor }}>{value}</span>} />
-                                                    </AreaChart>
-                                                )}
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <motion.div whileHover={{ y: -5 }} className={`${impactCardBgColor} rounded-3xl p-5 transition-colors duration-300 ease-in-out`}>
-                                            <div className="flex justify-between mb-2">
-                                                <h3 className={`text-lg font-montserrat font-bold ${impactCardTitleColor} transition-colors duration-300 ease-in-out`}>
-                                                    Temperature Impact
-                                                </h3>
-                                                <ThermometerSun size={24} className={`${impactCardTitleColor} transition-colors duration-300 ease-in-out`} />
-                                            </div>
-
-                                    {currentYearMetrics ? (
-                                        <>
-                                            <p className={`text-3xl font-bold ${impactCardValueColor} transition-colors duration-300 ease-in-out`}>
-                                                {currentYearMetrics.temperature.toFixed(1)}°C
-                                            </p>
-                                            <p className={`text-sm mt-2 ${impactCardValueColor} transition-colors duration-300 ease-in-out`}>
-                                                Projection for {selectedEndYear}
-                                            </p>
-                                            {impactSummary && (
-                                                <div className={`mt-3 text-sm ${impactCardSubTextColor} transition-colors duration-300 ease-in-out`}>
-                                                    <span
-                                                        className={`font-medium ${
-                                                            parseFloat(impactSummary.tempChange || "0") > 0
-                                                                ? "text-red-500"
-                                                                : "text-[#42be4f]"
-                                                        }`}
-                                                    >
-                                                        {impactSummary.tempChange}°C change
-                                                    </span>{" "}
-                                                    from {selectedStartYear} levels
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <p className={`${mainTextColor} text-sm`}>Data not available for {selectedEndYear}</p>
-                                    )}
-                                </motion.div>
-
-                                <motion.div whileHover={{ y: -5 }} className={`${impactCardBgColor} rounded-3xl p-5 transition-colors duration-300 ease-in-out`}>
-                                    <div className="flex justify-between mb-2">
-                                        <h3 className={`text-lg font-montserrat font-bold ${isDarkMode ? 'text-[#b4daf2]' : 'text-[#8e4e9d]' } transition-colors duration-300 ease-in-out`}>
-                                            Sea Level Impact
-                                        </h3>
-                                        <Waves size={24} className={`${isDarkMode ? 'text-[#b4daf2]' : 'text-[#8e4e9d]' } transition-colors duration-300 ease-in-out`} />
-                                    </div>
-                                    {currentYearMetrics ? (
-                                        <>
-                                            <p className={`text-3xl font-bold ${impactCardValueColor} transition-colors duration-300 ease-in-out`}>
-                                                +{currentYearMetrics.seaLevel.toFixed(1)}cm
-                                            </p>
-                                            <p className={`text-sm mt-2 ${impactCardValueColor} transition-colors duration-300 ease-in-out`}>
-                                                Projection for {selectedEndYear}
-                                            </p>
-                                            {impactSummary && (
-                                                <div className={`mt-3 text-sm ${impactCardSubTextColor} transition-colors duration-300 ease-in-out`}>
-                                                    <span
-                                                        className={`font-medium ${
-                                                            parseFloat(impactSummary.seaChange || "0") > 0
-                                                                ? "text-red-500"
-                                                                : "text-[#42be4f]"
-                                                        }`}
-                                                    >
-                                                        {impactSummary.seaChange}cm change
-                                                    </span>{" "}
-                                                    from {selectedStartYear} levels
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <p className={`${mainTextColor} text-sm`}>Data not available for {selectedEndYear}</p>
-                                    )}
-                                </motion.div>
-
-                                <motion.div whileHover={{ y: -5 }} className={`${impactCardBgColor} rounded-3xl p-5 transition-colors duration-300 ease-in-out`}>
-                                    <div className="flex justify-between mb-2">
-                                        <h3 className={`text-lg font-montserrat font-bold ${impactCardTitleColor} transition-colors duration-300 ease-in-out`}>
-                                            Ice Cap Impact
-                                        </h3>
-                                        <Snowflake size={24} className={`${impactCardTitleColor} transition-colors duration-300 ease-in-out`} />
-                                    </div>
-                                    {currentYearMetrics ? (
-                                        <>
-                                            <p className={`text-3xl font-bold ${impactCardValueColor} transition-colors duration-300 ease-in-out`}>
-                                                {currentYearMetrics.iceCap.toFixed(1)}%
-                                            </p>
-                                            <p className={`text-sm mt-2 ${impactCardValueColor} transition-colors duration-300 ease-in-out`}>
-                                                Projection for {selectedEndYear}
-                                            </p>
-                                            {impactSummary && (
-                                                <div className={`mt-3 text-sm ${impactCardSubTextColor} transition-colors duration-300 ease-in-out`}>
-                                                    <span
-                                                        className={`font-medium ${
-                                                            parseFloat(impactSummary.iceChange || "0") < 0
-                                                                ? "text-red-500"
-                                                                : "text-[#42be4f]"
-                                                        }`}
-                                                    >
-                                                        {impactSummary.iceChange}% change
-                                                    </span>{" "}
-                                                    from {selectedStartYear} levels
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <p className={`${mainTextColor} text-sm`}>Data not available for {selectedEndYear}</p>
-                                    )}
-                                </motion.div>
-                            </div>
-
-                            <div className={`${cardBgColor} rounded-3xl p-5 transition-colors duration-300 ease-in-out`}>
-                                <h2 className={`text-xl font-montserrat font-bold mb-4 ${learnMoreLinkColor} transition-colors duration-300 ease-in-out`}>
-                                    Understanding Climate Policy Impact
+                        <motion.div variants={itemVariants} custom={4} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+                            <motion.div variants={itemVariants} custom={4} className={`${currentCardClasses}`}>
+                                <h2 className={`text-2xl lg:text-xl font-bold flex items-center group ${isDark ? "text-gray-100" : "text-gray-900"}`}>
+                                    <Droplet size={28} className="mr-3 text-blue-500 group-hover:scale-110 transition-transform" />
+                                    Water Usage Over Time
                                 </h2>
+                                <GenericLineChart
+                                    data={preparedWaterUsageChartData}
+                                    dataKey="value"
+                                    lineName="Water Usage (L)"
+                                    lineColor="#12bf8e"
+                                />
+                            </motion.div>
 
-                                <div className={`space-y-4 text-sm leading-relaxed ${scenarioAnalysisTextColor} transition-colors duration-300 ease-in-out`}>
-                                    <p>
-                                        This simulation demonstrates how policy decisions today can dramatically shape our climate future.
-                                        The interactive controls allow you to explore how different environmental policies work together to
-                                        mitigate climate change.
-                                    </p>
+                            <motion.div variants={itemVariants} custom={5} className={`${currentCardClasses}`}>
+                                <h2 className={`text-2xl lg:text-xl font-bold flex items-center group ${isDark ? "text-gray-100" : "text-gray-900"}`}>
+                                    <Layers size={28} className="mr-3 text-orange-500 group-hover:scale-110 transition-transform" />
+                                    Soil pH Over Time
+                                </h2>
+                                <GenericLineChart
+                                    data={preparedSoilPhChartData}
+                                    dataKey="value"
+                                    lineName="Soil pH"
+                                    lineColor="#fe7600"
+                                />
+                            </motion.div>
 
-                                    <div className={`flex items-start gap-3 p-3 ${scenarioAnalysisBgColor} rounded-2xl transition-colors duration-300 ease-in-out`}>
-                                        <Info size={20} className={`${learnMoreLinkColor} mt-1 flex-shrink-0 transition-colors duration-300 ease-in-out`} />
-                                        <div>
-                                            <span className={`font-medium ${scenarioAnalysisTitleColor} transition-colors duration-300 ease-in-out`}>Key Insight:</span>{" "}
-                                            <span className={`${scenarioAnalysisTextColor} transition-colors duration-300 ease-in-out`}>
-                                                According to climate scientists, limiting global warming to 1.5°C above pre-industrial
-                                                levels will significantly reduce risks and impacts of climate change. This requires
-                                                ambitious policy implementation across all sectors.
-                                            </span>
-                                        </div>
-                                    </div>
+                            <motion.div variants={itemVariants} custom={6} className={`${currentCardClasses}`}>
+                                <h2 className={`text-2xl lg:text-xl font-bold flex items-center group ${isDark ? "text-gray-100" : "text-gray-900"}`}>
+                                    <Database size={28} className="mr-3 text-green-500 group-hover:scale-110 transition-transform" />
+                                    Total Water Usage by Crop
+                                </h2>
+                                <ResourceUsageChart data={preparedResourceUsageData} />
+                            </motion.div>
+                        </motion.div>
 
-                                    <p>
-                                        Adjust the policy sliders to see how different combinations of environmental initiatives can work
-                                        together to create a sustainable climate future. The most effective approach combines multiple
-                                        strategies rather than focusing on a single solution.
-                                    </p>
-
-                                    <div className="mt-4">
-                                        <button
-                                            onClick={openLearnMoreInfo}
-                                            className={`flex items-center gap-2 ${learnMoreLinkColor} font-medium hover:underline cursor-pointer transition-colors duration-300 ease-in-out`}
-                                        >
-                                            Learn more about climate policy impact
-                                            <ArrowRight size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    )}
-
-                    {currentView === 'regional' && (
-                        <div className={`${cardBgColor} rounded-3xl p-5 transition-colors duration-300 ease-in-out`}>
-                            <h2 className={`text-xl font-montserrat font-bold mb-4 ${policyControlTitleColor} transition-colors duration-300 ease-in-out`}>
-                                Regional Impact Analysis
+                        <motion.section variants={itemVariants} custom={7} className={`${currentCardClasses}`}>
+                            <h2 className={`${currentSectionTitleClasses}`}>
+                                <Calendar size={28} className="mr-3 text-orange-500 group-hover:scale-110 transition-transform" />
+                                Seasonal Analysis & Comparison
                             </h2>
-                            <div className="mb-4">
-                                <label htmlFor="region-select" className={`block text-sm font-medium ${mainTextColor} mb-1 transition-colors duration-300 ease-in-out`}>
-                                    Select Region:
-                                </label>
-                                <div className="flex items-center gap-3">
-                                    <select 
-                                        id="region-select"
-                                        value={focusedRegion}
-                                        onChange={(e) => setFocusedRegion(e.target.value)}
-                                        className={`flex-grow p-2.5 border rounded-lg text-sm cursor-pointer transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 ${isDarkMode ? `bg-slate-700 border-slate-600 text-slate-100 focus:ring-slate-500 placeholder-slate-400` : `bg-white border-gray-300 text-gray-900 focus:ring-indigo-500 placeholder-gray-400`}`}
+                            <motion.p
+                                variants={itemVariants}
+                                custom={8}
+                                className={`text-sm mb-6 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                            >
+                                Compare total water usage between the latest year and a selected past year.
+                            </motion.p>
+                            <motion.div variants={itemVariants} custom={9} className="flex flex-col sm:flex-row gap-4 items-end mb-6">
+                                <div className="flex-grow w-full sm:w-auto">
+                                    <label
+                                        htmlFor="compareSeason"
+                                        className={`block text-sm font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
                                     >
-                                        {regionDefinitions.map(region => (
-                                            <option key={region.name} value={region.name}>
-                                                {region.name}
-                                            </option>
-                                        ))}
+                                        Select Year to Compare
+                                    </label>
+                                    <select
+                                        id="compareSeason"
+                                        value={comparisonYear}
+                                        onChange={(e) => setComparisonYear(e.target.value)}
+                                        className={`${currentInputClasses} rounded-xl focus:ring-2 focus:ring-green-500/20`}
+                                        disabled={availableYears.length < 2}
+                                    >
+                                        {availableYears.length < 2 ? (
+                                            <option>Not enough data</option>
+                                        ) : availableYears.filter((year) => year.toString() !== latestYear).length === 0 ? (
+                                            <option disabled>No other years</option>
+                                        ) : (
+                                            availableYears
+                                                .filter((year) => year.toString() !== latestYear)
+                                                .map((year) => (
+                                                    <option key={year} value={year}>
+                                                        {year}
+                                                    </option>
+                                                ))
+                                        )}
                                     </select>
-                                    <button
-                                        onClick={exportRegionalDataToCSV}
-                                        title={`Export ${focusedRegion} Data to CSV`}
-                                        className={`p-2.5 rounded-lg cursor-pointer transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-opacity-50 flex items-center gap-2 text-sm ${isDarkMode ? `bg-slate-700 hover:bg-slate-600 text-slate-200 focus:ring-slate-500` : `bg-gray-100 hover:bg-gray-200 text-gray-700 focus:ring-gray-300`}`}
-                                    >
-                                        <Download size={16} />
-                                        <span className="hidden sm:inline">Export Region Data</span>
-                                    </button>
+                                </div>
+                            </motion.div>
+                            <motion.div variants={itemVariants} custom={10} className={chartCardClasses}>
+                                <h4
+                                    className={`text-lg font-semibold mb-4 flex items-center ${isDark ? "text-gray-100" : "text-gray-900"}`}
+                                >
+                                    <BarChartBig size={18} className="mr-2 text-orange-500" />
+                                    Total Water Usage Comparison: {latestYear} vs {comparisonYear}
+                                </h4>
+                                <SeasonalComparisonChart data={preparedSeasonalComparisonData} />
+                            </motion.div>
+                        </motion.section>
+
+                        <motion.section variants={itemVariants} custom={11} className={`${currentCardClasses}`}>
+                            <h2 className={`${currentSectionTitleClasses}`}>
+                                <TrendingUp size={28} className="mr-3 text-green-500 group-hover:scale-110 transition-transform" />
+                                Future Performance Forecast
+                            </h2>
+                            <motion.p
+                                variants={itemVariants}
+                                custom={12}
+                                className={`text-sm mb-6 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                            >
+                                Simple forecast based on recent water usage trends.
+                            </motion.p>
+                            <motion.div variants={itemVariants} custom={11} className={chartCardClasses}>
+                                {predictedNextWaterUsage !== null && lastActualWaterUsage !== null ? (
+                                    <ForecastVisualization lastActual={lastActualWaterUsage} predictedNext={predictedNextWaterUsage} />
+                                ) : (
+                                    <p className={`${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                                        Not enough data for a forecast (requires at least 2 entries).
+                                    </p>
+                                )}
+                            </motion.div>
+                        </motion.section>
+                    </main>
+
+                    <motion.footer
+                        variants={itemVariants}
+                        custom={12}
+                        className={`text-center p-8 border-t shrink-0 ${
+                            isDark ? "text-gray-400 border-gray-700 bg-gray-800/50" : "text-gray-500 border-gray-200 bg-white/50"
+                        }`}
+                    >
+                        <div className="max-w-[1440px] mx-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                                <div className="text-left">
+                                    <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-gray-200" : "text-gray-800"}`}>
+                                        About FarmVue
+                                    </h3>
+                                    <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+                                        Empowering farmers with data-driven insights for sustainable agriculture and optimal crop management.
+                                    </p>
+                                </div>
+                                <div className="text-left">
+                                    <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-gray-200" : "text-gray-800"}`}>
+                                        Quick Links
+                                    </h3>
+                                    <ul className="space-y-2">
+                                        <li>
+                                            <a 
+                                                href="#" 
+                                                className={`text-sm hover:text-[#12bf8e] transition-colors ${isDark ? "text-gray-400" : "text-gray-600"}`}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    toast.info('Documentation coming soon!', {
+                                                        theme: isDark ? "dark" : "light"
+                                                    });
+                                                }}
+                                            >
+                                                Documentation
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a 
+                                                href="#" 
+                                                className={`text-sm hover:text-[#12bf8e] transition-colors ${isDark ? "text-gray-400" : "text-gray-600"}`}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    toast.info('Support portal coming soon!', {
+                                                        theme: isDark ? "dark" : "light"
+                                                    });
+                                                }}
+                                            >
+                                                Support
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a 
+                                                href="#" 
+                                                className={`text-sm hover:text-[#12bf8e] transition-colors ${isDark ? "text-gray-400" : "text-gray-600"}`}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    toast.info('Privacy policy coming soon!', {
+                                                        theme: isDark ? "dark" : "light"
+                                                    });
+                                                }}
+                                            >
+                                                Privacy Policy
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div className="text-left">
+                                    <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-gray-200" : "text-gray-800"}`}>
+                                        Contact
+                                    </h3>
+                                    <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+                                        Have questions? Reach out to our support team at{' '}
+                                        <a 
+                                            href="mailto:support@farmvue.com" 
+                                            className="text-[#12bf8e] hover:underline"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                toast.info('Email support coming soon!', {
+                                                    theme: isDark ? "dark" : "light"
+                                                });
+                                            }}
+                                        >
+                                            support@farmvue.com
+                                        </a>
+                                    </p>
                                 </div>
                             </div>
-                            <p className={`${mainTextColor} transition-colors duration-300 ease-in-out`}>
-                               Displaying data for: <span className="font-semibold">{focusedRegion}</span>
-                            </p>
-                            {displayedSelectedRegionData.length > 0 ? (
-                                <div className="space-y-6 mt-6">
-                                    <div className="h-72">
-                                        <h3 
-                                            className={`text-md font-montserrat font-semibold mb-2 ${mainTextColor} text-center transition-colors duration-300 ease-in-out`}
-                                        >
-                                            Temperature Projections for {focusedRegion}
-                                        </h3>
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={displayedSelectedRegionData} margin={{ top: 5, right: 20, bottom: 20, left: 30 }}>
-                                                <XAxis
-                                                    dataKey="year"
-                                                    tick={{ fill: chartTickAndLabelColor, fontSize: 12, fontFamily: 'Arial, sans-serif' }}
-                                                    label={{
-                                                        value: "Year",
-                                                        position: "insideBottom",
-                                                        offset: -5,
-                                                        style: { fill: chartTickAndLabelColor, fontFamily: 'Arial, sans-serif' },
-                                                    }}
-                                                    stroke={chartStrokeColor}
-                                                />
-                                                <YAxis
-                                                    tickFormatter={(value) => parseFloat(value as string).toFixed(2)}
-                                                    tick={{ fill: chartTickAndLabelColor, fontSize: 12, fontFamily: 'Arial, sans-serif' }}
-                                                    label={{
-                                                        value: `Temp (°C)`,
-                                                        angle: -90,
-                                                        position: "insideLeft",
-                                                        offset: -20,
-                                                        style: { textAnchor: "middle", fill: chartTickAndLabelColor, fontFamily: 'Arial, sans-serif' },
-                                                    }}
-                                                    stroke={chartStrokeColor}
-                                                    domain={['dataMin - 1', 'dataMax + 1']}
-                                                />
-                                                <Tooltip
-                                                    contentStyle={{
-                                                        backgroundColor: tooltipBgColor,
-                                                        borderColor: tooltipBorderColor,
-                                                        borderRadius: "0.5rem",
-                                                    }}
-                                                    itemStyle={{ color: chartTickAndLabelColor }}
-                                                    labelFormatter={(label) => (
-                                                        <span style={{ color: chartTickAndLabelColor }}>{`Year: ${label}`}</span>
-                                                    )}
-                                                    formatter={(value, name, props) => {
-                                                        const formattedValue = parseFloat(value as string).toFixed(2);
-                                                        let label = "";
-                                                        if (props.dataKey === "temperature") label = "Projected Temp";
-                                                        if (props.dataKey === "bauTemperature") label = "Baseline Scenario";
-                                                        return [
-                                                            <span style={{ color: chartTickAndLabelColor }}>{`${formattedValue}°C`}</span>,
-                                                            <span style={{ color: props.stroke }}>{label}</span>
-                                                        ];
-                                                    }}
-                                                />
-                                                <Line
-                                                    type="monotone"
-                                                    dataKey="temperature"
-                                                    name="Projected Temperature"
-                                                    stroke="#3e3fba"
-                                                    strokeWidth={2}
-                                                    activeDot={{
-                                                        r: 6,
-                                                        fill: "#3e3fba",
-                                                        stroke: activeDotStrokeColor,
-                                                        strokeWidth: 2,
-                                                    }}
-                                                    dot={{ r: 3, fill: "#3e3fba" }}
-                                                />
-                                                <Line
-                                                    type="monotone"
-                                                    dataKey="bauTemperature"
-                                                    name="Baseline Scenario"
-                                                    stroke={isDarkMode ? "#6b7280" : "#9ca3af"}
-                                                    strokeWidth={2}
-                                                    strokeDasharray="5 5"
-                                                    dot={false}
-                                                    activeDot={false}
-                                                />
-                                                <Legend wrapperStyle={{ paddingTop: '10px' }} formatter={(value, entry) => <span style={{ color: chartTickAndLabelColor }}>{value}</span>} />
-                                            </LineChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    <div className="h-72">
-                                        <h3 className={`text-md font-montserrat font-semibold mb-2 ${mainTextColor} text-center transition-colors duration-300 ease-in-out`}>
-                                            Sea Level Rise Projections for {focusedRegion}
-                                        </h3>
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={displayedSelectedRegionData} margin={{ top: 5, right: 20, bottom: 20, left: 30 }}>
-                                                <defs>
-                                                    <linearGradient id="regionalSeaLevelColor" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor={isDarkMode ? "#5aa9e6" : "#74a6d3"} stopOpacity={0.8} />
-                                                        <stop offset="95%" stopColor={isDarkMode ? "#5aa9e6" : "#74a6d3"} stopOpacity={0.1} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <XAxis
-                                                    dataKey="year"
-                                                    tick={{ fill: chartTickAndLabelColor, fontSize: 12, fontFamily: 'Arial, sans-serif' }}
-                                                    label={{
-                                                        value: "Year",
-                                                        position: "insideBottom",
-                                                        offset: -5,
-                                                        style: { fill: chartTickAndLabelColor, fontFamily: 'Arial, sans-serif' },
-                                                    }}
-                                                    stroke={chartStrokeColor}
-                                                />
-                                                <YAxis
-                                                    tickFormatter={(value) => parseFloat(value as string).toFixed(2)}
-                                                    tick={{ fill: chartTickAndLabelColor, fontSize: 12, fontFamily: 'Arial, sans-serif' }}
-                                                    label={{
-                                                        value: `Sea Level (cm)`,
-                                                        angle: -90,
-                                                        position: "insideLeft",
-                                                        offset: -20,
-                                                        style: { textAnchor: "middle", fill: chartTickAndLabelColor, fontFamily: 'Arial, sans-serif' },
-                                                    }}
-                                                    stroke={chartStrokeColor}
-                                                    domain={['dataMin - 5', 'dataMax + 5']}
-                                                />
-                                                <Tooltip
-                                                    contentStyle={{
-                                                        backgroundColor: tooltipBgColor,
-                                                        borderColor: tooltipBorderColor,
-                                                        borderRadius: "0.5rem",
-                                                    }}
-                                                    itemStyle={{ color: chartTickAndLabelColor }}
-                                                    labelFormatter={(label) => (
-                                                        <span style={{ color: chartTickAndLabelColor }}>{`Year: ${label}`}</span>
-                                                    )}
-                                                    formatter={(value, name, props) => {
-                                                        const formattedValue = parseFloat(value as string).toFixed(2);
-                                                        let label = "";
-                                                        if (props.dataKey === "seaLevel") label = "Projected Sea Level";
-                                                        if (props.dataKey === "bauSeaLevel") label = "Baseline Scenario";
-                                                        return [
-                                                            <span style={{ color: chartTickAndLabelColor }}>{`${formattedValue}cm`}</span>,
-                                                            <span style={{ color: props.stroke }}>{label}</span>
-                                                        ];
-                                                    }}
-                                                />
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="seaLevel"
-                                                    name="Projected Sea Level"
-                                                    stroke={isDarkMode ? "#5aa9e6" : "#74a6d3"} 
-                                                    fill="url(#regionalSeaLevelColor)"
-                                                    strokeWidth={2}
-                                                    activeDot={{
-                                                        r: 6,
-                                                        fill: isDarkMode ? "#5aa9e6" : "#74a6d3",
-                                                        stroke: activeDotStrokeColor,
-                                                        strokeWidth: 2,
-                                                    }}
-                                                    dot={{ r: 3, fill: isDarkMode ? "#5aa9e6" : "#74a6d3" }}
-                                                />
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="bauSeaLevel"
-                                                    name="Baseline Scenario"
-                                                    stroke={isDarkMode ? "#6b7280" : "#9ca3af"}
-                                                    fill="transparent"
-                                                    strokeWidth={2}
-                                                    strokeDasharray="5 5"
-                                                    dot={false}
-                                                    activeDot={false}
-                                                />
-                                                <Legend wrapperStyle={{ paddingTop: '10px' }} formatter={(value, entry) => <span style={{ color: chartTickAndLabelColor }}>{value}</span>} />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            ) : (
-                                <p className={`${mainTextColor} mt-4 transition-colors duration-300 ease-in-out`}>
-                                    No regional data available for {focusedRegion}.
+                            <div className={`pt-6 border-t ${isDark ? "border-gray-700" : "border-gray-200"}`}>
+                                <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                                    © {new Date().getFullYear()} FarmVue. All rights reserved. Empowering Farmers with Data.
                                 </p>
-                            )}
+                            </div>
                         </div>
+                    </motion.footer>
+                </motion.div>
+
+                <AnimatePresence>
+                    {isLogCropModalOpen && (
+                        <LogCropDataModal
+                            isOpen={isLogCropModalOpen}
+                            onClose={closeLogModal}
+                            onSubmitCrop={handleAddCropEntry}
+                            inputBaseClasses={currentInputClasses}
+                            buttonPrimaryClasses={currentButtonPrimaryClasses}
+                            sectionTitleClasses={currentSectionTitleClasses}
+                        />
                     )}
-                </motion.div> 
-            </main>
-        </div>
-
-        <footer className={`${footerBgColor} mt-8 border-t ${isDarkMode ? 'border-slate-700' : 'border-gray-300'} transition-colors duration-300 ease-in-out`}>
-            <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                <div className={`pb-8 border-b ${isDarkMode ? 'border-slate-700/50' : 'border-gray-300/70'} transition-colors duration-300 ease-in-out`}>
-                    <h3 className={`${mainTextColor} text-md font-semibold mb-4 text-center md:text-left transition-colors duration-300 ease-in-out`}>
-                        Explore Further
-                    </h3>
-                    <div className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-3">
-                        <a href="https://www.epa.gov/climate-change" target="_blank" rel="noopener noreferrer" className={`${learnMoreLinkColor} text-sm hover:underline transition-colors duration-300 ease-in-out`}>Understanding Climate Science</a>
-                        <a href="https://www.ipcc.ch/reports/" target="_blank" rel="noopener noreferrer" className={`${learnMoreLinkColor} text-sm hover:underline transition-colors duration-300 ease-in-out`}>IPCC Reports</a>
-                        <a href="https://climate.nasa.gov/" target="_blank" rel="noopener noreferrer" className={`${learnMoreLinkColor} text-sm hover:underline transition-colors duration-300 ease-in-out`}>NASA Climate Portal</a>
-                        <a href="https://www.un.org/en/climatechange" target="_blank" rel="noopener noreferrer" className={`${learnMoreLinkColor} text-sm hover:underline transition-colors duration-300 ease-in-out`}>UN Climate Action</a>
-                        <a href="https://drawdown.org/" target="_blank" rel="noopener noreferrer" className={`${learnMoreLinkColor} text-sm hover:underline transition-colors duration-300 ease-in-out`}>Project Drawdown</a>
-                        <a href="https://www.climatecentral.org/" target="_blank" rel="noopener noreferrer" className={`${learnMoreLinkColor} text-sm hover:underline transition-colors duration-300 ease-in-out`}>Climate Central</a>
-                    </div>
-                </div>
-
-                <div className={`pt-8 flex flex-col md:flex-row justify-between items-center gap-6 md:gap-8`}>
-                    <div className="text-center md:text-left">
-                        <p className={`${mainTextColor} text-sm transition-colors duration-300 ease-in-out`}>
-                            &copy; {new Date().getFullYear()} Climate Future Simulator.
-                        </p>
-                        <p className={`${footerSubTextColor} text-xs mt-1 transition-colors duration-300 ease-in-out`}>
-                            All rights reserved.
-                        </p>
-                    </div>
-                    <div className="flex flex-col  items-center md:items-end gap-3">
-                        <div className="flex items-center space-x-4 mt-2 md:mt-0">
-                            <a href="#" target="_blank" rel="noopener noreferrer" title="Twitter" className={`text-[#313294] hover:opacity-75 transition-opacity duration-300 ease-in-out`} onClick={handleFooterLinkClick}>
-                                <Twitter size={20} />
-                            </a> 
-                            <a href="#" target="_blank" rel="noopener noreferrer" title="LinkedIn" className={`text-[#313294] hover:opacity-75 transition-opacity duration-300 ease-in-out`} onClick={handleFooterLinkClick}>
-                                <Linkedin size={20} />
-                            </a>
-                            <a href="#" target="_blank" rel="noopener noreferrer" title="Facebook" className={`text-[#313294] hover:opacity-75 transition-opacity duration-300 ease-in-out`} onClick={handleFooterLinkClick}>
-                                <Facebook size={20} />
-                            </a>
-                            <a href="#" target="_blank" rel="noopener noreferrer" title="Instagram" className={`text-[#313294] hover:opacity-75 transition-opacity duration-300 ease-in-out`} onClick={handleFooterLinkClick}>
-                                <Instagram size={20} />
-                            </a>
-                        </div>
-                        <div className="text-center md:text-right">
-                            <p className={`${mainTextColor} text-sm font-medium transition-colors duration-300 ease-in-out`}>
-                                Environmental Policy Think Tank
-                            </p>
-                            <p className={`${footerSubTextColor} text-xs mt-1 transition-colors duration-300 ease-in-out`}>
-                                Dedicated to promoting data-driven climate policy decisions.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </footer>
-    </div>
-    {toastInfo.show && (
-        <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20, transition: { duration: 0.2 } }}
-            className={`fixed bottom-10 left-1/2 -translate-x-1/2 p-4 rounded-md shadow-lg ${cardBgColor} ${mainTextColor} z-50 transition-colors duration-300 ease-in-out`}
-        >
-            {toastInfo.message}
-        </motion.div>
-    )}
-</>
-);
+                </AnimatePresence>
+                <ToastContainer
+                    position="top-right"
+                    autoClose={3000}
+                    hideProgressBar={false}
+                    newestOnTop
+                    closeOnClick
+                    rtl={false}
+                    pauseOnFocusLoss
+                    draggable
+                    pauseOnHover
+                    theme={isDark ? "dark" : "light"}
+                />
+            </motion.div>
+        </>
+    );
 };
 
-export default ClimateApp;
+const CropAnalysisTool = () => (
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <CropAnalysisToolInternal />
+    </ThemeProvider>
+);
+
+export default CropAnalysisTool;
