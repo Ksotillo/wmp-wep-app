@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Head from "next/head";
-import { Settings, Moon, Sun, Home, Info, Trophy, Volume2, VolumeX, Target, Shield, Zap, Github, Twitter, Linkedin } from "lucide-react";
+import { Moon, Sun, Home, Info, Volume2, VolumeX, Target, Shield, Zap, Github, Twitter, Linkedin } from "lucide-react";
 
 // theme types
 type Theme = "dark" | "light";
 
 // game states
-type GameState = "home" | "playing" | "gameover" | "about";
+type GameState = "home" | "playing" | "gameover";
 
 // difficulty levels
 type DifficultyLevel = "easy" | "medium" | "hard";
@@ -113,6 +113,10 @@ const TowerDefenseGame = () => {
     const [towers, setTowers] = useState<Tower[]>([]);
     const [enemies, setEnemies] = useState<Enemy[]>([]);
     const [waveInProgress, setWaveInProgress] = useState(false);
+    const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
+    // Add state for play again and difficulty selection
+    const [showDifficultySelect, setShowDifficultySelect] = useState(false);
+    const [pendingDifficulty, setPendingDifficulty] = useState<DifficultyLevel | null>(null);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const gameLoopRef = useRef<number>(0);
@@ -927,7 +931,7 @@ const TowerDefenseGame = () => {
                 cancelAnimationFrame(gameLoopRef.current);
             }
             gameLoopRef.current = requestAnimationFrame(update);
-        } else if (gameState === "gameover" || gameState === "home" || gameState === "about") {
+        } else if (gameState === "gameover" || gameState === "home") {
             if (gameLoopRef.current) {
                 cancelAnimationFrame(gameLoopRef.current);
                 gameLoopRef.current = 0;
@@ -1136,7 +1140,7 @@ const TowerDefenseGame = () => {
         });
 
         ctx.fillStyle = colors.text;
-        ctx.font = "bold 16px Arial";
+        ctx.font = "bold 16px Roboto"; // Use Roboto
         ctx.textAlign = "left";
         ctx.fillText(`Wave: ${currentWave}`, 10, 25);
         ctx.fillText(`Lives: ${lives}`, 10, 50);
@@ -1148,6 +1152,7 @@ const TowerDefenseGame = () => {
             ctx.fillRect(canvas.width / 2 - 100, canvas.height - 50, 200, 40);
             ctx.fillStyle = "#ffffff";
             ctx.textAlign = "center";
+            ctx.font = "bold 16px Roboto"; // Use Roboto
             ctx.fillText(`Start Wave ${currentWave + 1}`, canvas.width / 2, canvas.height - 25);
         }
 
@@ -1156,16 +1161,16 @@ const TowerDefenseGame = () => {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             ctx.fillStyle = colors.text;
-            ctx.font = "bold 36px Arial";
+            ctx.font = "bold 36px Montserrat"; // Use Montserrat
             ctx.textAlign = "center";
             ctx.fillText("Game Over", canvas.width / 2, canvas.height / 3);
 
-            ctx.font = "24px Arial";
+            ctx.font = "24px Roboto"; // Use Roboto
             ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 - 15);
             ctx.fillText(`Waves Survived: ${currentWave}`, canvas.width / 2, canvas.height / 2 + 20);
             ctx.fillText(`High Score: ${highScore}`, canvas.width / 2, canvas.height / 2 + 55);
 
-            ctx.font = "18px Arial";
+            ctx.font = "18px Roboto"; // Use Roboto
             ctx.fillText("Tap or press Space to continue", canvas.width / 2, canvas.height / 2 + 100);
         }
 
@@ -1174,7 +1179,7 @@ const TowerDefenseGame = () => {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             ctx.fillStyle = theme === "dark" ? "#8b5cf6" : "#ff934f";
-            ctx.font = "bold 72px Arial";
+            ctx.font = "bold 72px Montserrat"; // Use Montserrat
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillText(countdown.toString(), canvas.width / 2, canvas.height / 2);
@@ -1493,6 +1498,7 @@ const TowerDefenseGame = () => {
                     boxShadow: "var(--card-shadow)",
                     borderColor: "var(--card-border)",
                     color: "var(--text)",
+                    // flex: '1 1 500px', // Example for flex sizing
                 }}
             >
                 <h2 className="game-title" style={{ color: "var(--accent)" }}>
@@ -1523,7 +1529,7 @@ const TowerDefenseGame = () => {
                 <div className="btn-group">
                     <button
                         onClick={startGame}
-                        className="btn-primary"
+                        className="btn-primary cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
                         style={{
                             background: "var(--accent)",
                             color: "#ffffff",
@@ -1534,8 +1540,8 @@ const TowerDefenseGame = () => {
                     </button>
 
                     <button
-                        onClick={() => setGameState("about")}
-                        className="btn-secondary"
+                        onClick={() => setIsAboutModalOpen(true)}
+                        className="btn-secondary cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
                         style={{
                             background: "var(--card)",
                             color: "var(--text)",
@@ -1548,147 +1554,112 @@ const TowerDefenseGame = () => {
                 </div>
             </div>
 
-            <div className="features-container">
-                <div
-                    className="feature-card"
-                    style={{
-                        background: "var(--card)",
-                        boxShadow: "var(--card-shadow)",
-                        borderColor: "var(--card-border)",
-                        color: "var(--text)",
-                    }}
-                >
-                    <h3 className="card-title" style={{ color: "var(--highlight)" }}>
-                        Game Features
-                    </h3>
-                    <ul className="feature-list">
-                        <li className="feature-item">
-                            <span className="bullet" style={{ background: "var(--highlight)" }}></span>
-                            <span>Strategic tower placement and upgrade system</span>
-                        </li>
-                        <li className="feature-item">
-                            <span className="bullet" style={{ background: "var(--highlight)" }}></span>
-                            <span>Three unique tower types with different abilities</span>
-                        </li>
-                        <li className="feature-item">
-                            <span className="bullet" style={{ background: "var(--highlight)" }}></span>
-                            <span>Multiple enemy types with varying strengths and weaknesses</span>
-                        </li>
-                        <li className="feature-item">
-                            <span className="bullet" style={{ background: "var(--highlight)" }}></span>
-                            <span>Three different maps with unique path layouts</span>
-                        </li>
-                        <li className="feature-item">
-                            <span className="bullet" style={{ background: "var(--highlight)" }}></span>
-                            <span>Progressive difficulty with increasing wave challenge</span>
-                        </li>
-                    </ul>
+            {/* Game Settings Card - formerly in features-container */}
+            <div
+                className="settings-card-home feature-card" // Added settings-card-home for potential specific styling, kept feature-card for shared styles
+                style={{
+                    background: "var(--card)",
+                    boxShadow: "var(--card-shadow)",
+                    borderColor: "var(--card-border)",
+                    color: "var(--text)",
+                    // flex: '1 1 400px', // Example for flex sizing
+                }}
+            >
+                <h3 className="card-title" style={{ color: "var(--highlight)" }}>
+                    Game Settings
+                </h3>
+
+                <div className="setting-group">
+                    <h4 className="setting-title">Difficulty Level</h4>
+                    <div className="setting-options">
+                        {[ "easy", "medium", "hard"].map((level) => (
+                            <button
+                                key={level}
+                                onClick={() => changeDifficulty(level as DifficultyLevel)}
+                                className="option-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
+                                style={{
+                                    background: difficulty === level ? "var(--accent)" : "var(--card)",
+                                    color: difficulty === level ? "#ffffff" : "var(--text)",
+                                    border: `1px solid ${difficulty === level ? "transparent" : "var(--card-border)"}`,
+                                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                                }}
+                            >
+                                {level}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                <div
-                    className="feature-card"
-                    style={{
-                        background: "var(--card)",
-                        boxShadow: "var(--card-shadow)",
-                        borderColor: "var(--card-border)",
-                        color: "var(--text)",
-                    }}
-                >
-                    <h3 className="card-title" style={{ color: "var(--highlight)" }}>
-                        Game Settings
-                    </h3>
-
-                    <div className="setting-group">
-                        <h4 className="setting-title">Difficulty Level</h4>
-                        <div className="setting-options">
-                            {["easy", "medium", "hard"].map((level) => (
-                                <button
-                                    key={level}
-                                    onClick={() => changeDifficulty(level as DifficultyLevel)}
-                                    className="option-btn"
-                                    style={{
-                                        background: difficulty === level ? "var(--accent)" : "var(--card)",
-                                        color: difficulty === level ? "#ffffff" : "var(--text)",
-                                        border: `1px solid ${difficulty === level ? "transparent" : "var(--card-border)"}`,
-                                        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                                    }}
-                                >
-                                    {level}
-                                </button>
-                            ))}
-                        </div>
+                <div className="setting-group">
+                    <h4 className="setting-title">Tower Theme</h4>
+                    <div className="setting-options">
+                        {[
+                            { id: "medieval", name: "Medieval", color: theme === "dark" ? "#6b7280" : "#9ca3af" },
+                            { id: "futuristic", name: "Futuristic", color: theme === "dark" ? "#3b82f6" : "#60a5fa" },
+                            { id: "fantasy", name: "Fantasy", color: theme === "dark" ? "#8b5cf6" : "#a78bfa" },
+                        ].map((themeOption) => (
+                            <button
+                                key={themeOption.id}
+                                onClick={() => changeTowerTheme(themeOption.id as TowerTheme)}
+                                className="theme-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
+                                style={{
+                                    background: towerTheme === themeOption.id ? "rgba(var(--highlight-rgb), 0.1)" : "var(--card)",
+                                    color: "var(--text)",
+                                    border: `1px solid ${towerTheme === themeOption.id ? "var(--highlight)" : "var(--card-border)"}`,
+                                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                                }}
+                            >
+                                <div className="theme-circle" style={{ background: themeOption.color }}></div>
+                                <span className="theme-name">{themeOption.name}</span>
+                            </button>
+                        ))}
                     </div>
+                </div>
 
-                    <div className="setting-group">
-                        <h4 className="setting-title">Tower Theme</h4>
-                        <div className="setting-options">
-                            {[
-                                { id: "medieval", name: "Medieval", color: theme === "dark" ? "#6b7280" : "#9ca3af" },
-                                { id: "futuristic", name: "Futuristic", color: theme === "dark" ? "#3b82f6" : "#60a5fa" },
-                                { id: "fantasy", name: "Fantasy", color: theme === "dark" ? "#8b5cf6" : "#a78bfa" },
-                            ].map((themeOption) => (
-                                <button
-                                    key={themeOption.id}
-                                    onClick={() => changeTowerTheme(themeOption.id as TowerTheme)}
-                                    className="theme-btn"
-                                    style={{
-                                        background: towerTheme === themeOption.id ? "rgba(var(--highlight-rgb), 0.1)" : "var(--card)",
-                                        color: "var(--text)",
-                                        border: `1px solid ${towerTheme === themeOption.id ? "var(--highlight)" : "var(--card-border)"}`,
-                                        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                                    }}
-                                >
-                                    <div className="theme-circle" style={{ background: themeOption.color }}></div>
-                                    <span className="theme-name">{themeOption.name}</span>
-                                </button>
-                            ))}
-                        </div>
+                <div className="setting-group">
+                    <h4 className="setting-title">Map Selection</h4>
+                    <div className="setting-options">
+                        {[
+                            { id: "grassland", name: "Grassland", color: theme === "dark" ? "#065f46" : "#10b981" },
+                            { id: "desert", name: "Desert", color: theme === "dark" ? "#92400e" : "#f59e0b" },
+                            { id: "snow", name: "Snow", color: theme === "dark" ? "#1e40af" : "#3b82f6" },
+                        ].map((mapOption) => (
+                            <button
+                                key={mapOption.id}
+                                onClick={() => changeMapType(mapOption.id as MapType)}
+                                className="theme-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
+                                style={{
+                                    background: mapType === mapOption.id ? "rgba(var(--highlight-rgb), 0.1)" : "var(--card)",
+                                    color: "var(--text)",
+                                    border: `1px solid ${mapType === mapOption.id ? "var(--highlight)" : "var(--card-border)"}`,
+                                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                                }}
+                            >
+                                <div className="theme-circle" style={{ background: mapOption.color }}></div>
+                                <span className="theme-name">{mapOption.name}</span>
+                            </button>
+                        ))}
                     </div>
+                </div>
 
-                    <div className="setting-group">
-                        <h4 className="setting-title">Map Selection</h4>
-                        <div className="setting-options">
-                            {[
-                                { id: "grassland", name: "Grassland", color: theme === "dark" ? "#065f46" : "#10b981" },
-                                { id: "desert", name: "Desert", color: theme === "dark" ? "#92400e" : "#f59e0b" },
-                                { id: "snow", name: "Snow", color: theme === "dark" ? "#1e40af" : "#3b82f6" },
-                            ].map((mapOption) => (
-                                <button
-                                    key={mapOption.id}
-                                    onClick={() => changeMapType(mapOption.id as MapType)}
-                                    className="theme-btn"
-                                    style={{
-                                        background: mapType === mapOption.id ? "rgba(var(--highlight-rgb), 0.1)" : "var(--card)",
-                                        color: "var(--text)",
-                                        border: `1px solid ${mapType === mapOption.id ? "var(--highlight)" : "var(--card-border)"}`,
-                                        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                                    }}
-                                >
-                                    <div className="theme-circle" style={{ background: mapOption.color }}></div>
-                                    <span className="theme-name">{mapOption.name}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <h4 className="setting-title">Sound</h4>
-                        <button
-                            onClick={toggleSound}
-                            className="toggle-btn"
-                            style={{
-                                background: "var(--card)",
-                                color: "var(--text)",
-                                border: "1px solid var(--card-border)",
-                                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                            }}
-                        >
-                            {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-                            <span>{soundEnabled ? "Sound On" : "Sound Off"}</span>
-                        </button>
-                    </div>
+                <div>
+                    <h4 className="setting-title">Sound</h4>
+                    <button
+                        onClick={toggleSound}
+                        className="toggle-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
+                        style={{
+                            background: "var(--card)",
+                            color: "var(--text)",
+                            border: "1px solid var(--card-border)",
+                            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                        }}
+                    >
+                        {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                        <span>{soundEnabled ? "Sound On" : "Sound Off"}</span>
+                    </button>
                 </div>
             </div>
+            {/* Removed Game Features Card */}
 
             <style jsx>{`
                 @keyframes moveLeft {
@@ -1706,22 +1677,38 @@ const TowerDefenseGame = () => {
                     margin: 0 auto;
                     padding: 2rem 1rem;
                     display: flex;
-                    flex-direction: column;
-                    align-items: center;
+                    flex-direction: column; /* Default to column for smaller screens */
+                    align-items: center; /* Center items when in column mode */
+                    gap: 2rem; /* Add some gap between cards when in column mode */
+                }
+
+                @media (min-width: 1024px) { /* lg breakpoint or similar */
+                    .home-container {
+                        flex-direction: row;
+                        align-items: flex-start; /* Align to top when in row mode */
+                    }
                 }
 
                 .game-card {
-                    max-width: 32rem;
+                    /* max-width: 32rem; */ /* Removed max-width to allow flex grow */
+                    flex: 2 1 0px; /* Allow game card to be larger */
                     padding: 1.5rem;
                     border-radius: 0.75rem;
-                    margin-bottom: 2rem;
+                    /* margin-bottom: 2rem; */ /* Removed margin-bottom as gap handles spacing */
                     text-align: center;
+                }
+
+                .settings-card-home {
+                    flex: 1 1 0px; /* Allow settings card to take remaining space */
+                    padding: 1.5rem;
+                    border-radius: 0.75rem;
                 }
 
                 .game-title {
                     font-size: 1.875rem;
                     font-weight: 700;
                     margin-bottom: 1.5rem;
+                    font-family: 'Montserrat', sans-serif;
                 }
 
                 .game-animation {
@@ -1796,22 +1783,8 @@ const TowerDefenseGame = () => {
                     transform: scale(1.05);
                 }
 
-                .features-container {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 1.5rem;
-                    width: 100%;
-                    max-width: 1024px;
-                }
-
-                @media (min-width: 768px) {
-                    .features-container {
-                        flex-direction: row;
-                    }
-                }
-
-                .feature-card {
-                    flex: 1;
+                .feature-card { /* This class is still used by settings-card-home for shared padding/border-radius */
+                    /* flex: 1; */ /* Remove as flex is handled by settings-card-home directly */
                     padding: 1.5rem;
                     border-radius: 0.75rem;
                 }
@@ -1820,6 +1793,7 @@ const TowerDefenseGame = () => {
                     font-size: 1.25rem;
                     font-weight: 700;
                     margin-bottom: 1rem;
+                    font-family: 'Montserrat', sans-serif;
                 }
 
                 .feature-list {
@@ -1847,8 +1821,9 @@ const TowerDefenseGame = () => {
                 }
 
                 .setting-title {
-                    font-weight: 500;
+                    font-weight: 500; // Or 600/700 depending on desired look with Montserrat
                     margin-bottom: 0.5rem;
+                    font-family: 'Montserrat', sans-serif;
                 }
 
                 .setting-options {
@@ -1912,7 +1887,7 @@ const TowerDefenseGame = () => {
                             <button
                                 key={tower.type}
                                 onClick={() => selectTower(tower.type as TowerType)}
-                                className={`tower-btn ${selectedTower === tower.type ? "selected" : ""}`}
+                                className={`tower-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90 ${selectedTower === tower.type ? "selected" : ""}`}
                                 style={{
                                     background: selectedTower === tower.type ? "var(--accent)" : "var(--card)",
                                     color: selectedTower === tower.type ? "#ffffff" : "var(--text)",
@@ -1948,19 +1923,19 @@ const TowerDefenseGame = () => {
                     </div>
                 </div>
 
-                {/* {!waveInProgress && countdown === 0 && (
-                    <button
-                        onClick={handleStartWaveClick}
-                        className="start-wave-btn"
-                        style={{
-                            background: "var(--accent)",
-                            color: "#ffffff",
-                            boxShadow: "var(--card-shadow)",
-                        }}
-                    >
-                        Start Wave {currentWave + 1}
-                    </button>
-                )} */}
+                <button 
+                    onClick={() => setGameState("home")}
+                    className="home-btn-ingame cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
+                    style={{
+                        background: "var(--secondary)", 
+                        color: "var(--text)", 
+                        border: "1px solid var(--card-border)",
+                        alignSelf: 'center' // Or 'flex-start' / 'flex-end' depending on flex context
+                    }}
+                >
+                    <Home size={18} />
+                    <span>Back to Home</span>
+                </button>
             </div>
 
             <div
@@ -2043,7 +2018,7 @@ const TowerDefenseGame = () => {
                                     <button
                                         key={mode}
                                         onClick={() => changeTargetingMode(selectedTowerIndex, mode)}
-                                        className={`target-btn ${towers[selectedTowerIndex].targetingMode === mode ? "selected" : ""}`}
+                                        className={`target-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90 ${towers[selectedTowerIndex].targetingMode === mode ? "selected" : ""}`}
                                         style={{
                                             padding: "0.25rem 0.5rem",
                                             fontSize: "0.7rem",
@@ -2069,6 +2044,7 @@ const TowerDefenseGame = () => {
                                     disabled={
                                         gold < towerStats[towers[selectedTowerIndex].type].upgradeCost[towers[selectedTowerIndex].level]
                                     }
+                                    className="cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
                                     style={{
                                         flex: 2,
                                         padding: "0.5rem",
@@ -2076,7 +2052,6 @@ const TowerDefenseGame = () => {
                                         color: "#ffffff",
                                         borderRadius: "0.25rem",
                                         border: "none",
-                                        cursor: "pointer",
                                         opacity:
                                             gold < towerStats[towers[selectedTowerIndex].type].upgradeCost[towers[selectedTowerIndex].level]
                                                 ? 0.5
@@ -2103,6 +2078,7 @@ const TowerDefenseGame = () => {
                             )}
                             <button
                                 onClick={() => sellTower(selectedTowerIndex)}
+                                className="cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
                                 style={{
                                     flex: 1,
                                     padding: "0.5rem",
@@ -2110,7 +2086,6 @@ const TowerDefenseGame = () => {
                                     color: "#ffffff",
                                     borderRadius: "0.25rem",
                                     border: "none",
-                                    cursor: "pointer",
                                 }}
                             >
                                 Sell (+{Math.floor(towers[selectedTowerIndex].cost * 0.5 * towers[selectedTowerIndex].level)}g)
@@ -2149,8 +2124,9 @@ const TowerDefenseGame = () => {
                 }
 
                 .control-title {
-                    font-weight: 600;
+                    font-weight: 600; // Or 700 depending on desired look with Montserrat
                     color: var(--text);
+                    font-family: 'Montserrat', sans-serif;
                 }
 
                 .tower-buttons {
@@ -2214,16 +2190,15 @@ const TowerDefenseGame = () => {
                     font-size: 1.125rem;
                 }
 
-                /* .start-wave-btn {
+                .home-btn-ingame {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
                     padding: 0.5rem 1rem;
                     border-radius: 0.5rem;
-                    font-weight: 600;
-                    transition: transform 0.2s;
+                    /* border: 2px solid; */ /* Optional: if you want a more prominent border */
+                    /* margin-left: auto; */ /* Removed to allow centering or other flex alignments */
                 }
-
-                .start-wave-btn:hover {
-                    transform: scale(1.05);
-                } */
 
                 .canvas-wrap {
                     position: relative;
@@ -2244,75 +2219,294 @@ const TowerDefenseGame = () => {
                     text-align: center;
                 }
             `}</style>
+            {gameState === "gameover" && (
+                <div className="flex flex-col items-center justify-center mt-8">
+                    {!showDifficultySelect ? (
+                        <button
+                            className="mt-4 px-6 py-3 rounded-lg bg-[var(--accent)] text-white font-semibold text-lg cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
+                            onClick={() => setShowDifficultySelect(true)}
+                        >
+                            Play Again
+                        </button>
+                    ) : (
+                        <div className="flex flex-col items-center gap-4 mt-4">
+                            <div className="text-base font-semibold mb-2" style={{ color: "var(--text)" }}>Select Difficulty</div>
+                            <div className="flex gap-3">
+                                {["easy", "medium", "hard"].map((level) => (
+                                    <button
+                                        key={level}
+                                        className="px-5 py-2 rounded-md bg-[var(--card)] text-[var(--text)] border border-[var(--accent)] font-medium cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
+                                        onClick={() => {
+                                            setDifficulty(level as DifficultyLevel);
+                                            setShowDifficultySelect(false);
+                                            setTimeout(() => startGame(), 100);
+                                        }}
+                                    >
+                                        {level.charAt(0).toUpperCase() + level.slice(1)}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 
     const renderAboutScreen = () => (
-        <div className="about-container">
+        <div className="modal-overlay" style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.75)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "1.5rem"
+        }}>
             <div
-                className="about-card"
+                className="modal-content about-card"
                 style={{
                     background: "var(--card)",
                     boxShadow: "var(--card-shadow)",
                     borderColor: "var(--card-border)",
                     color: "var(--text)",
+                    position: "relative",
+                    padding: "2.5rem",
+                    borderRadius: "1rem",
+                    maxWidth: "42rem",
+                    width: "100%",
+                    maxHeight: "85vh",
+                    overflowY: "auto",
+                    border: "1px solid var(--card-border)"
                 }}
             >
-                <h2 className="about-title" style={{ color: "var(--accent)" }}>
+                <button 
+                    onClick={() => setIsAboutModalOpen(false)} 
+                    className="modal-close-btn cursor-pointer transition-transform duration-150 hover:scale-110 hover:bg-opacity-80"
+                    style={{ 
+                        color: "var(--text)",
+                        position: "absolute",
+                        top: "1rem",
+                        right: "1.5rem",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "2rem",
+                        lineHeight: 1,
+                        width: "40px",
+                        height: "40px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: "50%",
+                        transition: "background-color 0.2s ease"
+                    }}
+                >
+                    &times;
+                </button>
+                <h2 className="about-title" style={{ 
+                    color: "var(--accent)",
+                    fontSize: "2rem",
+                    fontWeight: 700,
+                    marginTop: 0,
+                    marginBottom: "1.5rem",
+                    textAlign: "center"
+                }}>
                     How to Play Tower Defense
                 </h2>
 
-                <p className="about-text">
+                <p className="about-text" style={{
+                    marginBottom: "1.5rem",
+                    lineHeight: 1.6,
+                    fontSize: "1.05rem"
+                }}>
                     Tower Defense is a strategy game where you must place defensive towers along a path to prevent enemies from reaching the
                     end. Plan your defenses carefully and upgrade strategically to survive increasingly difficult waves!
                 </p>
 
-                <h3 className="section-title" style={{ color: "var(--highlight)" }}>
+                <h3 className="section-title" style={{ 
+                    color: "var(--highlight)",
+                    fontSize: "1.4rem",
+                    fontWeight: 700,
+                    marginTop: "2rem",
+                    marginBottom: "1rem",
+                    position: "relative",
+                    paddingLeft: "1rem"
+                }}>
                     Game Basics
                 </h3>
 
-                <ul className="info-list">
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                <ul className="info-list" style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                    margin: "0 0 1.5rem 0",
+                    paddingLeft: "0.5rem",
+                    listStyleType: "none"
+                }}>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>Enemies follow a fixed path across the map</span>
                     </li>
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>Place towers strategically to attack enemies</span>
                     </li>
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>Each enemy that reaches the end costs you one life</span>
                     </li>
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>Defeating enemies gives you gold to build more towers</span>
                     </li>
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>Game ends when you run out of lives</span>
                     </li>
                 </ul>
 
-                <h3 className="section-title" style={{ color: "var(--highlight)" }}>
+                <h3 className="section-title" style={{ 
+                    color: "var(--highlight)",
+                    fontSize: "1.4rem",
+                    fontWeight: 700,
+                    marginTop: "2rem",
+                    marginBottom: "1rem",
+                    position: "relative",
+                    paddingLeft: "1rem"
+                }}>
                     Tower Types
                 </h3>
 
-                <ul className="info-list">
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                <ul className="info-list" style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                    margin: "0 0 1.5rem 0",
+                    paddingLeft: "0.5rem",
+                    listStyleType: "none"
+                }}>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>
                             <strong>Archer Tower:</strong> Fast firing rate, medium damage, long range. Good all-around tower.
                         </span>
                     </li>
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>
                             <strong>Cannon Tower:</strong> Slow firing rate, high damage, short range. Effective against armored enemies.
                         </span>
                     </li>
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>
                             <strong>Magic Tower:</strong> Medium firing rate, medium damage, very long range. The only tower that can hit
                             flying enemies.
@@ -2320,140 +2514,222 @@ const TowerDefenseGame = () => {
                     </li>
                 </ul>
 
-                <h3 className="section-title" style={{ color: "var(--highlight)" }}>
+                <h3 className="section-title" style={{ 
+                    color: "var(--highlight)",
+                    fontSize: "1.4rem",
+                    fontWeight: 700,
+                    marginTop: "2rem",
+                    marginBottom: "1rem",
+                    position: "relative",
+                    paddingLeft: "1rem"
+                }}>
                     Enemy Types
                 </h3>
 
-                <ul className="info-list">
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                <ul className="info-list" style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                    margin: "0 0 1.5rem 0",
+                    paddingLeft: "0.5rem",
+                    listStyleType: "none"
+                }}>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>
                             <strong>Infantry:</strong> Basic enemies with medium health and speed.
                         </span>
                     </li>
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>
                             <strong>Armored:</strong> High health but slower movement. Resistant to archer towers.
                         </span>
                     </li>
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>
                             <strong>Flying:</strong> Fast with low health, but can only be hit by magic towers.
                         </span>
                     </li>
                 </ul>
 
-                <h3 className="section-title" style={{ color: "var(--highlight)" }}>
+                <h3 className="section-title" style={{ 
+                    color: "var(--highlight)",
+                    fontSize: "1.4rem",
+                    fontWeight: 700,
+                    marginTop: "2rem",
+                    marginBottom: "1rem",
+                    position: "relative",
+                    paddingLeft: "1rem"
+                }}>
                     Tips & Strategies
                 </h3>
 
-                <ul className="info-list">
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                <ul className="info-list" style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                    margin: "0 0 1.5rem 0",
+                    paddingLeft: "0.5rem",
+                    listStyleType: "none"
+                }}>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>Place towers at corners and intersections for maximum exposure to enemies</span>
                     </li>
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>Build a mix of tower types to deal with different enemy types</span>
                     </li>
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>Always include at least one magic tower to handle flying enemies</span>
                     </li>
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>Upgrade existing towers instead of building too many new ones</span>
                     </li>
-                    <li className="info-item">
-                        <span className="info-bullet" style={{ background: "var(--highlight)" }}></span>
+                    <li className="info-item" style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "0.75rem",
+                        paddingLeft: "0.5rem"
+                    }}>
+                        <span className="info-bullet" style={{ 
+                            background: "var(--highlight)",
+                            display: "inline-block",
+                            width: "0.5rem",
+                            height: "0.5rem", 
+                            marginTop: "0.5rem",
+                            borderRadius: "50%",
+                            flexShrink: 0
+                        }}></span>
                         <span>Save gold between waves for more powerful tower upgrades</span>
                     </li>
                 </ul>
 
-                <div className="back-btn-wrap">
+                <div className="back-btn-wrap" style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    marginTop: "2.5rem"
+                }}>
                     <button
-                        onClick={() => setGameState("home")}
-                        className="back-btn"
+                        onClick={() => setIsAboutModalOpen(false)}
+                        className="back-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
                         style={{
                             background: "var(--accent)",
                             color: "#ffffff",
                             boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.75rem",
+                            padding: "0.75rem 1.75rem",
+                            borderRadius: "0.5rem",
+                            border: "none",
+                            fontWeight: 600,
+                            fontSize: "1rem",
+                            transition: "transform 0.2s ease"
                         }}
+                        onMouseOver={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
+                        onMouseOut={(e) => e.currentTarget.style.transform = "translateY(0)"}
                     >
                         <Home size={18} />
                         <span>Back to Home</span>
                     </button>
                 </div>
             </div>
-
-            <style jsx>{`
-                .about-container {
-                    width: 100%;
-                    max-width: 1200px;
-                    margin: 0 auto;
-                    padding: 2rem 1rem;
-                }
-
-                .about-card {
-                    max-width: 42rem;
-                    margin: 0 auto;
-                    padding: 1.5rem;
-                    border-radius: 0.75rem;
-                }
-
-                .about-title {
-                    font-size: 1.5rem;
-                    font-weight: 700;
-                    margin-bottom: 1.5rem;
-                }
-
-                .about-text {
-                    margin-bottom: 1rem;
-                }
-
-                .section-title {
-                    font-size: 1.25rem;
-                    font-weight: 700;
-                    margin: 1.5rem 0 0.75rem;
-                }
-
-                .info-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.5rem;
-                    margin-bottom: 1.5rem;
-                }
-
-                .info-item {
-                    display: flex;
-                    align-items: start;
-                }
-
-                .info-bullet {
-                    display: inline-block;
-                    width: 0.5rem;
-                    height: 0.5rem;
-                    margin-top: 0.5rem;
-                    margin-right: 0.5rem;
-                    border-radius: 9999px;
-                }
-
-                .back-btn-wrap {
-                    display: flex;
-                    justify-content: center;
-                    margin-top: 2rem;
-                }
-
-                .back-btn {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    padding: 0.5rem 1.5rem;
-                    border-radius: 0.5rem;
-                }
-            `}</style>
         </div>
     );
 
@@ -2464,8 +2740,6 @@ const TowerDefenseGame = () => {
             case "playing":
             case "gameover":
                 return renderGameScreen();
-            case "about":
-                return renderAboutScreen();
             default:
                 return renderHomePage();
         }
@@ -2477,6 +2751,7 @@ const TowerDefenseGame = () => {
                 <title>Tower Defense Strategy</title>
                 <meta name="description" content="A strategic tower defense game" />
                 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+                <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" crossOrigin="anonymous" />
             </Head>
 
             <header className="app-header">
@@ -2488,8 +2763,16 @@ const TowerDefenseGame = () => {
                 </h1>
                 <div className="header-controls">
                     <button
+                        onClick={() => setIsAboutModalOpen(true)} // New Info button
+                        className="icon-btn cursor-pointer transition-transform duration-150 hover:scale-110 hover:bg-[var(--accent)] hover:bg-opacity-20 hover:shadow-lg"
+                        style={{ background: "var(--card)", color: "var(--text)" }}
+                        // aria-label="Show game information"
+                    >
+                        <Info size={20} /> 
+                    </button>
+                    <button
                         onClick={toggleSound}
-                        className="icon-btn"
+                        className="icon-btn cursor-pointer transition-transform duration-150 hover:scale-110 hover:bg-[var(--accent)] hover:bg-opacity-20 hover:shadow-lg"
                         style={{ background: "var(--card)", color: "var(--text)" }}
                         aria-label={soundEnabled ? "Mute sound" : "Enable sound"}
                     >
@@ -2497,7 +2780,7 @@ const TowerDefenseGame = () => {
                     </button>
                     <button
                         onClick={toggleTheme}
-                        className="icon-btn"
+                        className="icon-btn cursor-pointer transition-transform duration-150 hover:scale-110 hover:bg-[var(--accent)] hover:bg-opacity-20 hover:shadow-lg"
                         style={{ background: "var(--card)", color: "var(--text)" }}
                         aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
                     >
@@ -2506,7 +2789,7 @@ const TowerDefenseGame = () => {
                 </div>
             </header>
 
-            <nav className="main-nav">
+            {/* <nav className="main-nav">
                 <ul className="nav-list">
                     <li>
                         <button
@@ -2534,10 +2817,11 @@ const TowerDefenseGame = () => {
                     </li>
                     <li>
                         <button
-                            onClick={() => setGameState("about")}
+                            onClick={() => setIsAboutModalOpen(true)}
                             className="nav-link"
                             style={{
-                                color: gameState === "about" ? "var(--highlight)" : "var(--text)",
+                                // color: gameState === "about" ? "var(--highlight)" : "var(--text)", Removed this
+                                color: "var(--text)", // Default color, modal state handles active appearance if needed elsewhere
                             }}
                         >
                             <Info size={16} />
@@ -2545,9 +2829,11 @@ const TowerDefenseGame = () => {
                         </button>
                     </li>
                 </ul>
-            </nav>
+            </nav> */}
 
             <main className="main-content">{renderContent()}</main>
+
+            {isAboutModalOpen && renderAboutScreen()} {/* Conditionally render modal */}
 
             <footer className="app-footer" style={{ color: "var(--text)" }}>
                 <p>© {new Date().getFullYear()} Tower Defense Strategy. All rights reserved.</p>
@@ -2565,10 +2851,13 @@ const TowerDefenseGame = () => {
             </footer>
 
             <style jsx>{`
+                @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap');
+
                 .app-wrapper {
                     min-height: 100vh;
                     display: flex;
                     flex-direction: column;
+                    font-family: 'Roboto', sans-serif; /* Apply Roboto as base body font */
                 }
 
                 .app-header {
@@ -2581,6 +2870,7 @@ const TowerDefenseGame = () => {
                 .logo-text {
                     font-size: 1.5rem;
                     font-weight: 700;
+                    font-family: 'Montserrat', sans-serif;
                 }
 
                 @media (min-width: 768px) {
@@ -2659,6 +2949,124 @@ const TowerDefenseGame = () => {
 
                 .social-icon:hover {
                     opacity: 1;
+                }
+
+                @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap');
+
+                .modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background-color: rgba(0, 0, 0, 0.75); /* Slightly darker overlay */
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000; /* High z-index to be on top */
+                    padding: 1rem; /* Add padding for small screens so modal doesn't touch edges */
+                }
+
+                .modal-content {
+                    position: relative; /* For positioning the close button */
+                    background: var(--card);
+                    color: var(--text);
+                    padding: 2rem;
+                    border-radius: 0.75rem;
+                    max-width: 45rem; /* Max width of the modal */
+                    width: 100%;     /* Responsive width */
+                    max-height: 90vh; /* Max height, viewport relative */
+                    overflow-y: auto; /* Scrollable if content exceeds max-height */
+                    box-shadow: var(--card-shadow);
+                    border: 1px solid var(--card-border);
+                }
+
+                .modal-close-btn {
+                    position: absolute;
+                    top: 0.75rem;
+                    right: 0.75rem;
+                    background: transparent;
+                    border: none;
+                    font-size: 2rem; /* Larger close button */
+                    line-height: 1;
+                    color: var(--text);
+                    padding: 0.25rem;
+                    opacity: 0.7;
+                    transition: opacity 0.2s ease-in-out;
+                }
+                .modal-close-btn:hover {
+                    opacity: 1;
+                }
+
+                /* Styles for the content specifically within the About modal */
+                .about-card .about-title {
+                    font-size: 1.75rem; /* Slightly larger title for modal */
+                    font-weight: 700;
+                    margin-top: 0; /* Remove top margin if close button is there */
+                    margin-bottom: 1.5rem;
+                    font-family: 'Montserrat', sans-serif;
+                    color: var(--accent);
+                }
+
+                .about-card .about-text {
+                    margin-bottom: 1rem;
+                    line-height: 1.6;
+                }
+
+                .about-card .section-title {
+                    font-size: 1.35rem; /* Slightly larger section title */
+                    font-weight: 700;
+                    margin-top: 2rem; 
+                    margin-bottom: 0.75rem;
+                    font-family: 'Montserrat', sans-serif;
+                    color: var(--highlight);
+                }
+                 .about-card .section-title:first-of-type {
+                    margin-top: 1rem;
+                 }
+
+                .about-card .info-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem; /* Slightly more gap */
+                    margin-bottom: 1.5rem;
+                    padding-left: 0; /* Remove default ul padding */
+                    list-style-type: none; /* Remove default list bullets */
+                }
+
+                .about-card .info-item {
+                    display: flex;
+                    align-items: flex-start; /* Align bullet with start of text */
+                    gap: 0.75rem; /* Gap between bullet and text */
+                }
+
+                .about-card .info-bullet {
+                    display: inline-block;
+                    width: 0.6rem; /* Slightly larger bullet */
+                    height: 0.6rem;
+                    margin-top: 0.35em; /* Align with text better */
+                    border-radius: 50%;
+                    background: var(--highlight);
+                    flex-shrink: 0; /* Prevent bullet from shrinking */
+                }
+
+                .about-card .back-btn-wrap {
+                    display: flex;
+                    justify-content: center;
+                    margin-top: 2.5rem; /* More space before close button */
+                }
+
+                .about-card .back-btn { /* This is the 'Close' button at the bottom of modal */
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.75rem 1.75rem; /* Larger padding */
+                    border-radius: 0.5rem;
+                    background: var(--accent);
+                    color: #ffffff;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    font-weight: 500;
+                    border: none; /* Remove default border if any */
                 }
             `}</style>
         </div>
