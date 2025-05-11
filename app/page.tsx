@@ -1,3076 +1,795 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import Head from "next/head";
-import { Moon, Sun, Home, Info, Volume2, VolumeX, Target, Shield, Zap, Github, Twitter, Linkedin } from "lucide-react";
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Bell, Search, ChevronUp, ChevronDown, Plus, Wallet, Users, PackageOpen, LineChart as LineChartIcon, 
+  Info, CheckCircle, Gem, Book, Layers, Wrench, EllipsisVertical, Moon, Sun,
+  ShoppingCart, MessageSquare, UserCircle, CreditCard, LifeBuoy, Settings, LogOut
+} from 'lucide-react';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 
-// theme types
-type Theme = "dark" | "light";
+const WunderUiLogo = () => (
+    <svg
+        className="h-10 w-auto sm:h-12 dark:text-white text-gray-800" // Adjusted size and added dark mode color
+        version="1.1"
+        id="Layer_1"
+        xmlns="http://www.w3.org/2000/svg"
+        xmlnsXlink="http://www.w3.org/1999/xlink"
+        x="0px"
+        y="0px"
+        viewBox="0 0 640 432"
+        enableBackground="new 0 0 640 432"
+        xmlSpace="preserve"
+        fill="currentColor" // Use currentColor to inherit from parent
+    >
+        <path
+            fill="#F9CB4B"
+            d="
+M419.347748,245.042557 
+	C415.668518,281.255859 401.787292,313.295990 378.166595,340.706207 
+	C347.944489,375.776917 309.204926,396.586212 263.823669,404.797882 
+	C252.320892,406.879333 240.465347,407.011383 228.086594,408.099457 
+	C228.086594,347.441925 228.086594,288.167542 228.050873,228.446930 
+	C228.015167,228.000702 227.966766,228.000992 227.966766,228.001007 
+	C237.563080,219.318130 247.244492,210.727203 256.740753,201.936264 
+	C295.556152,166.003769 334.327545,130.023727 373.087799,94.031769 
+	C386.614380,81.471268 400.058167,68.821571 413.550781,56.224445 
+	C415.335358,54.558292 417.185608,52.962471 420.052948,50.396755 
+	C420.052948,110.157784 420.052948,168.666016 420.049377,228.095551 
+	C419.813110,234.358765 419.580444,239.700653 419.347748,245.042557 
+z"
+        />
+        <path
+            fill="#12B0F0"
+            d="
+M228.013672,227.976334 
+	C216.454102,239.182053 204.793198,250.308548 193.358002,261.662384 
+	C163.813232,290.997040 134.368759,320.432678 104.880081,349.823853 
+	C104.068916,350.632355 103.210823,351.393768 101.336304,353.149841 
+	C92.107735,340.631470 82.237137,328.913940 74.230606,316.037354 
+	C56.964241,288.268494 49.359234,257.679871 49.565224,224.909302 
+	C49.807011,186.443939 49.282310,147.974030 49.146263,109.505882 
+	C49.077988,90.200615 49.134357,70.894897 49.134357,51.097374 
+	C108.762306,51.097374 167.615204,51.097374 227.846924,51.097374 
+	C227.846924,109.734764 227.846924,168.441040 227.906845,227.574158 
+	C227.966766,228.000992 228.015167,228.000702 228.013672,227.976334 
+z"
+        />
+        <path
+            fill="#F57791"
+            d="
+M421.052399,228.105515 
+	C422.051880,226.995911 423.003296,225.838257 424.057709,224.783569 
+	C480.469330,168.358139 536.888428,111.940170 593.316345,55.530994 
+	C594.671692,54.176044 596.135193,52.929287 598.540283,50.721325 
+	C598.704407,53.813801 598.877441,55.543633 598.876221,57.273338 
+	C598.834900,115.572121 599.203857,173.875549 598.567871,232.167999 
+	C598.159790,269.567993 586.623108,303.740631 564.616028,334.169800 
+	C541.301514,366.406677 510.318939,388.025635 472.610504,400.212585 
+	C456.993164,405.259918 440.889618,407.377014 424.525818,407.718842 
+	C423.236786,407.745758 421.943176,407.554565 420.172211,407.431427 
+	C420.172211,355.420563 420.172211,303.669403 420.451782,251.119675 
+	C420.838379,242.915909 420.945404,235.510712 421.052399,228.105515 
+z"
+        />
+        <path
+            fill="#F899B0"
+            d="
+M420.827576,228.104141 
+	C420.945404,235.510712 420.838379,242.915909 420.497437,250.652527 
+	C420.087341,249.215591 419.911163,247.447220 419.541382,245.360703 
+	C419.580444,239.700653 419.813110,234.358765 420.099670,228.569427 
+	C420.153534,228.121979 420.602753,228.102768 420.827576,228.104141 
+z"
+        />
+    </svg>
+);
 
-// game states
-type GameState = "home" | "playing" | "gameover";
+const navLinks = [
+  { name: 'Home', href: '#' },
+  { name: 'Overview', href: '#' },
+  { name: 'Projects', href: '#' },
+  { name: 'Tasks', href: '#' },
+  { name: 'Reports', href: '#' },
+  { name: 'Statements', href: '#' },
+];
 
-// difficulty levels
-type DifficultyLevel = "easy" | "medium" | "hard";
+const subNavLinks = [
+  { name: 'Dashboard', href: '#' },
+  { name: 'Sales', href: '#' },
+  { name: 'Performance', href: '#' },
+  { name: 'Traffic', href: '#' },
+  { name: 'Audience', href: '#' },
+  { name: 'Marketing Tools', href: '#' },
+];
 
-// tower themes
-type TowerTheme = "medieval" | "futuristic" | "fantasy";
+const DashboardPage = () => {
+  const [activeLink, setActiveLink] = useState('Home');
+  const [activeSubLink, setActiveSubLink] = useState('Dashboard');
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isProfileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [isNotificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<string[]>([]);
+  const [activeAnalyticsTimeFilter, setActiveAnalyticsTimeFilter] = useState('12 months');
 
-// map types
-type MapType = "grassland" | "desert" | "snow";
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const notificationDropdownRef = useRef<HTMLDivElement>(null);
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-// tower types
-type TowerType = "archer" | "cannon" | "magic";
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
-// enemy types
-type EnemyType = "infantry" | "armored" | "flying";
-
-// targeting modes
-type TargetingMode = "first" | "last" | "strongest" | "weakest";
-
-// special effect types
-type SpecialEffect = "slow" | "splash" | "critical" | "poison" | "chain";
-
-// tower interface
-interface Tower {
-    x: number;
-    y: number;
-    type: TowerType;
-    level: number;
-    range: number;
-    damage: number;
-    fireRate: number;
-    lastFired: number;
-    target: Enemy | null;
-    cost: number;
-    targetingMode: TargetingMode;
-    special?: {
-        effect: SpecialEffect;
-        chance: number;
-        duration?: number;
-        value?: number;
+  // Effect to handle clicks outside of dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setProfileDropdownOpen(false);
+      }
+      if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target as Node)) {
+        setNotificationDropdownOpen(false);
+      }
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target as Node) && searchInputRef.current && !searchInputRef.current.contains(event.target as Node)) {
+        setIsSearchDropdownOpen(false);
+      }
     };
-    shotAtPosition?: { x: number; y: number };
-    specialEffect?: SpecialEffect | "splash"; // Added to cover all possible effects being set
-}
-
-// enemy interface
-interface Enemy {
-    id: number;
-    type: EnemyType;
-    x: number;
-    y: number;
-    speed: number;
-    originalSpeed?: number;
-    health: number;
-    maxHealth: number;
-    reward: number;
-    pathIndex: number;
-    dead: boolean;
-    isBoss?: boolean;
-    effects: {
-        slowed?: { until: number; value: number };
-        poisoned?: { until: number; damagePerTick: number; lastTick: number };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
     };
-}
+  }, []);
 
-// map path point
-interface PathPoint {
-    x: number;
-    y: number;
-}
+  const activateDarkMode = () => {
+    setIsDarkMode(true);
+  };
 
-// map interface
-interface GameMap {
-    type: MapType;
-    path: PathPoint[];
-    startPoint: PathPoint;
-    endPoint: PathPoint;
-}
+  const deactivateDarkMode = () => {
+    setIsDarkMode(false);
+  };
 
-const AUDIO = {
-    PLACE_TOWER: "https://assets.mixkit.co/active_storage/sfx/212/212-preview.mp3",
-    START_WAVE: "https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3",
-    ENEMY_KILLED: "https://assets.mixkit.co/active_storage/sfx/270/270-preview.mp3",
-    ENEMY_LEAKED: "https://assets.mixkit.co/active_storage/sfx/537/537-preview.mp3",
-    GAME_OVER: "https://assets.mixkit.co/active_storage/sfx/566/566-preview.mp3",
-};
+  const toggleThemePreference = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+  
+  const userProfileClicked = () => setProfileDropdownOpen(!isProfileDropdownOpen);
+  const bellIconActivated = () => setNotificationDropdownOpen(!isNotificationDropdownOpen);
 
-const TowerDefenseGame = () => {
-    const [gameState, setGameState] = useState<GameState>("home");
-    const [score, setScore] = useState(0);
-    const [highScore, setHighScore] = useState(0);
-    const [theme, setTheme] = useState<Theme>("dark");
-    const [difficulty, setDifficulty] = useState<DifficultyLevel>("medium");
-    const [towerTheme, setTowerTheme] = useState<TowerTheme>("medieval");
-    const [soundEnabled, setSoundEnabled] = useState(true);
-    const [countdown, setCountdown] = useState(0);
-    const [mapType, setMapType] = useState<MapType>("grassland");
-    const [currentWave, setCurrentWave] = useState(0);
-    const [lives, setLives] = useState(10);
-    const [gold, setGold] = useState(100);
-    const [selectedTower, setSelectedTower] = useState<TowerType | null>(null);
-    const [towers, setTowers] = useState<Tower[]>([]);
-    const [enemies, setEnemies] = useState<Enemy[]>([]);
-    const [waveInProgress, setWaveInProgress] = useState(false);
-    const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
-    // Add state for play again and difficulty selection
-    const [showDifficultySelect, setShowDifficultySelect] = useState(false);
-    const [pendingDifficulty, setPendingDifficulty] = useState<DifficultyLevel | null>(null);
+  const searchableSections = [
+    'Dashboard', 'Sales', 'Performance', 'Traffic', 'Audience', 'Marketing Tools',
+    'Analytics', 'Impressions', 'Projects', 'Payments', 'Profile', 'Settings', 'Billing'
+  ];
 
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const gameLoopRef = useRef<number>(0);
-
-    const placeTowerSoundRef = useRef<HTMLAudioElement | null>(null);
-    const startWaveSoundRef = useRef<HTMLAudioElement | null>(null);
-    const enemyKilledSoundRef = useRef<HTMLAudioElement | null>(null);
-    const enemyLeakedSoundRef = useRef<HTMLAudioElement | null>(null);
-    const gameOverSoundRef = useRef<HTMLAudioElement | null>(null);
-
-    useEffect(() => {
-        placeTowerSoundRef.current = new Audio(AUDIO.PLACE_TOWER);
-        startWaveSoundRef.current = new Audio(AUDIO.START_WAVE);
-        enemyKilledSoundRef.current = new Audio(AUDIO.ENEMY_KILLED);
-        enemyLeakedSoundRef.current = new Audio(AUDIO.ENEMY_LEAKED);
-        gameOverSoundRef.current = new Audio(AUDIO.GAME_OVER);
-
-        if (placeTowerSoundRef.current) placeTowerSoundRef.current.volume = 0.2;
-        if (startWaveSoundRef.current) startWaveSoundRef.current.volume = 0.3;
-        if (enemyKilledSoundRef.current) enemyKilledSoundRef.current.volume = 0.3;
-        if (enemyLeakedSoundRef.current) enemyLeakedSoundRef.current.volume = 0.4;
-        if (gameOverSoundRef.current) gameOverSoundRef.current.volume = 0.4;
-
-        const preloadAudio = (audio: HTMLAudioElement | null) => {
-            if (audio) {
-                audio.load();
-            }
-        };
-
-        preloadAudio(placeTowerSoundRef.current);
-        preloadAudio(startWaveSoundRef.current);
-        preloadAudio(enemyKilledSoundRef.current);
-        preloadAudio(enemyLeakedSoundRef.current);
-        preloadAudio(gameOverSoundRef.current);
-
-        return () => {
-            [placeTowerSoundRef, startWaveSoundRef, enemyKilledSoundRef, enemyLeakedSoundRef, gameOverSoundRef].forEach((ref) => {
-                if (ref.current) {
-                    ref.current.pause();
-                    ref.current.src = "";
-                }
-            });
-        };
-    }, []);
-
-    const playSound = useCallback(
-        (soundRef: React.RefObject<HTMLAudioElement | null>) => {
-            if (soundEnabled && soundRef.current) {
-                soundRef.current.currentTime = 0;
-                const playPromise = soundRef.current.play();
-
-                if (playPromise !== undefined) {
-                    playPromise.catch((error) => {
-                        console.log("Audio play failed:", error);
-                    });
-                }
-            }
-        },
-        [soundEnabled]
+  const searchSections = (term: string) => {
+    if (term.length === 0) {
+      setSearchResults([]);
+      setIsSearchDropdownOpen(false);
+      return;
+    }
+    const matches = searchableSections.filter(section => 
+      section.toLowerCase().includes(term.toLowerCase())
     );
+    setSearchResults(matches);
+    setIsSearchDropdownOpen(true);
+  };
 
-    const difficultySettings = {
-        easy: { enemyHealth: 50, enemySpeed: 0.5, startingGold: 250, startingLives: 15 },
-        medium: { enemyHealth: 100, enemySpeed: 0.8, startingGold: 180, startingLives: 10 },
-        hard: { enemyHealth: 150, enemySpeed: 1.2, startingGold: 120, startingLives: 5 },
-    };
+  const searchInputChanged = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const currentSearchTerm = event.target.value;
+    setSearchTerm(currentSearchTerm);
+    searchSections(currentSearchTerm);
+  };
 
-    // Tower costs and stats with proper typings
-    interface TowerLevelStats {
-        damage: number;
-        range: number;
-        fireRate: number;
+  const focusSearchInput = () => {
+    if(searchTerm.length > 0) {
+        searchSections(searchTerm);
+    }
+  };
+
+  // Chart Data
+  const paymentsChartData = [
+    { name: "Jan", payments: 0 },
+    { name: "Feb", payments: 15000 },
+    { name: "Mar", payments: 25000 },
+    { name: "Apr", payments: 40000 },
+  ];
+
+  const generateAnalyticsData = (timeframe: string) => {
+    let labels: string[] = [];
+    let dataCurrent: number[] = [];
+    let dataPrevious: number[] = [];
+    let count = 0;
+
+    switch (timeframe) {
+      case '30 days':
+        count = 30;
+        labels = Array.from({ length: count }, (_, i) => `D${i + 1}`);
+        break;
+      case '7 days':
+        count = 7;
+        labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        break;
+      case '24 hours':
+        count = 24;
+        labels = Array.from({ length: count }, (_, i) => `${i}:00`);
+        break;
+      case '12 months':
+      default:
+        count = 18;
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        for (let i = 0; i < count; i++) {
+          const year = 23 + Math.floor(i / 12);
+          labels.push(`${monthNames[i % 12]}${year}`);
+        }
+        break;
     }
 
-    const towerStats = {
-        archer: {
-            cost: 50,
-            damage: 10,
-            range: 120,
-            fireRate: 600,
-            levels: [
-                {} as TowerLevelStats, // Level 0 is not used
-                { damage: 10, range: 120, fireRate: 600 }, // Level 1
-                { damage: 15, range: 130, fireRate: 550 }, // Level 2
-                { damage: 22, range: 140, fireRate: 500 }, // Level 3
-            ],
-            upgradeCost: [0, 40, 75], // Cost for upgrade to level [1, 2, 3]
-            special: { effect: "critical", chance: 0.15, value: 2 }, // Critical hits
-        },
-        cannon: {
-            cost: 100,
-            damage: 30,
-            range: 80,
-            fireRate: 1200,
-            levels: [
-                {} as TowerLevelStats, // Level 0 is not used
-                { damage: 30, range: 80, fireRate: 1200 }, // Level 1
-                { damage: 45, range: 85, fireRate: 1100 }, // Level 2
-                { damage: 65, range: 90, fireRate: 1000 }, // Level 3
-            ],
-            upgradeCost: [0, 80, 150], // Cost for upgrade to level [1, 2, 3]
-            special: { effect: "splash", chance: 1, value: 3 }, // Splash damage
-        },
-        magic: {
-            cost: 150,
-            damage: 20,
-            range: 150,
-            fireRate: 800,
-            levels: [
-                {} as TowerLevelStats, // Level 0 is not used
-                { damage: 20, range: 150, fireRate: 800 }, // Level 1
-                { damage: 30, range: 165, fireRate: 750 }, // Level 2
-                { damage: 42, range: 180, fireRate: 700 }, // Level 3
-            ],
-            upgradeCost: [0, 120, 180], // Cost for upgrade to level [1, 2, 3]
-            special: { effect: "slow", chance: 0.3, duration: 3000, value: 0.5 }, // Slow effect
-        },
-    };
-
-    const [canvasSize, setCanvasSize] = useState({ width: 600, height: 400 });
-    const [cellSize, setCellSize] = useState(40);
-    const [mapGrid, setMapGrid] = useState<number[][]>([]);
-    const [currentMap, setCurrentMap] = useState<GameMap | null>(null);
-
-    // Track mouse position for tower placement hover effect
-    const [lastMouseX, setLastMouseX] = useState(0);
-    const [lastMouseY, setLastMouseY] = useState(0);
-
-    const createMap = useCallback(
-        (type: MapType) => {
-            const gridCols = Math.floor(canvasSize.width / cellSize);
-            const gridRows = Math.floor(canvasSize.height / cellSize);
-
-            let newGrid: number[][] = Array(gridRows)
-                .fill(0)
-                .map(() => Array(gridCols).fill(0));
-            let pathPoints: PathPoint[] = [];
-
-            // Create different paths based on map type
-            if (type === "grassland") {
-                const startY = Math.floor(gridRows / 2);
-                pathPoints = [
-                    { x: 0, y: startY },
-                    { x: Math.floor(gridCols * 0.25), y: startY },
-                    { x: Math.floor(gridCols * 0.25), y: Math.floor(gridRows * 0.25) },
-                    { x: Math.floor(gridCols * 0.75), y: Math.floor(gridRows * 0.25) },
-                    { x: Math.floor(gridCols * 0.75), y: Math.floor(gridRows * 0.75) },
-                    { x: gridCols - 1, y: Math.floor(gridRows * 0.75) },
-                ];
-            } else if (type === "desert") {
-                pathPoints = [
-                    { x: 0, y: 0 },
-                    { x: gridCols - 1, y: 0 },
-                    { x: gridCols - 1, y: Math.floor(gridRows * 0.5) },
-                    { x: 0, y: Math.floor(gridRows * 0.5) },
-                    { x: 0, y: gridRows - 1 },
-                    { x: gridCols - 1, y: gridRows - 1 },
-                ];
-            } else {
-                // snow
-                const midX = Math.floor(gridCols / 2);
-                pathPoints = [
-                    { x: 0, y: 0 },
-                    { x: midX, y: 0 },
-                    { x: midX, y: Math.floor(gridRows * 0.33) },
-                    { x: Math.floor(gridCols * 0.25), y: Math.floor(gridRows * 0.33) },
-                    { x: Math.floor(gridCols * 0.25), y: Math.floor(gridRows * 0.66) },
-                    { x: Math.floor(gridCols * 0.75), y: Math.floor(gridRows * 0.66) },
-                    { x: Math.floor(gridCols * 0.75), y: gridRows - 1 },
-                    { x: gridCols - 1, y: gridRows - 1 },
-                ];
-            }
-
-            // Mark path cells in grid
-            for (let i = 0; i < pathPoints.length - 1; i++) {
-                const p1 = pathPoints[i];
-                const p2 = pathPoints[i + 1];
-
-                // Get all cells between p1 and p2
-                const dx = p2.x - p1.x;
-                const dy = p2.y - p1.y;
-                const steps = Math.max(Math.abs(dx), Math.abs(dy));
-                const xIncrement = dx / steps;
-                const yIncrement = dy / steps;
-
-                for (let j = 0; j <= steps; j++) {
-                    const x = Math.floor(p1.x + xIncrement * j);
-                    const y = Math.floor(p1.y + yIncrement * j);
-
-                    if (x >= 0 && x < gridCols && y >= 0 && y < gridRows) {
-                        newGrid[y][x] = 1; // 1 indicates path
-                    }
-                }
-            }
-
-            setMapGrid(newGrid);
-            return {
-                type,
-                path: pathPoints,
-                startPoint: pathPoints[0],
-                endPoint: pathPoints[pathPoints.length - 1],
-            };
-        },
-        [canvasSize.height, canvasSize.width, cellSize]
-    );
-
-    // theme toggle
-    const toggleTheme = () => {
-        const newTheme = theme === "dark" ? "light" : "dark";
-        setTheme(newTheme);
-        document.documentElement.setAttribute("data-theme", newTheme);
-        localStorage.setItem("towerDefenseTheme", newTheme);
-
-        const root = document.documentElement;
-        if (newTheme === "dark") {
-            root.style.setProperty("--primary", "#0b1120");
-            root.style.setProperty("--secondary", "#1e293b");
-            root.style.setProperty("--accent", "#8b5cf6");
-            root.style.setProperty("--highlight", "#a78bfa");
-            root.style.setProperty("--text", "#f8fafc");
-            root.style.setProperty("--card", "rgba(30, 41, 59, 0.7)");
-            root.style.setProperty("--card-border", "rgba(255, 255, 255, 0.1)");
-            root.style.setProperty("--bg-gradient", "linear-gradient(135deg, #0b1120 0%, #1e293b 100%)");
-            root.style.setProperty("--card-shadow", "0 8px 32px 0 rgba(0, 0, 0, 0.2)");
-            root.style.setProperty("--footer-bg", "var(--primary)");
-        } else {
-            root.style.setProperty("--primary", "#efecca");
-            root.style.setProperty("--secondary", "#a9cbb7");
-            root.style.setProperty("--accent", "#ff934f");
-            root.style.setProperty("--highlight", "#ff7517");
-            root.style.setProperty("--text", "#30292f");
-            root.style.setProperty("--card", "rgba(255, 255, 255, 0.85)");
-            root.style.setProperty("--card-border", "rgba(94, 86, 90, 0.2)");
-            root.style.setProperty("--bg-gradient", "linear-gradient(135deg, #efecca 0%, #a9cbb7 100%)");
-            root.style.setProperty("--card-shadow", "6px 6px 12px rgba(0, 0, 0, 0.1), -6px -6px 12px rgba(255, 255, 255, 0.7)");
-            root.style.setProperty("--footer-bg", "var(--secondary)");
-        }
-    };
-
-    // reset game state
-    const resetGame = useCallback(() => {
-        setTowers([]);
-        setEnemies([]);
-        setCurrentWave(0);
-        setWaveInProgress(false);
-        setScore(0);
-        setLives(difficultySettings[difficulty].startingLives);
-        setGold(difficultySettings[difficulty].startingGold);
-        setSelectedTower(null);
-    }, [difficulty]);
-
-    // start game
-    const startGame = useCallback(() => {
-        resetGame();
-        setGameState("playing");
-
-        const newMap = createMap(mapType);
-        setCurrentMap(newMap);
-
-        setCountdown(3);
-
-        const countdownInterval = setInterval(() => {
-            setCountdown((prev) => {
-                if (prev === 1) {
-                    clearInterval(countdownInterval);
-                    playSound(startWaveSoundRef);
-
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-    }, [createMap, mapType, playSound, resetGame]);
-
-    const startWave = useCallback(() => {
-        if (waveInProgress) return;
-
-        const newWave = currentWave + 1;
-        setCurrentWave(newWave);
-        setWaveInProgress(true);
-
-        const numEnemies = 5 + Math.floor(newWave * 1.5);
-
-        const enemyDistribution = {
-            infantry: Math.max(0.7 - newWave * 0.03, 0.3),
-            armored: Math.min(0.2 + newWave * 0.02, 0.4),
-            flying: Math.min(0.1 + newWave * 0.01, 0.3),
-        };
-
-        const hasBoss = newWave % 5 === 0;
-        const bossType: EnemyType = newWave % 15 === 0 ? "flying" : newWave % 10 === 0 ? "armored" : "infantry";
-
-        const spawnDelay = Math.max(800 - newWave * 30, 300);
-
-        let enemyId = Date.now();
-        let spawnCount = 0;
-
-        const spawnInterval = setInterval(() => {
-            if (spawnCount >= numEnemies) {
-                clearInterval(spawnInterval);
-                return;
-            }
-
-            const isBoss = hasBoss && spawnCount === numEnemies - 1;
-
-            let enemyType: EnemyType;
-
-            if (isBoss) {
-                enemyType = bossType;
-            } else {
-                const randValue = Math.random();
-                if (randValue < enemyDistribution.infantry) {
-                    enemyType = "infantry";
-                } else if (randValue < enemyDistribution.infantry + enemyDistribution.armored) {
-                    enemyType = "armored";
-                } else {
-                    enemyType = "flying";
-                }
-            }
-
-            if (currentMap) {
-                const startPoint = currentMap.path[0];
-
-                let enemyHealth = difficultySettings[difficulty].enemyHealth * (1 + (newWave - 1) * 0.2);
-
-                if (enemyType === "infantry") {
-                    enemyHealth *= 1;
-                } else if (enemyType === "armored") {
-                    enemyHealth *= 2;
-                } else {
-                    // flying
-                    enemyHealth *= 0.7;
-                }
-
-                if (isBoss) {
-                    enemyHealth *= 5;
-                }
-
-                let enemySpeed =
-                    difficultySettings[difficulty].enemySpeed *
-                    (enemyType === "infantry" ? 1 : enemyType === "armored" ? 0.7 : 1.3) *
-                    (1 + (newWave - 1) * 0.07);
-
-                if (isBoss) {
-                    enemySpeed *= 0.7;
-                }
-
-                const baseReward = 10 + Math.floor(newWave * 0.5);
-                const enemyReward = baseReward * (enemyType === "infantry" ? 1 : enemyType === "armored" ? 2 : 3) * (isBoss ? 5 : 1);
-
-                const newEnemy: Enemy = {
-                    id: enemyId++,
-                    type: enemyType,
-                    x: startPoint.x * cellSize,
-                    y: startPoint.y * cellSize,
-                    speed: enemySpeed,
-                    originalSpeed: enemySpeed,
-                    health: enemyHealth,
-                    maxHealth: enemyHealth,
-                    reward: enemyReward,
-                    pathIndex: 0,
-                    dead: false,
-                    isBoss,
-                    effects: {},
-                };
-
-                setEnemies((prev) => [...prev, newEnemy]);
-            }
-
-            spawnCount++;
-
-            if (spawnCount >= numEnemies) {
-                clearInterval(spawnInterval);
-
-                const checkEnemiesInterval = setInterval(() => {
-                    if (enemies.length === 0) {
-                        clearInterval(checkEnemiesInterval);
-                        setWaveInProgress(false);
-
-                        const waveBonus = 20 + Math.floor(newWave * 5);
-                        setGold((prev) => prev + waveBonus);
-                    }
-                }, 1000);
-            }
-        }, spawnDelay);
-
-        playSound(startWaveSoundRef);
-    }, [currentMap, currentWave, difficulty, enemies.length, playSound, waveInProgress]);
-
-    const handleCanvasClick = useCallback(
-        (event: React.MouseEvent<HTMLCanvasElement>) => {
-            if (!canvasRef.current || gameState !== "playing" || countdown > 0) return;
-
-            const canvas = canvasRef.current;
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-
-            const x = (event.clientX - rect.left) * scaleX;
-            const y = (event.clientY - rect.top) * scaleY;
-
-            // Check if the click is on the "Start Wave" button drawn on canvas
-            if (!waveInProgress && gameState === "playing" && countdown === 0) {
-                const buttonRect = {
-                    x: canvas.width / 2 - 100,
-                    y: canvas.height - 50,
-                    width: 200,
-                    height: 40,
-                };
-
-                if (
-                    x >= buttonRect.x &&
-                    x <= buttonRect.x + buttonRect.width &&
-                    y >= buttonRect.y &&
-                    y <= buttonRect.y + buttonRect.height
-                ) {
-                    startWave();
-                    return; // Exit early if wave started
-                }
-            }
-
-            const gridX = Math.floor(x / cellSize);
-            const gridY = Math.floor(y / cellSize);
-
-            const clickedTowerIndex = towers.findIndex(
-                (tower) => Math.floor(tower.x / cellSize) === gridX && Math.floor(tower.y / cellSize) === gridY
-            );
-
-            if (clickedTowerIndex !== -1) {
-                setSelectedTowerIndex(clickedTowerIndex);
-                setSelectedTower(null);
-                return;
-            } else {
-                setSelectedTowerIndex(null);
-            }
-
-            if (selectedTower) {
-                if (mapGrid[gridY] && mapGrid[gridY][gridX] === 0) {
-                    const towerExists = towers.some(
-                        (tower) => Math.floor(tower.x / cellSize) === gridX && Math.floor(tower.y / cellSize) === gridY
-                    );
-
-                    if (!towerExists) {
-                        const towerCost = towerStats[selectedTower].cost;
-
-                        if (gold >= towerCost) {
-                            const levelStats = towerStats[selectedTower].levels[1];
-
-                            const newTower: Tower = {
-                                x: gridX * cellSize,
-                                y: gridY * cellSize,
-                                type: selectedTower,
-                                level: 1,
-                                range: levelStats.range,
-                                damage: levelStats.damage,
-                                fireRate: levelStats.fireRate,
-                                lastFired: 0,
-                                target: null,
-                                cost: towerCost,
-                                targetingMode: "first",
-                                special: {
-                                    ...towerStats[selectedTower].special,
-                                    effect: towerStats[selectedTower].special.effect as SpecialEffect,
-                                },
-                            };
-
-                            setTowers((prev) => [...prev, newTower]);
-                            setGold((prev) => prev - towerCost);
-                            playSound(placeTowerSoundRef);
-
-                            // Check if player can afford another tower of the SAME TYPE they just placed
-                            const goldAfterPurchase = gold - towerCost;
-                            if (selectedTower) { // Ensure selectedTower is not null before accessing its stats
-                                const costOfSelectedType = towerStats[selectedTower].cost;
-                                if (goldAfterPurchase < costOfSelectedType) {
-                                    setSelectedTower(null);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        [cellSize, countdown, gameState, gold, mapGrid, playSound, selectedTower, towers, towerStats]
-    );
-
-    const [selectedTowerIndex, setSelectedTowerIndex] = useState<number | null>(null);
-
-    const upgradeTower = (index: number) => {
-        const tower = towers[index];
-
-        if (tower.level >= 3) return;
-
-        const nextLevel = tower.level + 1;
-        const upgradeCost = towerStats[tower.type].upgradeCost[nextLevel - 1];
-
-        if (gold >= upgradeCost) {
-            const levelStats = towerStats[tower.type].levels[nextLevel];
-
-            const updatedTowers = [...towers];
-            updatedTowers[index] = {
-                ...tower,
-                level: nextLevel,
-                damage: levelStats.damage,
-                range: levelStats.range,
-                fireRate: levelStats.fireRate,
-            };
-
-            setTowers(updatedTowers);
-            setGold(gold - upgradeCost);
-            playSound(placeTowerSoundRef);
-        }
-    };
-
-    const changeTargetingMode = (index: number, mode: TargetingMode) => {
-        const updatedTowers = [...towers];
-        updatedTowers[index] = {
-            ...updatedTowers[index],
-            targetingMode: mode,
-        };
-        setTowers(updatedTowers);
-    };
-
-    const selectTower = (type: TowerType) => {
-        if (selectedTower === type) {
-            setSelectedTower(null);
-        } else {
-            setSelectedTower(type);
-            setSelectedTowerIndex(null);
-        }
-    };
-
-    const updateEnemies = useCallback(() => {
-        if (!currentMap) return;
-
-        const updatedEnemies = enemies
-            .map((enemy) => {
-                if (enemy.dead) return enemy;
-
-                const now = Date.now();
-                let enemySpeed = enemy.speed;
-
-                if (enemy.effects.slowed && enemy.effects.slowed.until > now) {
-                    enemySpeed *= enemy.effects.slowed.value;
-                } else if (enemy.effects.slowed) {
-                    enemy.effects.slowed = undefined;
-                }
-
-                if (enemy.effects.poisoned && enemy.effects.poisoned.until > now) {
-                    if (now - enemy.effects.poisoned.lastTick >= 1000) {
-                        enemy.health -= enemy.effects.poisoned.damagePerTick;
-                        enemy.effects.poisoned.lastTick = now;
-
-                        if (enemy.health <= 0) {
-                            setScore((prev) => prev + 1);
-                            setGold((prev) => prev + enemy.reward);
-                            playSound(enemyKilledSoundRef);
-                            return { ...enemy, health: 0, dead: true };
-                        }
-                    }
-                } else if (enemy.effects.poisoned) {
-                    enemy.effects.poisoned = undefined;
-                }
-
-                const pathIndex = enemy.pathIndex;
-                const targetPoint = currentMap.path[pathIndex + 1];
-
-                if (!targetPoint) {
-                    setLives((prev) => {
-                        const damage = enemy.isBoss ? 3 : 1;
-                        const newLives = prev - damage;
-                        if (newLives <= 0) {
-                            setGameState("gameover");
-                            playSound(gameOverSoundRef);
-                        } else {
-                            playSound(enemyLeakedSoundRef);
-                        }
-                        return newLives;
-                    });
-                    return { ...enemy, dead: true };
-                }
-
-                const targetX = targetPoint.x * cellSize;
-                const targetY = targetPoint.y * cellSize;
-                const dx = targetX - enemy.x;
-                const dy = targetY - enemy.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance < enemySpeed) {
-                    return { ...enemy, x: targetX, y: targetY, pathIndex: pathIndex + 1 };
-                } else {
-                    const vx = (dx / distance) * enemySpeed;
-                    const vy = (dy / distance) * enemySpeed;
-                    return { ...enemy, x: enemy.x + vx, y: enemy.y + vy };
-                }
-            })
-            .filter((enemy) => !enemy.dead);
-
-        setEnemies(updatedEnemies);
-    }, [cellSize, currentMap, enemies, playSound]);
-
-    const sellTower = (index: number) => {
-        const tower = towers[index];
-        const sellValue = Math.floor(tower.cost * 0.5 * tower.level);
-        const updatedTowers = towers.filter((_, i) => i !== index);
-        setTowers(updatedTowers);
-        setGold(gold + sellValue);
-
-        if (selectedTowerIndex === index) {
-            setSelectedTowerIndex(null);
-        }
-    };
-
-    const updateTowers = useCallback(
-        (timestamp: number) => {
-            if (enemies.length === 0) {
-                setTowers(prevTowers => prevTowers.map(t => ({ ...t, shotAtPosition: undefined, target: null })) );
-                return;
-            }
-
-            const updatedTowers = towers.map((currentTowerState) => {
-                let towerWorkInProgress = { ...currentTowerState }; 
-
-                if (towerWorkInProgress.shotAtPosition && timestamp - towerWorkInProgress.lastFired >= 150) {
-                    towerWorkInProgress.shotAtPosition = undefined;
-                }
-
-                let currentDecisionTarget: Enemy | null = null;
-                if (towerWorkInProgress.target) {
-                    const refreshedTargetCandidate = enemies.find(enemy => enemy.id === towerWorkInProgress.target?.id);
-                    if (refreshedTargetCandidate &&
-                        !refreshedTargetCandidate.dead &&
-                        getDistance(towerWorkInProgress, refreshedTargetCandidate) <= towerWorkInProgress.range &&
-                        (refreshedTargetCandidate.type !== "flying" || towerWorkInProgress.type === "magic")) {
-                        currentDecisionTarget = refreshedTargetCandidate;
-                    }
-                }
-
-                if (!currentDecisionTarget) {
-                    let potentialTargets = enemies.filter((enemy) => {
-                        if (enemy.dead) return false;
-                        if (enemy.type === "flying" && towerWorkInProgress.type !== "magic") return false;
-                        return getDistance(towerWorkInProgress, enemy) <= towerWorkInProgress.range;
-                    });
-                    if (potentialTargets.length > 0) {
-                        switch (towerWorkInProgress.targetingMode) {
-                            case "first": potentialTargets.sort((a, b) => b.pathIndex - a.pathIndex); break;
-                            case "last": potentialTargets.sort((a, b) => a.pathIndex - b.pathIndex); break;
-                            case "strongest": potentialTargets.sort((a, b) => b.health - a.health); break;
-                            case "weakest": potentialTargets.sort((a, b) => a.health - b.health); break;
-                            default: potentialTargets.sort((a, b) => b.pathIndex - a.pathIndex);
-                        }
-                        currentDecisionTarget = potentialTargets[0];
-                    }
-                }
-                towerWorkInProgress.target = currentDecisionTarget; // Always update aiming target
-
-                if (currentDecisionTarget && timestamp - towerWorkInProgress.lastFired >= towerWorkInProgress.fireRate) {
-                    let damage = towerWorkInProgress.damage;
-                    let isCritical = false;
-                    let appliedSlow = false;
-                    let didSplash = false;
-
-                    if (towerWorkInProgress.special) {
-                        const { effect, chance, value, duration } = towerWorkInProgress.special;
-                        if (Math.random() < chance) {
-                            switch (effect) {
-                                case "critical": isCritical = true; damage *= value || 2; break;
-                                case "splash":
-                                    didSplash = true;
-                                    const splashRadius = (value || 3) * cellSize;
-                                    const splashDamage = towerWorkInProgress.damage * 0.5;
-                                    enemies.forEach(enemy => { // Splash affects enemies in the main list
-                                        if (!enemy.dead && enemy.id !== currentDecisionTarget!.id && getDistance(currentDecisionTarget!, enemy) <= splashRadius) {
-                                            enemy.health -= splashDamage;
-                                            if (enemy.health <= 0) { enemy.health = 0; enemy.dead = true; /* Handled by setEnemies filter */ }
-                                        }
-                                    });
-                                    break;
-                                case "slow":
-                                    appliedSlow = true;
-                                    const slowUntil = Date.now() + (duration || 3000);
-                                    const slowValue = value || 0.5;
-                                    if (currentDecisionTarget.effects) currentDecisionTarget.effects.slowed = { until: slowUntil, value: slowValue };
-                                    else currentDecisionTarget.effects = { slowed: { until: slowUntil, value: slowValue }};
-                                    break;
-                            }
-                        }
-                    }
-
-                    const targetWasKilled = { killed: false };
-                    let tempEnemies = enemies.map(e => ({...e, effects: {...e.effects}})); // Create a working copy for this iteration
-
-                    tempEnemies = tempEnemies.map((enemy) => {
-                        if (enemy.id === currentDecisionTarget!.id) {
-                            enemy.health -= damage;
-                            if (enemy.health <= 0) {
-                                setScore((prev) => prev + 1);
-                                setGold((prev) => prev + enemy.reward);
-                                playSound(enemyKilledSoundRef);
-                                targetWasKilled.killed = true; enemy.health = 0; enemy.dead = true;
-                            }
-                            if (appliedSlow && enemy.effects) enemy.effects.slowed = currentDecisionTarget!.effects.slowed; // Apply slow to the copy
-                        }
-                        // For splash, dead marking already happened on 'enemies' list, filter will pick it up
-                        return enemy;
-                    });
-                    setEnemies(tempEnemies.filter(e => !e.dead));
-                    
-                    towerWorkInProgress.lastFired = timestamp;
-                    towerWorkInProgress.shotAtPosition = { x: currentDecisionTarget.x + cellSize / 2, y: currentDecisionTarget.y + cellSize / 2 };
-                    towerWorkInProgress.target = targetWasKilled.killed ? null : currentDecisionTarget;
-                    towerWorkInProgress.specialEffect = isCritical ? "critical" : appliedSlow ? "slow" : didSplash ? "splash" : undefined;
-                }
-                return towerWorkInProgress;
-            });
-            setTowers(updatedTowers);
-        },
-        [enemies, playSound, towers, cellSize, setScore, setGold] // Keep existing dependencies
-    );
-
-    const getDistance = (obj1: { x: number; y: number }, obj2: { x: number; y: number }) => {
-        const dx = obj1.x - obj2.x;
-        const dy = obj1.y - obj2.y;
-        return Math.sqrt(dx * dx + dy * dy);
-    };
-
-    const update = useCallback(
-        (timestamp: number) => {
-            if (gameState !== "playing" || countdown > 0) return;
-
-            updateEnemies();
-            updateTowers(timestamp);
-
-            gameLoopRef.current = requestAnimationFrame(update);
-        },
-        [countdown, gameState, updateEnemies, updateTowers]
-    );
-
-    useEffect(() => {
-        const savedHighScore = localStorage.getItem("towerDefenseHighScore");
-        if (savedHighScore) {
-            setHighScore(parseInt(savedHighScore, 10));
-        }
-
-        const savedTheme = localStorage.getItem("towerDefenseTheme");
-        if (savedTheme && (savedTheme === "dark" || savedTheme === "light")) {
-            setTheme(savedTheme as Theme);
-            document.documentElement.setAttribute("data-theme", savedTheme);
-        } else {
-            document.documentElement.setAttribute("data-theme", "dark");
-        }
-
-        const savedDifficulty = localStorage.getItem("towerDefenseDifficulty");
-        if (savedDifficulty && (savedDifficulty === "easy" || savedDifficulty === "medium" || savedDifficulty === "hard")) {
-            setDifficulty(savedDifficulty as DifficultyLevel);
-        }
-
-        const savedTowerTheme = localStorage.getItem("towerDefenseTowerTheme");
-        if (savedTowerTheme && (savedTowerTheme === "medieval" || savedTowerTheme === "futuristic" || savedTowerTheme === "fantasy")) {
-            setTowerTheme(savedTowerTheme as TowerTheme);
-        }
-
-        const root = document.documentElement;
-        if (theme === "dark") {
-            root.style.setProperty("--primary", "#0b1120");
-            root.style.setProperty("--secondary", "#1e293b");
-            root.style.setProperty("--accent", "#8b5cf6");
-            root.style.setProperty("--highlight", "#a78bfa");
-            root.style.setProperty("--text", "#f8fafc");
-            root.style.setProperty("--card", "rgba(30, 41, 59, 0.7)");
-            root.style.setProperty("--card-border", "rgba(255, 255, 255, 0.1)");
-            root.style.setProperty("--bg-gradient", "linear-gradient(135deg, #0b1120 0%, #1e293b 100%)");
-            root.style.setProperty("--card-shadow", "0 8px 32px 0 rgba(0, 0, 0, 0.2)");
-            root.style.setProperty("--footer-bg", "var(--primary)");
-        } else {
-            root.style.setProperty("--primary", "#efecca");
-            root.style.setProperty("--secondary", "#a9cbb7");
-            root.style.setProperty("--accent", "#ff934f");
-            root.style.setProperty("--highlight", "#ff7517");
-            root.style.setProperty("--text", "#30292f");
-            root.style.setProperty("--card", "rgba(255, 255, 255, 0.85)");
-            root.style.setProperty("--card-border", "rgba(94, 86, 90, 0.2)");
-            root.style.setProperty("--bg-gradient", "linear-gradient(135deg, #efecca 0%, #a9cbb7 100%)");
-            root.style.setProperty("--card-shadow", "6px 6px 12px rgba(0, 0, 0, 0.1), -6px -6px 12px rgba(255, 255, 255, 0.7)");
-            root.style.setProperty("--footer-bg", "var(--secondary)");
-        }
-
-        const handleResize = () => {
-            const width = Math.min(window.innerWidth - 40, 800);
-            const height = Math.min(window.innerHeight - 220, 500);
-            setCanvasSize({ width, height });
-
-            const newCellSize = Math.min(Math.floor(width / 15), Math.floor(height / 10));
-            setCellSize(newCellSize);
-        };
-
-        handleResize();
-        window.addEventListener("resize", handleResize);
-
-        return () => {
-            window.removeEventListener("resize", handleResize);
-            if (gameLoopRef.current) {
-                cancelAnimationFrame(gameLoopRef.current);
-            }
-        };
-    }, [theme]);
-
-    useEffect(() => {
-        if (gameState === "playing") {
-            if (gameLoopRef.current) {
-                cancelAnimationFrame(gameLoopRef.current);
-            }
-            gameLoopRef.current = requestAnimationFrame(update);
-        } else if (gameState === "gameover" || gameState === "home") {
-            if (gameLoopRef.current) {
-                cancelAnimationFrame(gameLoopRef.current);
-                gameLoopRef.current = 0;
-            }
-        }
-    }, [gameState, update]);
-
-    useEffect(() => {
-        if (score > highScore) {
-            setHighScore(score);
-            localStorage.setItem("towerDefenseHighScore", score.toString());
-        }
-    }, [score, highScore]);
-
-    useEffect(() => {
-        localStorage.setItem("towerDefenseTheme", theme);
-        localStorage.setItem("towerDefenseDifficulty", difficulty);
-        localStorage.setItem("towerDefenseTowerTheme", towerTheme);
-    }, [theme, difficulty, towerTheme]);
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.code === "Space" || e.key === " ") {
-                if (gameState === "playing" && !waveInProgress && countdown === 0) {
-                    startWave();
-                } else if (gameState === "gameover") {
-                    setGameState("home");
-                } else if (gameState === "home") {
-                    startGame();
-                }
-            }
-
-            if (e.key === "Escape") {
-                setGameState("home");
-                if (gameLoopRef.current) {
-                    cancelAnimationFrame(gameLoopRef.current);
-                    gameLoopRef.current = 0;
-                }
-            }
-
-            if (gameState === "playing") {
-                if (e.key === "1") selectTower("archer");
-                if (e.key === "2") selectTower("cannon");
-                if (e.key === "3") selectTower("magic");
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-
-        return () => {
-            window.removeEventListener("keydown", handleKeyDown);
-        };
-    }, [countdown, gameState, startGame, startWave, waveInProgress]);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const colors = {
-            background: theme === "dark" ? "#0b1120" : "#efecca",
-            path: theme === "dark" ? "#1e293b" : "#a9cbb7",
-            tower: theme === "dark" ? "#8b5cf6" : "#ff934f",
-            enemy: theme === "dark" ? "#ef4444" : "#dc2626",
-            range: "rgba(255, 255, 255, 0.2)",
-            text: theme === "dark" ? "#f8fafc" : "#30292f",
-            healthBar: {
-                background: "rgba(0, 0, 0, 0.5)",
-                fill: "#10b981",
-            },
-        };
-
-        ctx.fillStyle = colors.background;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        if (mapGrid.length > 0) {
-            for (let y = 0; y < mapGrid.length; y++) {
-                for (let x = 0; x < mapGrid[y].length; x++) {
-                    const cellType = mapGrid[y][x];
-
-                    if (cellType === 1) {
-                        ctx.fillStyle = colors.path;
-                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-
-                        ctx.fillStyle = theme === "dark" ? "rgba(0, 0, 0, 0.2)" : "rgba(255, 255, 255, 0.2)";
-                        ctx.fillRect(x * cellSize + 2, y * cellSize + 2, cellSize - 4, cellSize - 4);
-                    } else {
-                        ctx.strokeStyle = theme === "dark" ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)";
-                        ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
-
-                        if (mapType === "grassland") {
-                            if (Math.random() > 0.8) {
-                                ctx.fillStyle = theme === "dark" ? "rgba(0, 100, 0, 0.2)" : "rgba(0, 180, 0, 0.2)";
-                                ctx.beginPath();
-                                ctx.arc(
-                                    x * cellSize + Math.random() * cellSize,
-                                    y * cellSize + Math.random() * cellSize,
-                                    2,
-                                    0,
-                                    Math.PI * 2
-                                );
-                                ctx.fill();
-                            }
-                        } else if (mapType === "desert") {
-                            if (Math.random() > 0.8) {
-                                ctx.fillStyle = theme === "dark" ? "rgba(200, 180, 100, 0.2)" : "rgba(210, 180, 140, 0.3)";
-                                ctx.beginPath();
-                                ctx.arc(
-                                    x * cellSize + Math.random() * cellSize,
-                                    y * cellSize + Math.random() * cellSize,
-                                    2,
-                                    0,
-                                    Math.PI * 2
-                                );
-                                ctx.fill();
-                            }
-                        } else if (mapType === "snow") {
-                            if (Math.random() > 0.8) {
-                                ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-                                ctx.beginPath();
-                                ctx.arc(
-                                    x * cellSize + Math.random() * cellSize,
-                                    y * cellSize + Math.random() * cellSize,
-                                    1,
-                                    0,
-                                    Math.PI * 2
-                                );
-                                ctx.fill();
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (selectedTower && gameState === "playing") {
-            canvas.style.cursor = "pointer";
-
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = (lastMouseX - rect.left) * (canvas.width / rect.width);
-            const mouseY = (lastMouseY - rect.top) * (canvas.height / rect.height);
-
-            const gridX = Math.floor(mouseX / cellSize);
-            const gridY = Math.floor(mouseY / cellSize);
-
-            const isValidPlacement =
-                mapGrid[gridY] &&
-                mapGrid[gridY][gridX] === 0 &&
-                !towers.some((t) => Math.floor(t.x / cellSize) === gridX && Math.floor(t.y / cellSize) === gridY);
-
-            const range = towerStats[selectedTower].range;
-            const x = gridX * cellSize + cellSize / 2;
-            const y = gridY * cellSize + cellSize / 2;
-
-            ctx.beginPath();
-            ctx.arc(x, y, range, 0, Math.PI * 2);
-            ctx.fillStyle = isValidPlacement ? "rgba(72, 187, 120, 0.2)" : "rgba(239, 68, 68, 0.2)";
-            ctx.fill();
-
-            ctx.fillStyle = isValidPlacement
-                ? theme === "dark"
-                    ? "rgba(139, 92, 246, 0.5)"
-                    : "rgba(255, 147, 79, 0.5)"
-                : "rgba(239, 68, 68, 0.5)";
-
-            drawTower(ctx, selectedTower, gridX * cellSize, gridY * cellSize, 1, towerTheme, true);
-        } else {
-            canvas.style.cursor = "default";
-        }
-
-        towers.forEach((tower) => {
-            drawTower(ctx, tower.type, tower.x, tower.y, tower.level, towerTheme, false);
-
-            if (tower.shotAtPosition) { // Condition simplified, lifetime of shotAtPosition is managed by updateTowers
-                // Muzzle Flash
-                ctx.beginPath();
-                ctx.arc(tower.x + cellSize / 2, tower.y + cellSize / 2, cellSize * 0.2, 0, Math.PI * 2);
-                ctx.fillStyle = theme === 'dark' ? "rgba(255, 255, 200, 0.8)" : "rgba(255, 255, 0, 0.8)";
-                ctx.fill();
-
-                // Projectile Line to where it shot
-                ctx.beginPath();
-                ctx.moveTo(tower.x + cellSize / 2, tower.y + cellSize / 2);
-                ctx.lineTo(tower.shotAtPosition.x, tower.shotAtPosition.y);
-                ctx.strokeStyle = tower.type === "archer" ? "#10b981" : tower.type === "cannon" ? "#f59e0b" : "#8b5cf6";
-                ctx.lineWidth = tower.type === "cannon" ? 3 : 2;
-                ctx.stroke();
-                ctx.lineWidth = 1; // Reset line width
-            }
-
-            // Separately, draw a very faint static range circle if the tower currently has a target (for aiming)
-            if (tower.target) {
-                ctx.beginPath();
-                ctx.arc(tower.x + cellSize / 2, tower.y + cellSize / 2, tower.range, 0, Math.PI * 2);
-                ctx.strokeStyle = theme === "dark" ? "rgba(139, 92, 246, 0.05)" : "rgba(255, 147, 79, 0.05)";
-                ctx.stroke();
-            }
-        });
-
-        enemies.forEach((enemy) => {
-            drawEnemy(ctx, enemy, cellSize);
-        });
-
-        ctx.fillStyle = colors.text;
-        ctx.font = "bold 16px Roboto"; // Use Roboto
-        ctx.textAlign = "left";
-        ctx.fillText(`Wave: ${currentWave}`, 10, 25);
-        ctx.fillText(`Lives: ${lives}`, 10, 50);
-        ctx.fillText(`Gold: ${gold}`, 10, 75);
-        ctx.fillText(`Score: ${score}`, 10, 100);
-
-        if (!waveInProgress && gameState === "playing" && countdown === 0) {
-            ctx.fillStyle = theme === "dark" ? "rgba(139, 92, 246, 0.8)" : "rgba(255, 147, 79, 0.8)";
-            ctx.fillRect(canvas.width / 2 - 100, canvas.height - 50, 200, 40);
-            ctx.fillStyle = "#ffffff";
-            ctx.textAlign = "center";
-            ctx.font = "bold 16px Roboto"; // Use Roboto
-            ctx.fillText(`Start Wave ${currentWave + 1}`, canvas.width / 2, canvas.height - 25);
-        }
-
-        if (gameState === "gameover") {
-            ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = colors.text;
-            ctx.font = "bold 36px Montserrat"; // Use Montserrat
-            ctx.textAlign = "center";
-            ctx.fillText("Game Over", canvas.width / 2, canvas.height / 3);
-
-            ctx.font = "24px Roboto"; // Use Roboto
-            ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 - 15);
-            ctx.fillText(`Waves Survived: ${currentWave}`, canvas.width / 2, canvas.height / 2 + 20);
-            ctx.fillText(`High Score: ${highScore}`, canvas.width / 2, canvas.height / 2 + 55);
-
-            ctx.font = "18px Roboto"; // Use Roboto
-            ctx.fillText("Tap or press Space to continue", canvas.width / 2, canvas.height / 2 + 100);
-        }
-
-        if (countdown > 0 && gameState === "playing") {
-            ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = theme === "dark" ? "#8b5cf6" : "#ff934f";
-            ctx.font = "bold 72px Montserrat"; // Use Montserrat
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(countdown.toString(), canvas.width / 2, canvas.height / 2);
-        }
-    }, [
-        countdown,
-        currentWave,
-        difficulty,
-        enemies,
-        gameState,
-        gold,
-        highScore,
-        lastMouseX,
-        lastMouseY,
-        lives,
-        mapGrid,
-        mapType,
-        score,
-        selectedTower,
-        theme,
-        towerTheme,
-        towers,
-        waveInProgress,
-        cellSize,
-    ]);
-
-    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        setLastMouseX(e.clientX);
-        setLastMouseY(e.clientY);
-    };
-
-    function drawTower(
-        ctx: CanvasRenderingContext2D,
-        type: TowerType,
-        x: number,
-        y: number,
-        level: number,
-        theme: TowerTheme,
-        isPlaceholder: boolean
-    ) {
-        const centerX = x + cellSize / 2;
-        const centerY = y + cellSize / 2;
-        const towerSize = cellSize * 0.8;
-        const alpha = isPlaceholder ? 0.6 : 1;
-
-        ctx.fillStyle = getTowerBaseColor(type, theme, alpha);
-        ctx.beginPath();
-
-        if (theme === "medieval") {
-            ctx.fillRect(x + cellSize * 0.1, y + cellSize * 0.1, towerSize, towerSize);
-        } else if (theme === "futuristic") {
-            drawHexagon(ctx, centerX, centerY, towerSize / 2);
-            ctx.fill();
-        } else {
-            ctx.arc(centerX, centerY, towerSize / 2, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        if (type === "archer") {
-            ctx.fillStyle = getTowerTopColor(type, theme, alpha);
-
-            if (theme === "medieval") {
-                ctx.beginPath();
-                ctx.arc(centerX, centerY - towerSize * 0.1, towerSize * 0.3, 0, Math.PI, true);
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = getTowerTopColor(type, theme, alpha);
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY - towerSize * 0.3);
-                ctx.lineTo(centerX, centerY + towerSize * 0.1);
-                ctx.stroke();
-            } else if (theme === "futuristic") {
-                ctx.fillRect(centerX - towerSize * 0.1, centerY - towerSize * 0.4, towerSize * 0.2, towerSize * 0.3);
-                ctx.beginPath();
-                ctx.arc(centerX, centerY - towerSize * 0.4, towerSize * 0.15, 0, Math.PI * 2);
-                ctx.fill();
-            } else {
-                // fantasy
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, towerSize * 0.25, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY - towerSize * 0.3);
-                ctx.lineTo(centerX, centerY + towerSize * 0.3);
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = "rgba(16, 185, 129, " + alpha + ")";
-                ctx.stroke();
-            }
-        } else if (type === "cannon") {
-            ctx.fillStyle = getTowerTopColor(type, theme, alpha);
-
-            if (theme === "medieval") {
-                ctx.fillRect(centerX - towerSize * 0.25, centerY - towerSize * 0.3, towerSize * 0.5, towerSize * 0.3);
-                ctx.beginPath();
-                ctx.arc(centerX, centerY - towerSize * 0.15, towerSize * 0.1, 0, Math.PI * 2);
-                ctx.fill();
-            } else if (theme === "futuristic") {
-                ctx.beginPath();
-                ctx.moveTo(centerX - towerSize * 0.3, centerY - towerSize * 0.1);
-                ctx.lineTo(centerX + towerSize * 0.3, centerY - towerSize * 0.1);
-                ctx.lineTo(centerX + towerSize * 0.2, centerY + towerSize * 0.2);
-                ctx.lineTo(centerX - towerSize * 0.2, centerY + towerSize * 0.2);
-                ctx.closePath();
-                ctx.fill();
-            } else {
-                // fantasy
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, towerSize * 0.3, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, towerSize * 0.2, 0, Math.PI * 2);
-                ctx.fillStyle = "rgba(245, 158, 11, " + alpha + ")";
-                ctx.fill();
-            }
-        } else if (type === "magic") {
-            ctx.fillStyle = getTowerTopColor(type, theme, alpha);
-
-            if (theme === "medieval") {
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY - towerSize * 0.4);
-                ctx.lineTo(centerX - towerSize * 0.25, centerY - towerSize * 0.1);
-                ctx.lineTo(centerX + towerSize * 0.25, centerY - towerSize * 0.1);
-                ctx.closePath();
-                ctx.fill();
-            } else if (theme === "futuristic") {
-                ctx.beginPath();
-                ctx.arc(centerX, centerY - towerSize * 0.2, towerSize * 0.2, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.beginPath();
-                for (let i = 0; i < 8; i++) {
-                    const angle = (i * Math.PI) / 4;
-                    ctx.moveTo(centerX + Math.cos(angle) * towerSize * 0.2, centerY - towerSize * 0.2 + Math.sin(angle) * towerSize * 0.2);
-                    ctx.lineTo(
-                        centerX + Math.cos(angle) * towerSize * 0.35,
-                        centerY - towerSize * 0.2 + Math.sin(angle) * towerSize * 0.35
-                    );
-                }
-                ctx.strokeStyle = "rgba(139, 92, 246, " + alpha + ")";
-                ctx.stroke();
-            } else {
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY - towerSize * 0.4);
-                ctx.lineTo(centerX - towerSize * 0.2, centerY - towerSize * 0.1);
-                ctx.lineTo(centerX - towerSize * 0.1, centerY + towerSize * 0.2);
-                ctx.lineTo(centerX + towerSize * 0.1, centerY + towerSize * 0.2);
-                ctx.lineTo(centerX + towerSize * 0.2, centerY - towerSize * 0.1);
-                ctx.closePath();
-                ctx.fill();
-            }
-        }
-
-        if (level > 1 && !isPlaceholder) {
-            ctx.fillStyle = "#fcd34d";
-            for (let i = 0; i < level - 1; i++) {
-                ctx.beginPath();
-                ctx.arc(x + cellSize * 0.2 + i * cellSize * 0.2, y + cellSize * 0.8, cellSize * 0.05, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
+    for (let i = 0; i < count; i++) {
+      dataPrevious.push(Math.floor(Math.random() * 25000) + 10000);
+      dataCurrent.push(Math.floor(Math.random() * 30000) + 5000);
     }
+    
+    return labels.map((label, index) => ({
+      name: label,
+      Current: dataCurrent[index],
+      Previous: dataPrevious[index],
+    }));
+  };
+  
+  const [analyticsChartData, setAnalyticsChartData] = useState(generateAnalyticsData(activeAnalyticsTimeFilter));
 
-    function drawHexagon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const angle = (i * Math.PI) / 3;
-            const pointX = x + size * Math.cos(angle);
-            const pointY = y + size * Math.sin(angle);
+  useEffect(() => {
+    setAnalyticsChartData(generateAnalyticsData(activeAnalyticsTimeFilter));
+  }, [activeAnalyticsTimeFilter]);
 
-            if (i === 0) {
-                ctx.moveTo(pointX, pointY);
-            } else {
-                ctx.lineTo(pointX, pointY);
-            }
-        }
-        ctx.closePath();
-    }
 
-    function getTowerBaseColor(type: TowerType, towerTheme: TowerTheme, alpha: number) {
-        const colorMap = {
-            medieval: {
-                archer: "rgba(75, 85, 99, " + alpha + ")",
-                cannon: "rgba(55, 65, 81, " + alpha + ")",
-                magic: "rgba(107, 114, 128, " + alpha + ")",
-            },
-            futuristic: {
-                archer: "rgba(59, 130, 246, " + alpha + ")",
-                cannon: "rgba(37, 99, 235, " + alpha + ")",
-                magic: "rgba(96, 165, 250, " + alpha + ")",
-            },
-            fantasy: {
-                archer: "rgba(16, 185, 129, " + alpha + ")",
-                cannon: "rgba(245, 158, 11, " + alpha + ")",
-                magic: "rgba(139, 92, 246, " + alpha + ")",
-            },
-        };
-
-        return colorMap[towerTheme][type];
-    }
-
-    function getTowerTopColor(type: TowerType, towerTheme: TowerTheme, alpha: number) {
-        const colorMap = {
-            medieval: {
-                archer: "rgba(120, 53, 15, " + alpha + ")",
-                cannon: "rgba(17, 24, 39, " + alpha + ")",
-                magic: "rgba(30, 58, 138, " + alpha + ")",
-            },
-            futuristic: {
-                archer: "rgba(110, 231, 183, " + alpha + ")",
-                cannon: "rgba(251, 146, 60, " + alpha + ")",
-                magic: "rgba(192, 132, 252, " + alpha + ")",
-            },
-            fantasy: {
-                archer: "rgba(167, 243, 208, " + alpha + ")",
-                cannon: "rgba(253, 186, 116, " + alpha + ")",
-                magic: "rgba(216, 180, 254, " + alpha + ")",
-            },
-        };
-
-        return colorMap[towerTheme][type];
-    }
-
-    function drawEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy, cellSize: number) {
-        const centerX = enemy.x + cellSize / 2;
-        const centerY = enemy.y + cellSize / 2;
-        const enemySize = cellSize * 0.7;
-
-        if (enemy.type === "infantry") {
-            ctx.fillStyle = theme === "dark" ? "#ef4444" : "#dc2626";
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, enemySize / 2, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = theme === "dark" ? "#b91c1c" : "#991b1b";
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, enemySize / 3, 0, Math.PI * 2);
-            ctx.fill();
-        } else if (enemy.type === "armored") {
-            ctx.fillStyle = theme === "dark" ? "#9ca3af" : "#6b7280";
-            ctx.fillRect(centerX - enemySize / 2, centerY - enemySize / 2, enemySize, enemySize);
-
-            ctx.fillStyle = theme === "dark" ? "#4b5563" : "#374151";
-            ctx.fillRect(centerX - enemySize / 3, centerY - enemySize / 3, (enemySize * 2) / 3, (enemySize * 2) / 3);
-        } else if (enemy.type === "flying") {
-            ctx.fillStyle = theme === "dark" ? "#60a5fa" : "#3b82f6";
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY - enemySize / 2);
-            ctx.lineTo(centerX - enemySize / 2, centerY + enemySize / 2);
-            ctx.lineTo(centerX + enemySize / 2, centerY + enemySize / 2);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.fillStyle = theme === "dark" ? "#93c5fd" : "#60a5fa";
-            ctx.beginPath();
-            ctx.moveTo(centerX - enemySize / 3, centerY - enemySize / 6);
-            ctx.lineTo(centerX - (enemySize * 2) / 3, centerY);
-            ctx.lineTo(centerX - enemySize / 3, centerY + enemySize / 6);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(centerX + enemySize / 3, centerY - enemySize / 6);
-            ctx.lineTo(centerX + (enemySize * 2) / 3, centerY);
-            ctx.lineTo(centerX + enemySize / 3, centerY + enemySize / 6);
-            ctx.closePath();
-            ctx.fill();
-        }
-
-        const healthBarWidth = cellSize * 0.8;
-        const healthBarHeight = cellSize * 0.1;
-        const healthPercent = enemy.health / enemy.maxHealth;
-
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-        ctx.fillRect(centerX - healthBarWidth / 2, centerY - enemySize / 2 - healthBarHeight - 2, healthBarWidth, healthBarHeight);
-
-        ctx.fillStyle = healthPercent > 0.6 ? "#10b981" : healthPercent > 0.3 ? "#f59e0b" : "#ef4444";
-        ctx.fillRect(
-            centerX - healthBarWidth / 2,
-            centerY - enemySize / 2 - healthBarHeight - 2,
-            healthBarWidth * healthPercent,
-            healthBarHeight
-        );
-    }
-
-    const changeDifficulty = (newDifficulty: DifficultyLevel) => {
-        setDifficulty(newDifficulty);
-        localStorage.setItem("towerDefenseDifficulty", newDifficulty);
-    };
-
-    const changeTowerTheme = (newTheme: TowerTheme) => {
-        setTowerTheme(newTheme);
-        localStorage.setItem("towerDefenseTowerTheme", newTheme);
-    };
-
-    const changeMapType = (newMapType: MapType) => {
-        setMapType(newMapType);
-    };
-
-    const toggleSound = () => {
-        setSoundEnabled(!soundEnabled);
-    };
-
-    const handleStartWaveClick = () => {
-        if (gameState === "playing" && !waveInProgress && countdown === 0) {
-            startWave();
-        }
-    };
-
-    const renderHomePage = () => (
-        <div className="home-container">
-            <div
-                className="game-card"
-                style={{
-                    background: "var(--card)",
-                    boxShadow: "var(--card-shadow)",
-                    borderColor: "var(--card-border)",
-                    color: "var(--text)",
-                    // flex: '1 1 500px', // Example for flex sizing
-                }}
-            >
-                <h2 className="game-title" style={{ color: "var(--accent)" }}>
-                    Tower Defense Strategy
-                </h2>
-
-                <div className="game-animation" style={{ background: "var(--primary)" }}>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="tower" style={{ background: "var(--accent)" }}></div>
-
-                        <div
-                            className="enemy"
-                            style={{
-                                transform: "translateX(100%)",
-                                animation: "moveLeft 3s linear infinite",
-                            }}
-                        >
-                            <div className="enemy-shape" style={{ background: "var(--highlight)" }}></div>
-                        </div>
-                    </div>
-                </div>
-
-                <p className="game-desc">
-                    Defend your territory by strategically placing towers to stop the invading enemies. Upgrade your defenses and survive
-                    increasingly difficult waves!
-                </p>
-
-                <div className="btn-group">
-                    <button
-                        onClick={startGame}
-                        className="btn-primary cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
-                        style={{
-                            background: "var(--accent)",
-                            color: "#ffffff",
-                            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-                        }}
-                    >
-                        Start Game
-                    </button>
-
-                    <button
-                        onClick={() => setIsAboutModalOpen(true)}
-                        className="btn-secondary cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
-                        style={{
-                            background: "var(--card)",
-                            color: "var(--text)",
-                            border: "2px solid var(--accent)",
-                            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-                        }}
-                    >
-                        How to Play
-                    </button>
-                </div>
-            </div>
-
-            {/* Game Settings Card - formerly in features-container */}
-            <div
-                className="settings-card-home feature-card" // Added settings-card-home for potential specific styling, kept feature-card for shared styles
-                style={{
-                    background: "var(--card)",
-                    boxShadow: "var(--card-shadow)",
-                    borderColor: "var(--card-border)",
-                    color: "var(--text)",
-                    // flex: '1 1 400px', // Example for flex sizing
-                }}
-            >
-                <h3 className="card-title" style={{ color: "var(--highlight)" }}>
-                    Game Settings
-                </h3>
-
-                <div className="setting-group">
-                    <h4 className="setting-title">Difficulty Level</h4>
-                    <div className="setting-options">
-                        {[ "easy", "medium", "hard"].map((level) => (
-                            <button
-                                key={level}
-                                onClick={() => changeDifficulty(level as DifficultyLevel)}
-                                className="option-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
-                                style={{
-                                    background: difficulty === level ? "var(--accent)" : "var(--card)",
-                                    color: difficulty === level ? "#ffffff" : "var(--text)",
-                                    border: `1px solid ${difficulty === level ? "transparent" : "var(--card-border)"}`,
-                                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                                }}
-                            >
-                                {level}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="setting-group">
-                    <h4 className="setting-title">Tower Theme</h4>
-                    <div className="setting-options">
-                        {[
-                            { id: "medieval", name: "Medieval", color: theme === "dark" ? "#6b7280" : "#9ca3af" },
-                            { id: "futuristic", name: "Futuristic", color: theme === "dark" ? "#3b82f6" : "#60a5fa" },
-                            { id: "fantasy", name: "Fantasy", color: theme === "dark" ? "#8b5cf6" : "#a78bfa" },
-                        ].map((themeOption) => (
-                            <button
-                                key={themeOption.id}
-                                onClick={() => changeTowerTheme(themeOption.id as TowerTheme)}
-                                className="theme-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
-                                style={{
-                                    background: towerTheme === themeOption.id ? "rgba(var(--highlight-rgb), 0.1)" : "var(--card)",
-                                    color: "var(--text)",
-                                    border: `1px solid ${towerTheme === themeOption.id ? "var(--highlight)" : "var(--card-border)"}`,
-                                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                                }}
-                            >
-                                <div className="theme-circle" style={{ background: themeOption.color }}></div>
-                                <span className="theme-name">{themeOption.name}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="setting-group">
-                    <h4 className="setting-title">Map Selection</h4>
-                    <div className="setting-options">
-                        {[
-                            { id: "grassland", name: "Grassland", color: theme === "dark" ? "#065f46" : "#10b981" },
-                            { id: "desert", name: "Desert", color: theme === "dark" ? "#92400e" : "#f59e0b" },
-                            { id: "snow", name: "Snow", color: theme === "dark" ? "#1e40af" : "#3b82f6" },
-                        ].map((mapOption) => (
-                            <button
-                                key={mapOption.id}
-                                onClick={() => changeMapType(mapOption.id as MapType)}
-                                className="theme-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
-                                style={{
-                                    background: mapType === mapOption.id ? "rgba(var(--highlight-rgb), 0.1)" : "var(--card)",
-                                    color: "var(--text)",
-                                    border: `1px solid ${mapType === mapOption.id ? "var(--highlight)" : "var(--card-border)"}`,
-                                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                                }}
-                            >
-                                <div className="theme-circle" style={{ background: mapOption.color }}></div>
-                                <span className="theme-name">{mapOption.name}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div>
-                    <h4 className="setting-title">Sound</h4>
-                    <button
-                        onClick={toggleSound}
-                        className="toggle-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
-                        style={{
-                            background: "var(--card)",
-                            color: "var(--text)",
-                            border: "1px solid var(--card-border)",
-                            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                        }}
-                    >
-                        {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-                        <span>{soundEnabled ? "Sound On" : "Sound Off"}</span>
-                    </button>
-                </div>
-            </div>
-            {/* Removed Game Features Card */}
-
-            <style jsx>{`
-                @keyframes moveLeft {
-                    0% {
-                        transform: translateX(100%);
-                    }
-                    100% {
-                        transform: translateX(-100%);
-                    }
-                }
-
-                .home-container {
-                    width: 100%;
-                    max-width: 1200px;
-                    margin: 0 auto;
-                    padding: 2rem 1rem;
-                    display: flex;
-                    flex-direction: column; /* Default to column for smaller screens */
-                    align-items: center; /* Center items when in column mode */
-                    gap: 2rem; /* Add some gap between cards when in column mode */
-                }
-
-                @media (min-width: 1024px) { /* lg breakpoint or similar */
-                    .home-container {
-                        flex-direction: row;
-                        align-items: flex-start; /* Align to top when in row mode */
-                    }
-                }
-
-                .game-card {
-                    /* max-width: 32rem; */ /* Removed max-width to allow flex grow */
-                    flex: 2 1 0px; /* Allow game card to be larger */
-                    padding: 1.5rem;
-                    border-radius: 0.75rem;
-                    /* margin-bottom: 2rem; */ /* Removed margin-bottom as gap handles spacing */
-                    text-align: center;
-                }
-
-                .settings-card-home {
-                    flex: 1 1 0px; /* Allow settings card to take remaining space */
-                    padding: 1.5rem;
-                    border-radius: 0.75rem;
-                }
-
-                .game-title {
-                    font-size: 1.875rem;
-                    font-weight: 700;
-                    margin-bottom: 1.5rem;
-                    font-family: 'Montserrat', sans-serif;
-                }
-
-                .game-animation {
-                    position: relative;
-                    height: 16rem;
-                    width: 100%;
-                    margin-bottom: 2rem;
-                    border-radius: 0.5rem;
-                    overflow: hidden;
-                }
-
-                .tower {
-                    width: 3rem;
-                    height: 3rem;
-                    border-radius: 0.5rem;
-                    position: relative;
-                }
-
-                .tower::after {
-                    content: "";
-                    position: absolute;
-                    top: -1.5rem;
-                    left: 1rem;
-                    width: 1rem;
-                    height: 1.5rem;
-                    background: inherit;
-                    border-radius: 0.25rem;
-                }
-
-                .enemy {
-                    position: absolute;
-                    height: 100%;
-                    display: flex;
-                    align-items: center;
-                }
-
-                .enemy-shape {
-                    width: 2rem;
-                    height: 2rem;
-                    border-radius: 50%;
-                }
-
-                .game-desc {
-                    margin-bottom: 1.5rem;
-                }
-
-                .btn-group {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.75rem;
-                    justify-content: center;
-                    margin-bottom: 1.5rem;
-                }
-
-                @media (min-width: 640px) {
-                    .btn-group {
-                        flex-direction: row;
-                    }
-                }
-
-                .btn-primary,
-                .btn-secondary {
-                    padding: 0.75rem 2rem;
-                    border-radius: 9999px;
-                    font-size: 1.125rem;
-                    font-weight: 600;
-                    transition: transform 0.2s;
-                }
-
-                .btn-primary:hover,
-                .btn-secondary:hover {
-                    transform: scale(1.05);
-                }
-
-                .feature-card { /* This class is still used by settings-card-home for shared padding/border-radius */
-                    /* flex: 1; */ /* Remove as flex is handled by settings-card-home directly */
-                    padding: 1.5rem;
-                    border-radius: 0.75rem;
-                }
-
-                .card-title {
-                    font-size: 1.25rem;
-                    font-weight: 700;
-                    margin-bottom: 1rem;
-                    font-family: 'Montserrat', sans-serif;
-                }
-
-                .feature-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.75rem;
-                }
-
-                .feature-item {
-                    display: flex;
-                    align-items: start;
-                }
-
-                .bullet {
-                    display: inline-block;
-                    width: 0.5rem;
-                    height: 0.5rem;
-                    margin-top: 0.5rem;
-                    margin-right: 0.5rem;
-                    border-radius: 9999px;
-                }
-
-                .setting-group {
-                    margin-bottom: 1.5rem;
-                }
-
-                .setting-title {
-                    font-weight: 500; // Or 600/700 depending on desired look with Montserrat
-                    margin-bottom: 0.5rem;
-                    font-family: 'Montserrat', sans-serif;
-                }
-
-                .setting-options {
-                    display: flex;
-                    gap: 0.5rem;
-                }
-
-                .option-btn {
-                    flex: 1;
-                    padding: 0.5rem 0.75rem;
-                    border-radius: 0.5rem;
-                    font-size: 0.875rem;
-                    font-weight: 500;
-                    text-transform: capitalize;
-                }
-
-                .theme-btn {
-                    flex: 1;
-                    padding: 0.5rem;
-                    border-radius: 0.5rem;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 0.5rem;
-                }
-
-                .theme-circle {
-                    width: 2rem;
-                    height: 2rem;
-                    border-radius: 9999px;
-                }
-
-                .theme-name {
-                    font-size: 0.75rem;
-                }
-
-                .toggle-btn {
-                    width: 100%;
-                    padding: 0.5rem 0.75rem;
-                    border-radius: 0.5rem;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 0.5rem;
-                }
-            `}</style>
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white dark:bg-gray-800 p-3 shadow-lg rounded-md border border-gray-200 dark:border-gray-700">
+          <p className="label text-sm text-gray-700 dark:text-gray-300">{`${label}`}</p>
+          {payload.map((pld: any) => (
+            <p key={pld.dataKey} style={{ color: pld.color }} className="text-xs">
+              {`${pld.dataKey}: ${pld.value?.toLocaleString()}`}
+            </p>
+          ))}
         </div>
-    );
+      );
+    }
+    return null;
+  };
 
-    const renderGameScreen = () => (
-        <div className="game-view">
-            <div className="game-controls">
-                <div className="tower-selection">
-                    <h3 className="control-title">Towers</h3>
-                    <div className="tower-buttons">
-                        {[
-                            { type: "archer", name: "Archer", icon: <Target size={16} />, cost: towerStats.archer.cost },
-                            { type: "cannon", name: "Cannon", icon: <Shield size={16} />, cost: towerStats.cannon.cost },
-                            { type: "magic", name: "Magic", icon: <Zap size={16} />, cost: towerStats.magic.cost },
-                        ].map((tower) => (
-                            <button
-                                key={tower.type}
-                                onClick={() => selectTower(tower.type as TowerType)}
-                                className={`tower-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90 ${selectedTower === tower.type ? "selected" : ""}`}
-                                style={{
-                                    background: selectedTower === tower.type ? "var(--accent)" : "var(--card)",
-                                    color: selectedTower === tower.type ? "#ffffff" : "var(--text)",
-                                    boxShadow: "var(--card-shadow)",
-                                    opacity: (selectedTower !== tower.type && gold < tower.cost) ? 0.5 : 1,
-                                }}
-                                disabled={selectedTower !== tower.type && gold < tower.cost}
-                            >
-                                <span className="tower-icon">{tower.icon}</span>
-                                <span className="tower-name">{tower.name}</span>
-                                <span className="tower-cost">{tower.cost}g</span>
-                            </button>
-                        ))}
-                    </div>
+  return (
+    <>
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap');
+        body {
+          font-family: 'Roboto', sans-serif;
+          background-color: #f7f9fc; /* Light mode background */
+          color: #333; /* Light mode text */
+          transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .dark body {
+          background-color: #1a202c; /* Dark mode background */
+          color: #e2e8f0; /* Dark mode text */
+        }
+        h1, h2, h3, h4, h5, h6 {
+          font-family: 'Montserrat', sans-serif;
+        }
+        /* Additional global styles can be added here */
+      `}</style>
+
+      <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+        {/* Navbar */}
+        <nav className="bg-white dark:bg-gray-800 shadow-md dark:border-b dark:border-gray-700">
+          <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              {/* Left Section: Logo and Nav Links */}
+              <div className="flex items-center">
+                <div className="flex-shrink-0 flex items-center gap-3 relative pr-8 mr-8">
+                  <WunderUiLogo />
+                  <span className="font-montserrat text-2xl font-bold text-gray-800 dark:text-white">WunderUI</span>
+                  <div className="absolute right-0 top-[-10px] h-[calc(100%+20px)] w-px bg-gray-200 dark:bg-gray-700"></div>
                 </div>
-
-                <div className="game-info">
-                    <div className="info-item">
-                        <span className="info-label">Wave:</span>
-                        <span className="info-value">{currentWave}</span>
-                    </div>
-                    <div className="info-item">
-                        <span className="info-label">Lives:</span>
-                        <span className="info-value">{lives}</span>
-                    </div>
-                    <div className="info-item">
-                        <span className="info-label">Gold:</span>
-                        <span className="info-value">{gold}</span>
-                    </div>
-                    <div className="info-item">
-                        <span className="info-label">Score:</span>
-                        <span className="info-value">{score}</span>
-                    </div>
+                <div className="hidden md:block">
+                  <div className="ml-10 flex items-baseline space-x-4">
+                    {navLinks.map((link) => (
+                      <a
+                        key={link.name}
+                        href={link.href}
+                        onClick={() => setActiveLink(link.name)}
+                        className={`px-3 py-2 rounded-md text-sm font-medium cursor-pointer
+                          ${activeLink === link.name 
+                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' 
+                            : 'text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                          }`}
+                      >
+                        {link.name}
+                      </a>
+                    ))}
+                  </div>
                 </div>
+              </div>
 
-                <button 
-                    onClick={() => setGameState("home")}
-                    className="home-btn-ingame cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
-                    style={{
-                        background: "var(--secondary)", 
-                        color: "var(--text)", 
-                        border: "1px solid var(--card-border)",
-                        alignSelf: 'center' // Or 'flex-start' / 'flex-end' depending on flex context
-                    }}
-                >
-                    <Home size={18} />
-                    <span>Back to Home</span>
-                </button>
-            </div>
-
-            <div
-                className="canvas-wrap"
-                style={{
-                    height: `${canvasSize.height}px`,
-                    background: "var(--primary)",
-                    boxShadow: "var(--card-shadow)",
-                    borderColor: "var(--card-border)",
-                }}
-            >
-                <canvas
-                    ref={canvasRef}
-                    width={canvasSize.width}
-                    height={canvasSize.height}
-                    className="game-canvas"
-                    onClick={handleCanvasClick}
-                    onMouseMove={handleMouseMove}
-                    style={{ touchAction: "none" }}
-                />
-
-                {selectedTowerIndex !== null && towers[selectedTowerIndex] && (
-                    <div
-                        className="tower-panel"
-                        style={{
-                            position: "absolute",
-                            bottom: "10px",
-                            left: "10px",
-                            background: "var(--card)",
-                            borderRadius: "0.5rem",
-                            padding: "0.5rem",
-                            boxShadow: "var(--card-shadow)",
-                            color: "var(--text)",
-                            width: "220px",
-                        }}
+              {/* Right Section: Notifications, Profile, Theme Toggle */}
+              <div className="hidden md:block">
+                <div className="ml-4 flex items-center md:ml-6 gap-4">
+                  {/* Theme Toggle Button */}
+                  <button
+                    onClick={toggleThemePreference}
+                    className="p-1 rounded-full text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 dark:focus:ring-offset-gray-900 focus:ring-white cursor-pointer"
+                  >
+                    <span className="sr-only">Toggle dark mode</span>
+                    {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                  </button>
+                
+                  {/* Notification Bell */}
+                  <div className="relative" ref={notificationDropdownRef}>
+                    <button
+                      onClick={bellIconActivated}
+                      className="p-1 bg-white dark:bg-gray-800 rounded-full text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none cursor-pointer"
                     >
-                        <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                            <h4 style={{ margin: 0 }}>
-                                {towers[selectedTowerIndex].type.charAt(0).toUpperCase() + towers[selectedTowerIndex].type.slice(1)}
-                                Tower (Level {towers[selectedTowerIndex].level})
-                            </h4>
-                            <button
-                                onClick={() => setSelectedTowerIndex(null)}
-                                style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text)" }}
-                            >
-                                &times;
-                            </button>
+                      <span className="sr-only">View notifications</span>
+                      <Bell size={20} />
+                      <span className="absolute top-0 right-0 block h-2 w-2 rounded-full ring-2 ring-white dark:ring-gray-800 bg-red-500"></span>
+                    </button>
+                    {isNotificationDropdownOpen && (
+                      <div className="origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-lg py-1 bg-white dark:bg-gray-700 ring-1 ring-black dark:ring-gray-600 ring-opacity-5 z-20">
+                        <div className="px-4 py-3 text-sm text-gray-800 dark:text-gray-100 font-semibold border-b border-gray-200 dark:border-gray-600">Notifications</div>
+                        {
+                          [
+                            { icon: <ShoppingCart size={16} className="text-blue-500"/>, title: 'New order received (#12345)', time: '5 minutes ago' },
+                            { icon: <LineChartIcon size={16} className="text-red-500"/>, title: 'Traffic dropped by 15%', time: '1 hour ago' },
+                            { icon: <Users size={16} className="text-green-500"/>, title: 'New customer registered', time: '3 hours ago' },
+                            { icon: <MessageSquare size={16} className="text-yellow-500"/>, title: 'Comment on \'Creative Brandbook\'', time: 'Yesterday' },
+                          ].map(item => (
+                            <a key={item.title} href="#" className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">
+                              <span className="flex-shrink-0">{item.icon}</span>
+                              <div className="flex-grow">
+                                <p>{item.title}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500">{item.time}</p>
+                              </div>
+                            </a>
+                          ))
+                        }
+                        <div className="border-t border-gray-200 dark:border-gray-600">
+                          <a href="#" className="block px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">View All Notifications</a>
                         </div>
-
-                        <div className="tower-stats" style={{ fontSize: "0.8rem", marginBottom: "0.5rem" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <span>Damage:</span>
-                                <span>{towers[selectedTowerIndex].damage}</span>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <span>Range:</span>
-                                <span>{towers[selectedTowerIndex].range}</span>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <span>Fire Rate:</span>
-                                <span>{(1000 / towers[selectedTowerIndex].fireRate).toFixed(1)} /sec</span>
-                            </div>
-
-                            {towers[selectedTowerIndex].special && (
-                                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                    <span>Special:</span>
-                                    <span>
-                                        {towers[selectedTowerIndex].special.effect.charAt(0).toUpperCase() +
-                                            towers[selectedTowerIndex].special.effect.slice(1)}{" "}
-                                        ({Math.round(towers[selectedTowerIndex].special.chance * 100)}%)
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="targeting-modes" style={{ marginBottom: "0.5rem" }}>
-                            <div style={{ fontSize: "0.8rem", marginBottom: "0.2rem" }}>Targeting:</div>
-                            <div style={{ display: "flex", gap: "0.25rem" }}>
-                                {(["first", "last", "strongest", "weakest"] as TargetingMode[]).map((mode) => (
-                                    <button
-                                        key={mode}
-                                        onClick={() => changeTargetingMode(selectedTowerIndex, mode)}
-                                        className={`target-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90 ${towers[selectedTowerIndex].targetingMode === mode ? "selected" : ""}`}
-                                        style={{
-                                            padding: "0.25rem 0.5rem",
-                                            fontSize: "0.7rem",
-                                            background:
-                                                towers[selectedTowerIndex].targetingMode === mode ? "var(--accent)" : "var(--secondary)",
-                                            color: towers[selectedTowerIndex].targetingMode === mode ? "#ffffff" : "var(--text)",
-                                            borderRadius: "0.25rem",
-                                            border: "none",
-                                            cursor: "pointer",
-                                            flex: 1,
-                                        }}
-                                    >
-                                        {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="tower-actions" style={{ display: "flex", gap: "0.5rem" }}>
-                            {towers[selectedTowerIndex].level < 3 && (
-                                <button
-                                    onClick={() => upgradeTower(selectedTowerIndex)}
-                                    disabled={
-                                        gold < towerStats[towers[selectedTowerIndex].type].upgradeCost[towers[selectedTowerIndex].level]
-                                    }
-                                    className="cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
-                                    style={{
-                                        flex: 2,
-                                        padding: "0.5rem",
-                                        background: "var(--accent)",
-                                        color: "#ffffff",
-                                        borderRadius: "0.25rem",
-                                        border: "none",
-                                        opacity:
-                                            gold < towerStats[towers[selectedTowerIndex].type].upgradeCost[towers[selectedTowerIndex].level]
-                                                ? 0.5
-                                                : 1,
-                                    }}
-                                >
-                                    Upgrade ({towerStats[towers[selectedTowerIndex].type].upgradeCost[towers[selectedTowerIndex].level]}g)
-                                </button>
-                            )}
-                            {towers[selectedTowerIndex].level === 3 && (
-                                <div
-                                    style={{
-                                        flex: 2,
-                                        padding: "0.5rem",
-                                        background: "var(--secondary)",
-                                        color: "var(--text)",
-                                        borderRadius: "0.25rem",
-                                        textAlign: "center",
-                                        fontSize: "0.8rem",
-                                    }}
-                                >
-                                    Max Level
-                                </div>
-                            )}
-                            <button
-                                onClick={() => sellTower(selectedTowerIndex)}
-                                className="cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
-                                style={{
-                                    flex: 1,
-                                    padding: "0.5rem",
-                                    background: "#ef4444",
-                                    color: "#ffffff",
-                                    borderRadius: "0.25rem",
-                                    border: "none",
-                                }}
-                            >
-                                Sell (+{Math.floor(towers[selectedTowerIndex].cost * 0.5 * towers[selectedTowerIndex].level)}g)
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <div className="game-tip" style={{ color: "var(--text)" }}>
-                <p>Tip: Click to place selected tower. Press 1-3 to select towers. Click on towers to upgrade.</p>
-            </div>
-
-            <style jsx>{`
-                .game-view {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    padding: 1.5rem 1rem;
-                }
-
-                .game-controls {
-                    width: 100%;
-                    max-width: ${canvasSize.width}px;
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 1rem;
-                    margin-bottom: 1rem;
-                    justify-content: space-between;
-                }
-
-                .tower-selection {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.5rem;
-                }
-
-                .control-title {
-                    font-weight: 600; // Or 700 depending on desired look with Montserrat
-                    color: var(--text);
-                    font-family: 'Montserrat', sans-serif;
-                }
-
-                .tower-buttons {
-                    display: flex;
-                    gap: 0.5rem;
-                }
-
-                .tower-btn {
-                    padding: 0.5rem;
-                    border-radius: 0.5rem;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 0.25rem;
-                    min-width: 4rem;
-                    transition: transform 0.2s;
-                }
-
-                .tower-btn:not(:disabled):hover {
-                    transform: scale(1.05);
-                }
-
-                .tower-btn.selected {
-                    border: 2px solid var(--highlight);
-                }
-
-                .tower-icon {
-                    margin-bottom: 0.25rem;
-                }
-
-                .tower-name {
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                }
-
-                .tower-cost {
-                    font-size: 0.7rem;
-                    opacity: 0.8;
-                }
-
-                .game-info {
-                    display: flex;
-                    gap: 1rem;
-                    align-items: center;
-                }
-
-                .info-item {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    color: var(--text);
-                }
-
-                .info-label {
-                    font-size: 0.75rem;
-                    opacity: 0.8;
-                }
-
-                .info-value {
-                    font-weight: 600;
-                    font-size: 1.125rem;
-                }
-
-                .home-btn-ingame {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    padding: 0.5rem 1rem;
-                    border-radius: 0.5rem;
-                    /* border: 2px solid; */ /* Optional: if you want a more prominent border */
-                    /* margin-left: auto; */ /* Removed to allow centering or other flex alignments */
-                }
-
-                .canvas-wrap {
-                    position: relative;
-                    width: 100%;
-                    max-width: ${canvasSize.width}px;
-                    border-radius: 0.75rem;
-                    overflow: hidden;
-                }
-
-                .game-canvas {
-                    width: 100%;
-                    height: 100%;
-                }
-
-                .game-tip {
-                    margin-top: 1rem;
-                    font-size: 0.875rem;
-                    text-align: center;
-                }
-            `}</style>
-            {gameState === "gameover" && (
-                <div className="flex flex-col items-center justify-center mt-8">
-                    {!showDifficultySelect ? (
-                        <button
-                            className="mt-4 px-6 py-3 rounded-lg bg-[var(--accent)] text-white font-semibold text-lg cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
-                            onClick={() => setShowDifficultySelect(true)}
-                        >
-                            Play Again
-                        </button>
-                    ) : (
-                        <div className="flex flex-col items-center gap-4 mt-4">
-                            <div className="text-base font-semibold mb-2" style={{ color: "var(--text)" }}>Select Difficulty</div>
-                            <div className="flex gap-3">
-                                {["easy", "medium", "hard"].map((level) => (
-                                    <button
-                                        key={level}
-                                        className="px-5 py-2 rounded-md bg-[var(--card)] text-[var(--text)] border border-[var(--accent)] font-medium cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
-                                        onClick={() => {
-                                            setDifficulty(level as DifficultyLevel);
-                                            setShowDifficultySelect(false);
-                                            setTimeout(() => startGame(), 100);
-                                        }}
-                                    >
-                                        {level.charAt(0).toUpperCase() + level.slice(1)}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                      </div>
                     )}
-                </div>
-            )}
-        </div>
-    );
+                  </div>
 
-    const renderAboutScreen = () => (
-        <div className="modal-overlay" style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.75)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "1.5rem"
-        }}>
-            <div
-                className="modal-content about-card"
-                style={{
-                    background: "var(--card)",
-                    boxShadow: "var(--card-shadow)",
-                    borderColor: "var(--card-border)",
-                    color: "var(--text)",
-                    position: "relative",
-                    padding: "2.5rem",
-                    borderRadius: "1rem",
-                    maxWidth: "42rem",
-                    width: "100%",
-                    maxHeight: "85vh",
-                    overflowY: "auto",
-                    border: "1px solid var(--card-border)"
-                }}
-            >
-                <button 
-                    onClick={() => setIsAboutModalOpen(false)} 
-                    className="modal-close-btn cursor-pointer transition-transform duration-150 hover:scale-110 hover:bg-opacity-80"
-                    style={{ 
-                        color: "var(--text)",
-                        position: "absolute",
-                        top: "1rem",
-                        right: "1.5rem",
-                        background: "transparent",
-                        border: "none",
-                        fontSize: "2rem",
-                        lineHeight: 1,
-                        width: "40px",
-                        height: "40px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderRadius: "50%",
-                        transition: "background-color 0.2s ease"
-                    }}
-                >
-                    &times;
+                  <div className="h-6 w-px bg-gray-200 dark:bg-gray-600"></div>
+
+                  {/* Profile Dropdown */}
+                  <div className="ml-3 relative" ref={profileDropdownRef}>
+                    <div>
+                      <button
+                        onClick={userProfileClicked}
+                        className="max-w-xs bg-white dark:bg-gray-800 rounded-full flex items-center text-sm focus:outline-none gap-2 cursor-pointer"
+                        id="user-menu-button"
+                      >
+                        <span className="sr-only">Open user menu</span>
+                        <div className="h-8 w-8 rounded-full bg-purple-200 dark:bg-purple-700 flex items-center justify-center text-purple-700 dark:text-purple-200 font-semibold">
+                          JM
+                        </div>
+                        <div className="text-left hidden sm:block">
+                          <div className="text-sm font-medium text-gray-700 dark:text-gray-200">Jonah Miller</div>
+                          <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Administrator</div>
+                        </div>
+                        <div className="hidden sm:flex flex-col items-center">
+                            <ChevronUp size={12} className="text-gray-400 dark:text-gray-500 -mb-1" />
+                            <ChevronDown size={12} className="text-gray-400 dark:text-gray-500 -mt-1" />
+                        </div>
+                      </button>
+                    </div>
+                    {isProfileDropdownOpen && (
+                       <div 
+                        className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-20" 
+                        role="menu" 
+                        aria-orientation="vertical" 
+                        aria-labelledby="user-menu-button"
+                      >
+                        {
+                          [
+                            { label: 'View Profile', icon: <UserCircle size={16} className="mr-2 text-gray-500 dark:text-gray-400"/> },
+                            { label: 'Billing', icon: <CreditCard size={16} className="mr-2 text-gray-500 dark:text-gray-400"/> },
+                            { label: 'Help Center', icon: <LifeBuoy size={16} className="mr-2 text-gray-500 dark:text-gray-400"/> },
+                            { label: 'Account Settings', icon: <Settings size={16} className="mr-2 text-gray-500 dark:text-gray-400"/> },
+                          ].map(item => (
+                            <a key={item.label} href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600" role="menuitem">
+                              {item.icon} {item.label}
+                            </a>
+                          ))
+                        }
+                        <div className="border-t border-gray-200 dark:border-gray-600 my-1"></div>
+                        <a href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600" role="menuitem">
+                          <LogOut size={16} className="mr-2 text-gray-500 dark:text-gray-400" />
+                           Logout
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* Mobile menu button (placeholder) */}
+              <div className="-mr-2 flex md:hidden">
+                <button className="bg-gray-50 dark:bg-gray-700 inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-300 hover:text-gray-500 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none cursor-pointer">
+                  <span className="sr-only">Open main menu</span>
+                  {/* Icon for mobile menu - e.g., Menu from lucide-react */}
                 </button>
-                <h2 className="about-title" style={{ 
-                    color: "var(--accent)",
-                    fontSize: "2rem",
-                    fontWeight: 700,
-                    marginTop: 0,
-                    marginBottom: "1.5rem",
-                    textAlign: "center"
-                }}>
-                    How to Play Tower Defense
-                </h2>
-
-                <p className="about-text" style={{
-                    marginBottom: "1.5rem",
-                    lineHeight: 1.6,
-                    fontSize: "1.05rem"
-                }}>
-                    Tower Defense is a strategy game where you must place defensive towers along a path to prevent enemies from reaching the
-                    end. Plan your defenses carefully and upgrade strategically to survive increasingly difficult waves!
-                </p>
-
-                <h3 className="section-title" style={{ 
-                    color: "var(--highlight)",
-                    fontSize: "1.4rem",
-                    fontWeight: 700,
-                    marginTop: "2rem",
-                    marginBottom: "1rem",
-                    position: "relative",
-                    paddingLeft: "1rem"
-                }}>
-                    Game Basics
-                </h3>
-
-                <ul className="info-list" style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.75rem",
-                    margin: "0 0 1.5rem 0",
-                    paddingLeft: "0.5rem",
-                    listStyleType: "none"
-                }}>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>Enemies follow a fixed path across the map</span>
-                    </li>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>Place towers strategically to attack enemies</span>
-                    </li>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>Each enemy that reaches the end costs you one life</span>
-                    </li>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>Defeating enemies gives you gold to build more towers</span>
-                    </li>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>Game ends when you run out of lives</span>
-                    </li>
-                </ul>
-
-                <h3 className="section-title" style={{ 
-                    color: "var(--highlight)",
-                    fontSize: "1.4rem",
-                    fontWeight: 700,
-                    marginTop: "2rem",
-                    marginBottom: "1rem",
-                    position: "relative",
-                    paddingLeft: "1rem"
-                }}>
-                    Tower Types
-                </h3>
-
-                <ul className="info-list" style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.75rem",
-                    margin: "0 0 1.5rem 0",
-                    paddingLeft: "0.5rem",
-                    listStyleType: "none"
-                }}>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>
-                            <strong>Archer Tower:</strong> Fast firing rate, medium damage, long range. Good all-around tower.
-                        </span>
-                    </li>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>
-                            <strong>Cannon Tower:</strong> Slow firing rate, high damage, short range. Effective against armored enemies.
-                        </span>
-                    </li>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>
-                            <strong>Magic Tower:</strong> Medium firing rate, medium damage, very long range. The only tower that can hit
-                            flying enemies.
-                        </span>
-                    </li>
-                </ul>
-
-                <h3 className="section-title" style={{ 
-                    color: "var(--highlight)",
-                    fontSize: "1.4rem",
-                    fontWeight: 700,
-                    marginTop: "2rem",
-                    marginBottom: "1rem",
-                    position: "relative",
-                    paddingLeft: "1rem"
-                }}>
-                    Enemy Types
-                </h3>
-
-                <ul className="info-list" style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.75rem",
-                    margin: "0 0 1.5rem 0",
-                    paddingLeft: "0.5rem",
-                    listStyleType: "none"
-                }}>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>
-                            <strong>Infantry:</strong> Basic enemies with medium health and speed.
-                        </span>
-                    </li>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>
-                            <strong>Armored:</strong> High health but slower movement. Resistant to archer towers.
-                        </span>
-                    </li>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>
-                            <strong>Flying:</strong> Fast with low health, but can only be hit by magic towers.
-                        </span>
-                    </li>
-                </ul>
-
-                <h3 className="section-title" style={{ 
-                    color: "var(--highlight)",
-                    fontSize: "1.4rem",
-                    fontWeight: 700,
-                    marginTop: "2rem",
-                    marginBottom: "1rem",
-                    position: "relative",
-                    paddingLeft: "1rem"
-                }}>
-                    Tips & Strategies
-                </h3>
-
-                <ul className="info-list" style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.75rem",
-                    margin: "0 0 1.5rem 0",
-                    paddingLeft: "0.5rem",
-                    listStyleType: "none"
-                }}>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>Place towers at corners and intersections for maximum exposure to enemies</span>
-                    </li>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>Build a mix of tower types to deal with different enemy types</span>
-                    </li>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>Always include at least one magic tower to handle flying enemies</span>
-                    </li>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>Upgrade existing towers instead of building too many new ones</span>
-                    </li>
-                    <li className="info-item" style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.75rem",
-                        paddingLeft: "0.5rem"
-                    }}>
-                        <span className="info-bullet" style={{ 
-                            background: "var(--highlight)",
-                            display: "inline-block",
-                            width: "0.5rem",
-                            height: "0.5rem", 
-                            marginTop: "0.5rem",
-                            borderRadius: "50%",
-                            flexShrink: 0
-                        }}></span>
-                        <span>Save gold between waves for more powerful tower upgrades</span>
-                    </li>
-                </ul>
-
-                <div className="back-btn-wrap" style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    marginTop: "2.5rem"
-                }}>
-                    <button
-                        onClick={() => setIsAboutModalOpen(false)}
-                        className="back-btn cursor-pointer transition-transform duration-150 hover:scale-105 hover:shadow-lg hover:bg-opacity-90"
-                        style={{
-                            background: "var(--accent)",
-                            color: "#ffffff",
-                            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.75rem",
-                            padding: "0.75rem 1.75rem",
-                            borderRadius: "0.5rem",
-                            border: "none",
-                            fontWeight: 600,
-                            fontSize: "1rem",
-                            transition: "transform 0.2s ease"
-                        }}
-                        onMouseOver={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
-                        onMouseOut={(e) => e.currentTarget.style.transform = "translateY(0)"}
-                    >
-                        <Home size={18} />
-                        <span>Back to Home</span>
-                    </button>
-                </div>
+              </div>
             </div>
+          </div>
+        </nav>
+
+        {/* Sub Navbar */}
+        <div className="bg-white dark:bg-gray-800 shadow-sm dark:border-b dark:border-gray-700">
+          <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-12">
+              {/* SubNav Links */}
+              <div className="flex items-center space-x-1">
+                {subNavLinks.map((link) => (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    onClick={() => setActiveSubLink(link.name)}
+                    className={`px-3 py-2 rounded-md text-xs font-medium cursor-pointer
+                      ${activeSubLink === link.name
+                        ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white'
+                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300'
+                      }`}
+                  >
+                    {link.name}
+                  </a>
+                ))}
+              </div>
+
+              {/* Search Bar with Dropdown */}
+              <div className="relative" ref={searchDropdownRef}>
+                <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-md px-2 py-1">
+                  <Search size={16} className="text-gray-400 dark:text-gray-500 mr-2" />
+                  <input 
+                    ref={searchInputRef}
+                    type="text" 
+                    placeholder="Search"
+                    value={searchTerm}
+                    onChange={searchInputChanged}
+                    onFocus={focusSearchInput}
+                    className="text-sm bg-transparent focus:outline-none text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500"
+                  />
+                </div>
+                {isSearchDropdownOpen && (
+                  <div className="origin-top-right absolute right-0 mt-2 w-64 rounded-md shadow-lg py-1 bg-white dark:bg-gray-700 ring-1 ring-black dark:ring-gray-600 ring-opacity-5 z-10">
+                    {searchTerm.length === 0 && (
+                        <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 text-center">Start typing to search...</div>
+                    )}
+                    {searchTerm.length > 0 && searchResults.length === 0 && (
+                        <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 text-center">No sections found.</div>
+                    )}
+                    {searchResults.map(result => (
+                      <a 
+                        key={result} 
+                        href="#" 
+                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
+                        onClick={() => { alert(`Navigating to ${result}`); setIsSearchDropdownOpen(false); setSearchTerm(result); /* Optionally clear search term or navigate */ }}
+                      >
+                        {result}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
         </div>
-    );
+        
+        {/* Main Content Area */}
+        <main className="flex-grow p-4 sm:p-6 lg:p-8">
+          {/* Header Section */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-montserrat font-semibold text-gray-900 dark:text-white">
+                Hello, Jonah Miller
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                It's great to see you again.
+              </p>
+            </div>
+            <button className="mt-4 sm:mt-0 flex items-center bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 dark:hover:bg-gray-600 text-white text-xs sm:text-sm font-medium py-2 px-3 sm:px-4 rounded-lg cursor-pointer transition-colors">
+              <span className="p-1 bg-gray-700 dark:bg-gray-600 rounded-md mr-2 border border-gray-600 dark:border-gray-500">
+                <Plus size={12} className="text-white" />
+              </span>
+              New Product
+            </button>
+          </div>
 
-    const renderContent = () => {
-        switch (gameState) {
-            case "home":
-                return renderHomePage();
-            case "playing":
-            case "gameover":
-                return renderGameScreen();
-            default:
-                return renderHomePage();
-        }
-    };
-
-    return (
-        <div className="app-wrapper" style={{ background: "var(--bg-gradient)" }}>
-            <Head>
-                <title>Tower Defense Strategy</title>
-                <meta name="description" content="A strategic tower defense game" />
-                <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-                <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" crossOrigin="anonymous" />
-            </Head>
-
-            <header className="app-header">
-                <h1 className="logo-text" style={{ color: "var(--text)" }}>
-                    Tower{" "}
-                    <span className="logo-accent" style={{ color: "var(--highlight)" }}>
-                        Defense
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            {
+              [
+                {
+                  title: 'Total Profits',
+                  value: '$68,510.32',
+                  change: '+18.2%',
+                  changeType: 'positive' as 'positive' | 'negative',
+                  previous: '$52,012.34 last year',
+                  icon: <Wallet size={20} className="text-gray-700 dark:text-gray-300" />
+                },
+                {
+                  title: 'New Customers',
+                  value: '153,640',
+                  change: '+13.5%',
+                  changeType: 'positive' as 'positive' | 'negative',
+                  previous: '120,145 last year',
+                  icon: <Users size={20} className="text-gray-700 dark:text-gray-300" />
+                },
+                {
+                  title: 'Total Orders',
+                  value: '181,960',
+                  change: '+12.7%',
+                  changeType: 'positive' as 'positive' | 'negative',
+                  previous: '151,423 last year',
+                  icon: <PackageOpen size={20} className="text-gray-700 dark:text-gray-300" />
+                },
+                {
+                  title: 'Total Traffic',
+                  value: '1,563,029',
+                  change: '-9.7%',
+                  changeType: 'negative' as 'positive' | 'negative',
+                  previous: '2,420,301 last year',
+                  icon: <LineChartIcon size={20} className="text-gray-700 dark:text-gray-300" />
+                }
+              ].map((stat, index) => (
+                <div key={index} className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col gap-1">
+                  <div className="flex items-start justify-between">
+                    <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg border-2 border-gray-200 dark:border-gray-600">
+                      {stat.icon}
+                    </div>
+                    <span 
+                      className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center
+                        ${stat.changeType === 'positive' ? 'bg-green-100 dark:bg-green-700 text-green-700 dark:text-green-200' : 'bg-red-100 dark:bg-red-700 text-red-700 dark:text-red-200'}
+                      `}
+                    >
+                      {stat.changeType === 'positive' ? <ChevronUp size={12} className="mr-1"/> : <ChevronDown size={12} className="mr-1"/>}
+                      {stat.change}
                     </span>
-                </h1>
-                <div className="header-controls">
-                    <button
-                        onClick={() => setIsAboutModalOpen(true)} // New Info button
-                        className="icon-btn cursor-pointer transition-transform duration-150 hover:scale-110 hover:bg-[var(--accent)] hover:bg-opacity-20 hover:shadow-lg"
-                        style={{ background: "var(--card)", color: "var(--text)" }}
-                        // aria-label="Show game information"
-                    >
-                        <Info size={20} /> 
-                    </button>
-                    <button
-                        onClick={toggleSound}
-                        className="icon-btn cursor-pointer transition-transform duration-150 hover:scale-110 hover:bg-[var(--accent)] hover:bg-opacity-20 hover:shadow-lg"
-                        style={{ background: "var(--card)", color: "var(--text)" }}
-                        aria-label={soundEnabled ? "Mute sound" : "Enable sound"}
-                    >
-                        {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
-                    </button>
-                    <button
-                        onClick={toggleTheme}
-                        className="icon-btn cursor-pointer transition-transform duration-150 hover:scale-110 hover:bg-[var(--accent)] hover:bg-opacity-20 hover:shadow-lg"
-                        style={{ background: "var(--card)", color: "var(--text)" }}
-                        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                    >
-                        {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-                    </button>
+                  </div>
+                  <div className="mt-1">
+                    <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 font-montserrat">
+                      {stat.title}
+                    </h3>
+                    <p className="text-2xl font-semibold text-gray-900 dark:text-white mt-px">
+                      {stat.value}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {stat.previous}
+                    </p>
+                  </div>
                 </div>
-            </header>
+              ))
+            }
+          </div>
 
-            {/* <nav className="main-nav">
-                <ul className="nav-list">
-                    <li>
-                        <button
-                            onClick={() => setGameState("home")}
-                            className="nav-link"
-                            style={{
-                                color: gameState === "home" ? "var(--highlight)" : "var(--text)",
-                            }}
-                        >
-                            <Home size={16} />
-                            <span>Home</span>
-                        </button>
-                    </li>
-                    <li>
-                        <button
-                            onClick={startGame}
-                            className="nav-link"
-                            style={{
-                                color: gameState === "playing" || gameState === "gameover" ? "var(--highlight)" : "var(--text)",
-                            }}
-                        >
-                            <Trophy size={16} />
-                            <span>Play</span>
-                        </button>
-                    </li>
-                    <li>
-                        <button
-                            onClick={() => setIsAboutModalOpen(true)}
-                            className="nav-link"
-                            style={{
-                                // color: gameState === "about" ? "var(--highlight)" : "var(--text)", Removed this
-                                color: "var(--text)", // Default color, modal state handles active appearance if needed elsewhere
-                            }}
-                        >
-                            <Info size={16} />
-                            <span>About</span>
-                        </button>
-                    </li>
-                </ul>
-            </nav> */}
-
-            <main className="main-content">{renderContent()}</main>
-
-            {isAboutModalOpen && renderAboutScreen()} {/* Conditionally render modal */}
-
-            <footer className="app-footer" style={{ color: "var(--text)" }}>
-                <p>© {new Date().getFullYear()} Tower Defense Strategy. All rights reserved.</p>
-                <div className="social-icons">
-                    <a href="#" target="_blank" rel="noopener noreferrer" className="social-icon cursor-pointer">
-                        <Github size={20} />
-                    </a>
-                    <a href="#" target="_blank" rel="noopener noreferrer" className="social-icon cursor-pointer">
-                        <Twitter size={20} />
-                    </a>
-                    <a href="#" target="_blank" rel="noopener noreferrer" className="social-icon cursor-pointer">
-                        <Linkedin size={20} />
-                    </a>
+          {/* Analytics and Impressions Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            {/* Analytics Card (2/3 width on lg screens) */}
+            <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5">
+                <div className="flex items-center">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white font-montserrat">
+                    Analytics
+                  </h3>
+                  <Info size={14} className="ml-2 text-gray-400 dark:text-gray-500 cursor-pointer" />
                 </div>
-            </footer>
+                <div className="mt-3 sm:mt-0 inline-flex border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+                  {['12 months', '30 days', '7 days', '24 hours'].map((filter, idx, arr) => (
+                    <a 
+                      key={filter} 
+                      href="#" 
+                      onClick={() => setActiveAnalyticsTimeFilter(filter)}
+                      className={`px-3 py-1.5 text-xs font-medium cursor-pointer 
+                        ${activeAnalyticsTimeFilter === filter 
+                          ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white' 
+                          : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'}
+                        ${idx < arr.length - 1 ? 'border-r border-gray-200 dark:border-gray-700' : ''}
+                      `}
+                    >
+                      {filter}
+                    </a>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* KPIs */}
+                <div className="md:col-span-1 flex flex-col gap-6 pt-2">
+                  {
+                    [
+                      {
+                        label: 'Total Earnings',
+                        value: '$56,423.32',
+                        borderColor: 'border-purple-500',
+                        percentage: null
+                      },
+                      {
+                        label: 'Total Views',
+                        value: '1,256,014',
+                        borderColor: 'border-gray-300 dark:border-gray-600',
+                        percentage: null
+                      },
+                      {
+                        label: 'Conversion Rate',
+                        value: '10.4%',
+                        borderColor: 'border-gray-300 dark:border-gray-600',
+                        percentage: '+6.2%'
+                      }
+                    ].map(kpi => (
+                      <div key={kpi.label} className={`relative pl-3 border-l-2 ${kpi.borderColor}`}>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{kpi.label}</p>
+                        <p className="text-xl font-semibold text-gray-900 dark:text-white">
+                          {kpi.value}
+                          {kpi.percentage && (
+                            <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-700 text-green-700 dark:text-green-200 align-middle">
+                              <ChevronUp size={10} className="inline mr-0.5" />{kpi.percentage}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    ))
+                  }
+                </div>
+                {/* Chart Placeholder */}
+                <div className="md:col-span-2 h-64 bg-gray-50 dark:bg-gray-700/30 p-2 rounded-lg">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={analyticsChartData} margin={{ top: 5, right: 0, left: -25, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4A5568' : '#E2E8F0'} vertical={false}/>
+                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: isDarkMode ? '#A0AEC0' : '#718096' }} tickLine={false} axisLine={{stroke: isDarkMode ? '#4A5568' : '#E2E8F0'}}/>
+                      <YAxis tickFormatter={(value) => `${value / 1000}k`} tick={{ fontSize: 10, fill: isDarkMode ? '#A0AEC0' : '#718096' }} tickLine={false} axisLine={false}/>
+                      <Tooltip content={<CustomTooltip />} cursor={{ fill: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}/>
+                      <Bar dataKey="Current" fill="#4a90e2" radius={[4, 4, 0, 0]} barSize={10}/>
+                      <Bar dataKey="Previous" fill={isDarkMode ? '#4A5568' : '#e2e8f0'} radius={[4, 4, 0, 0]} barSize={10}/>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
 
-            <style jsx>{`
-                @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap');
+            {/* Impressions Card (1/3 width on lg screens) */}
+            <div className="lg:col-span-1 bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white font-montserrat mb-1">
+                Impressions
+              </h3>
+              <div className="relative pl-3 border-l-2 border-gray-300 dark:border-gray-600 mb-4">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+                <p className="text-xl font-semibold text-gray-900 dark:text-white">159,367</p>
+              </div>
 
-                .app-wrapper {
-                    min-height: 100vh;
-                    display: flex;
-                    flex-direction: column;
-                    font-family: 'Roboto', sans-serif; /* Apply Roboto as base body font */
+              <div className="space-y-4">
+                {
+                  [
+                    { name: 'United States', value: '142,410', progress: '89.3%', flag: 'https://flagcdn.com/w40/us.png' },
+                    { name: 'Germany', value: '175,133', progress: '75.2%', flag: 'https://flagcdn.com/w40/de.png' },
+                    { name: 'Italy', value: '58,173', progress: '36.5%', flag: 'https://flagcdn.com/w40/it.png' },
+                    { name: 'England', value: '138,110', progress: '86.7%', flag: 'https://flagcdn.com/w40/gb-eng.png' },
+                    { name: 'United Kingdom', value: '182,503', progress: '70%', flag: 'https://flagcdn.com/w40/gb.png' },
+                  ].map(country => (
+                    <div key={country.name} className="flex items-center gap-3">
+                      <img src={country.flag} alt={`${country.name} flag`} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                      <div className="flex-grow">
+                        <div className="flex justify-between items-center mb-0.5">
+                          <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">{country.name}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{country.value}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                          <div 
+                            className="bg-gray-500 dark:bg-gray-400 h-1.5 rounded-full"
+                            style={{ width: country.progress }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
                 }
+              </div>
+            </div>
+          </div>
 
-                .app-header {
-                    padding: 1rem;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
+          {/* Projects Table and Payments Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            {/* Projects Table (2/3 width on lg screens) */}
+            <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-0 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto">
+              <div className="p-5 sm:p-6">
+                {/* Optionally, a header for the projects table can go here if needed later */}
+                {/* <h3 className="text-lg font-semibold text-gray-900 dark:text-white font-montserrat">Projects</h3> */}
+              </div>
+              <table className="w-full min-w-[640px] text-sm text-left">
+                <thead className="bg-gray-50 dark:bg-gray-700/50">
+                  <tr>
+                    <th className="p-3 w-12 text-center font-medium text-gray-500 dark:text-gray-400"><input type="checkbox" className="cursor-pointer rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:bg-gray-700 dark:checked:bg-indigo-500" /></th>
+                    {['No.', 'Name', 'Status', 'Views', 'Sales', 'Conversion', 'Total'].map(header => (
+                      <th key={header} scope="col" className="p-3 font-medium text-gray-500 dark:text-gray-400 tracking-wider whitespace-nowrap">
+                        {header} <ChevronDown size={12} className="inline text-gray-400 dark:text-gray-500" />
+                      </th>
+                    ))}
+                    <th scope="col" className="p-3 font-medium text-gray-500 dark:text-gray-400 tracking-wider"><span className="sr-only">More</span></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {
+                    [
+                      { no: '01', name: 'Basic design guideline', icon: <Gem size={16}/>, iconBg: 'bg-blue-500 dark:bg-blue-600', status: '9 Jan 2023 9:43 PM', views: '3,147', sales: '1,004', conversion: '6.5%', total: '$14,238', checked: true },
+                      { no: '02', name: 'Creative Brandbook', icon: <Book size={16}/>, iconBg: 'bg-green-500 dark:bg-green-600', status: '9 Jan 2023 9:43 PM', views: '3,147', sales: '1,004', conversion: '6.5%', total: '$14,238', checked: false },
+                      { no: '03', name: 'Landing Page Templates', icon: <Layers size={16}/>, iconBg: 'bg-purple-500 dark:bg-purple-600', status: '9 Jan 2023 9:43 PM', views: '3,147', sales: '1,004', conversion: '6.5%', total: '$14,238', checked: false },
+                      { no: '04', name: 'UI Software Tool', icon: <Wrench size={16}/>, iconBg: 'bg-red-500 dark:bg-red-600', status: '9 Jan 2023 9:43 PM', views: '3,147', sales: '1,004', conversion: '6.5%', total: '$14,238', checked: false },
+                      { no: '05', name: 'Basic design guideline', icon: <Gem size={16}/>, iconBg: 'bg-blue-500 dark:bg-blue-600', status: '9 Jan 2023 9:43 PM', views: '3,147', sales: '1,004', conversion: '6.5%', total: '$14,238', checked: true },
+                      { no: '06', name: 'Creative Brandbook', icon: <Book size={16}/>, iconBg: 'bg-green-500 dark:bg-green-600', status: '9 Jan 2023 9:43 PM', views: '3,147', sales: '1,004', conversion: '6.5%', total: '$14,238', checked: false },
+                    ].map(project => (
+                      <tr key={project.no} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                        <td className="p-3 text-center"><input type="checkbox" defaultChecked={project.checked} className="cursor-pointer rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:bg-gray-700 dark:checked:bg-indigo-500" /></td>
+                        <td className="p-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{project.no}</td>
+                        <td className="p-3 text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className={`mr-2.5 p-1.5 rounded-md text-white ${project.iconBg}`}> 
+                              {project.icon}
+                            </span>
+                            <span className="font-medium">{project.name}</span>
+                          </div>
+                        </td>
+                        <td className="p-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                          <CheckCircle size={14} className="inline mr-1.5 text-green-500 dark:text-green-400" />
+                          {project.status}
+                        </td>
+                        <td className="p-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{project.views}</td>
+                        <td className="p-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{project.sales}</td>
+                        <td className="p-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{project.conversion}</td>
+                        <td className="p-3 text-gray-700 dark:text-gray-200 font-medium whitespace-nowrap">{project.total}</td>
+                        <td className="p-3 text-gray-400 dark:text-gray-500 text-center"><button className="cursor-pointer hover:text-gray-600 dark:hover:text-gray-300"><EllipsisVertical size={18} /></button></td>
+                      </tr>
+                    ))
+                  }
+                </tbody>
+              </table>
+            </div>
 
-                .logo-text {
-                    font-size: 1.5rem;
-                    font-weight: 700;
-                    font-family: 'Montserrat', sans-serif;
-                }
+            {/* Payments Card (1/3 width on lg screens) */}
+            <div className="lg:col-span-1 bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white font-montserrat">
+                  Payments
+                </h3>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full flex items-center bg-green-100 dark:bg-green-700 text-green-700 dark:text-green-200">
+                  <ChevronUp size={12} className="mr-1" />
+                  +12.7%
+                </span>
+              </div>
+              {/* Chart Placeholder */}
+              <div className="h-64 bg-gray-50 dark:bg-gray-700/30 p-2 rounded-lg">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={paymentsChartData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#4A5568' : '#E2E8F0'} vertical={false}/>
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: isDarkMode ? '#A0AEC0' : '#718096' }} tickLine={false} axisLine={{stroke: isDarkMode ? '#4A5568' : '#E2E8F0'}} />
+                    <YAxis tickFormatter={(value) => `${value / 1000}k`} tick={{ fontSize: 10, fill: isDarkMode ? '#A0AEC0' : '#718096' }} tickLine={false} axisLine={false} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#68d391', strokeWidth: 1, fill: 'transparent' }}/>
+                    <Line type="monotone" dataKey="payments" stroke="#68d391" strokeWidth={2} dot={{ r: 4, fill: '#68d391'}} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
 
-                @media (min-width: 768px) {
-                    .logo-text {
-                        font-size: 1.875rem;
-                    }
-                }
+          </div>
 
-                .logo-accent {
-                    font-size: 1.25rem;
-                }
+          {/* Further components will be added here */}
+        </main>
 
-                .header-controls {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                }
-
-                .icon-btn {
-                    padding: 0.5rem;
-                    border-radius: 9999px;
-                }
-
-                .main-nav {
-                    padding: 0.5rem 1rem;
-                    margin-bottom: 1rem;
-                    display: flex;
-                    justify-content: center;
-                }
-
-                .nav-list {
-                    display: flex;
-                    gap: 1.5rem;
-                }
-
-                .nav-link {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.25rem;
-                    font-size: 0.875rem;
-                }
-
-                @media (min-width: 768px) {
-                    .nav-link {
-                        font-size: 1rem;
-                    }
-                }
-
-                .main-content {
-                    min-height: calc(100vh - 130px);
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                }
-
-                .app-footer {
-                    padding: 1rem;
-                    text-align: center;
-                    font-size: 0.875rem;
-                    background: var(--footer-bg);
-                    border-top: 1px solid var(--card-border);
-                }
-
-                .social-icons {
-                    display: flex;
-                    justify-content: center;
-                    gap: 1rem;
-                    margin-top: 0.5rem;
-                }
-
-                .social-icon {
-                    color: var(--text);
-                    opacity: 0.7;
-                    transition: opacity 0.2s ease-in-out;
-                }
-
-                .social-icon:hover {
-                    opacity: 1;
-                }
-
-                @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap');
-
-                .modal-overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background-color: rgba(0, 0, 0, 0.75); /* Slightly darker overlay */
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 1000; /* High z-index to be on top */
-                    padding: 1rem; /* Add padding for small screens so modal doesn't touch edges */
-                }
-
-                .modal-content {
-                    position: relative; /* For positioning the close button */
-                    background: var(--card);
-                    color: var(--text);
-                    padding: 2rem;
-                    border-radius: 0.75rem;
-                    max-width: 45rem; /* Max width of the modal */
-                    width: 100%;     /* Responsive width */
-                    max-height: 90vh; /* Max height, viewport relative */
-                    overflow-y: auto; /* Scrollable if content exceeds max-height */
-                    box-shadow: var(--card-shadow);
-                    border: 1px solid var(--card-border);
-                }
-
-                .modal-close-btn {
-                    position: absolute;
-                    top: 0.75rem;
-                    right: 0.75rem;
-                    background: transparent;
-                    border: none;
-                    font-size: 2rem; /* Larger close button */
-                    line-height: 1;
-                    color: var(--text);
-                    padding: 0.25rem;
-                    opacity: 0.7;
-                    transition: opacity 0.2s ease-in-out;
-                }
-                .modal-close-btn:hover {
-                    opacity: 1;
-                }
-
-                /* Styles for the content specifically within the About modal */
-                .about-card .about-title {
-                    font-size: 1.75rem; /* Slightly larger title for modal */
-                    font-weight: 700;
-                    margin-top: 0; /* Remove top margin if close button is there */
-                    margin-bottom: 1.5rem;
-                    font-family: 'Montserrat', sans-serif;
-                    color: var(--accent);
-                }
-
-                .about-card .about-text {
-                    margin-bottom: 1rem;
-                    line-height: 1.6;
-                }
-
-                .about-card .section-title {
-                    font-size: 1.35rem; /* Slightly larger section title */
-                    font-weight: 700;
-                    margin-top: 2rem; 
-                    margin-bottom: 0.75rem;
-                    font-family: 'Montserrat', sans-serif;
-                    color: var(--highlight);
-                }
-                 .about-card .section-title:first-of-type {
-                    margin-top: 1rem;
-                 }
-
-                .about-card .info-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.75rem; /* Slightly more gap */
-                    margin-bottom: 1.5rem;
-                    padding-left: 0; /* Remove default ul padding */
-                    list-style-type: none; /* Remove default list bullets */
-                }
-
-                .about-card .info-item {
-                    display: flex;
-                    align-items: flex-start; /* Align bullet with start of text */
-                    gap: 0.75rem; /* Gap between bullet and text */
-                }
-
-                .about-card .info-bullet {
-                    display: inline-block;
-                    width: 0.6rem; /* Slightly larger bullet */
-                    height: 0.6rem;
-                    margin-top: 0.35em; /* Align with text better */
-                    border-radius: 50%;
-                    background: var(--highlight);
-                    flex-shrink: 0; /* Prevent bullet from shrinking */
-                }
-
-                .about-card .back-btn-wrap {
-                    display: flex;
-                    justify-content: center;
-                    margin-top: 2.5rem; /* More space before close button */
-                }
-
-                .about-card .back-btn { /* This is the 'Close' button at the bottom of modal */
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    padding: 0.75rem 1.75rem; /* Larger padding */
-                    border-radius: 0.5rem;
-                    background: var(--accent);
-                    color: #ffffff;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                    font-weight: 500;
-                    border: none; /* Remove default border if any */
-                }
-            `}</style>
-        </div>
-    );
+      </div>
+    </>
+  );
 };
 
-export default TowerDefenseGame;
+export default DashboardPage;
