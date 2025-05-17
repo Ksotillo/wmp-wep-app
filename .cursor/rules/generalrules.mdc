@@ -19,8 +19,7 @@ You are a Senior Front-End Developer and an Expert in ReactJS, NextJS, JavaScrip
 - If you do not know the answer, say so, instead of guessing.
 - All code for this project should be on app/page.tsx.
 - For every single button that you make, please add the class "cursor-pointer" to it.
-- The project should always be adapted to dark mode. ALWAYS. From the very begining should work with dark/light mode.
-- Every time you write a component it should have its corresponding tailwind dark classes.
+- The project should always be adapted to dark mode. ALWAYS. From the very begining should work with dark/light mode. Refer to "Theming Strategy for Project" section in order to know how to achieve this effectivly.
 - Do not add "Aria-labels" when writing HTML, by any means, do not add it.
 - Writing comments in this project is extrictly prohibited, so avoid it please.
 - Please apply different naming conventions throughout the same app. Do not use "handle[Action]" or "on[Action]", but do it in a Human way, varying a lot, same with naming conventions.
@@ -106,7 +105,95 @@ Follow these rules when you write code:
 - Best Practices Demonstrate adherence to best practices in performance, security, and maintainability.
 
 
+# Theming Strategy for Project
 
+This document outlines the established theming strategy. All future implementations or modifications of theming must adhere to these guidelines.
+
+## Core Principles:
+
+1.  **Technology Stack**:
+    *   Theme switching is managed by `next-themes`.
+    *   Styling (colors, fonts, etc.) is primarily controlled by **CSS Custom Properties (Variables)**.
+    *   Tailwind CSS is used for layout and applying these CSS variables.
+
+2.  **`next-themes` Configuration**:
+    *   The `ThemeProvider` from `next-themes` must wrap the main application view.
+    *   Configuration: `attribute="class"`, `defaultTheme="dark"`, `enableSystem={false}`.
+    *   This ensures `next-themes` toggles a `class="light"` or `class="dark"` on the `<html>` element and does not defer to system preference after a user choice.
+
+3.  **CSS Variable Definitions & Style Injection**:
+    *   **No `globals.css` for Theme Colors**: Do not define theme-specific color variables or rules in `app/globals.css`. This file should only contain Tailwind directives (`@tailwind base; @tailwind components; @tailwind utilities;`) and potentially truly global, non-theme-dependent base styles if absolutely necessary.
+    *   **`app/page.tsx` for All Theme Styles**: All CSS Custom Properties for theming, base body styles (background, text color, primary font), and custom scrollbar styles must be defined within a `<style jsx global>{``}</style>` tag.
+    *   This global style tag should be encapsulated within a dedicated React component (e.g., `GlobalThemeStyles`) rendered within `CreatorPlatformPage` (or your main page component), inside the `ThemeProvider`.
+
+4.  **CSS Variable Naming and Structure**:
+    *   **Light Theme (Default)**: Define all CSS variables within the `:root {}` selector. These are the default (light theme) values.
+    *   **Dark Theme Overrides**: Define overrides for these variables within the `html.dark {}` selector.
+    *   **Semantic Naming**: Use semantic names for variables, prefixed appropriately (e.g., `--page-bg`, `--card-text-primary`, `--button-accent-bg`, `--font-heading`).
+    *   **Categories**: Group variables logically (e.g., Base Page, Cards & Interactive Elements, Accent Colors, Specific UI Elements, Fonts, Scrollbar).
+
+5.  **Applying Styles with Tailwind CSS**:
+    *   **Use CSS Variables**: Apply themed styles in components using Tailwind's arbitrary value syntax with your defined CSS variables.
+        *   Example: `className="bg-[var(--card-bg)] text-[var(--page-text-primary)] border-[var(--border-color-primary)]"`
+    *   **No `dark:` Prefixes for Theming**: Avoid using Tailwind's `dark:` prefix for applying theme-specific colors (e.g., do NOT use `dark:bg-zinc-800`). The CSS variables automatically handle theme changes. `dark:` prefixes should only be used for structural or layout changes if absolutely necessary and not manageable via CSS variables alone.
+
+6.  **Font Handling**:
+    *   Define primary heading and body font families as CSS variables (e.g., `--font-heading: 'Lora', serif;`, `--font-body: 'Open Sans', sans-serif;`).
+    *   Apply these in the global style tag (`body { font-family: var(--font-body); }`, `h1,h2,... { font-family: var(--font-heading); }`) or directly in components using `font-[var(--font-body)]`.
+    *   Ensure the chosen fonts are correctly imported/linked in the project (e.g., via `next/font` or `<link>` tags in the document head, configured outside this specific theming CSS).
+
+7.  **Custom Scrollbar Styling**:
+    *   Define custom scrollbar styles using CSS variables (`--scrollbar-thumb`, `--scrollbar-track`).
+    *   These styles should also be included within the `<style jsx global>{``}</style>` block in `app/page.tsx`.
+
+## Example Snippet (for `GlobalThemeStyles` component in `app/page.tsx`):
+
+```jsx
+const GlobalThemeStyles = () => (
+  <style jsx global>{`
+    :root {
+      /* Light Theme Variables */
+      --page-bg: #ffffff;
+      --page-text-primary: #18181b;
+      --card-bg: #f4f4f5;
+      --accent-primary: #f59e0b;
+      --font-heading: 'Lora', serif;
+      --font-body: 'Open Sans', sans-serif;
+      /* ... more light theme variables ... */
+    }
+
+    html.dark {
+      /* Dark Theme Variable Overrides */
+      --page-bg: #18181b;
+      --page-text-primary: #f4f4f5;
+      --card-bg: #27272a;
+      --accent-primary: #facc15;
+      /* ... more dark theme variables ... */
+    }
+
+    body {
+      background-color: var(--page-bg);
+      color: var(--page-text-primary);
+      font-family: var(--font-body);
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--font-heading);
+    }
+
+    /* ... scrollbar styles using variables ... */
+  `}</style>
+);
+```
+
+## Quick Check for Compliance:
+
+*   Is `ThemeProvider` correctly configured in `app/page.tsx`?
+*   Are all theme colors and font styles defined as CSS variables inside a `<style jsx global>` tag in `app/page.tsx`?
+*   Are `dark:` prefixes avoided for color/font theming in Tailwind classes?
+*   Is `globals.css` free of theme-specific CSS variable definitions or media query-based dark mode styles?
+
+By following these rules, we ensure a consistent, maintainable, and self-contained theming approach within `app/page.tsx`.
 
 
 
