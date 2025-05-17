@@ -4,17 +4,36 @@ import { useState, useEffect, ComponentType, ReactNode, useRef } from 'react';
 import { ThemeProvider, useTheme } from 'next-themes';
 import { Playfair_Display, Merriweather } from 'next/font/google';
 import { 
-    Sun, Moon, Search, UserCircle2, CircleDotDashed, BriefcaseBusiness, MoreVertical, 
+    Sun, Moon, Search, UserCircle2,  MoreVertical, 
     PlusCircle, ThumbsUp, MessageSquareText, Send, ImageUp, VideoIcon, ListChecks, CalendarClock, UsersRound, AtSign, Settings2, LogOut, ChevronDown, ArrowRightFromLine,
-    Home, Bell, Heart, CheckCircle2, ImageIcon,
+    Bell, CheckCircle2, ImageIcon,
     Edit3, Trash2, Link2, Code2, Flag,
-    User, Settings, CreditCard,
-    DollarSign, Briefcase, UserPlus, UserCheck, HandCoins, VideoOff, Info, X,
+    User, Settings, Briefcase, UserPlus, UserCheck, HandCoins, Info, X,
     MessageCircle,
-    Menu 
+    Menu,
+    Tv2, BookOpen, Camera, Bookmark, ListFilter 
 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
+
+const renderContentWithStyledHashtags = (text: string): ReactNode[] => {
+  if (!text) return [];
+  const parts = text.split(/(#\w+)/g); 
+  return parts.map((part, index) => {
+    if (/(#\w+)/.test(part)) {
+      return (
+        <span 
+          key={index} 
+          className="text-[var(--accent-primary)] hover:underline cursor-pointer"
+          onClick={() => console.log(`Hashtag clicked: ${part}`)} 
+        >
+          {part}
+        </span>
+      );
+    }
+    return part;
+  });
+};
 
 const playfairDisplay = Playfair_Display({
   subsets: ['latin'],
@@ -31,35 +50,26 @@ const merriweather = Merriweather({
 });
 
 
-
-const displayPlaceholderAlert = (message: string) => {
-  if (typeof window !== 'undefined') {
-    window.alert(message);
-  }
-};
-
-
 const peopleImageUrls = [
+    "https://images.unsplash.com/photo-1695800998493-ccff5ea292ea?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "https://images.unsplash.com/photo-1675388545634-83d816322c83?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "https://images.unsplash.com/photo-1697510364485-e900c2fe7524?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "https://images.unsplash.com/photo-1708034678252-ce866ca93b5d?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "https://images.unsplash.com/photo-1697715841744-9c24df04dacc?q=80&w=3198&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "https://images.unsplash.com/photo-1708034677699-6f39d9c59f6e?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "https://images.unsplash.com/photo-1668293750324-bd77c1f08ca9?q=80&w=2304&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "https://images.unsplash.com/photo-1713766056256-9cb07ceda9e5?q=80&w=3007&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     "https://images.unsplash.com/photo-1641391503184-a2131018701b?q=80&w=2960&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     "https://images.unsplash.com/photo-1747069334505-cf6815248cfe?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     "https://images.unsplash.com/photo-1742201949705-220268ad4467?q=80&w=3164&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1741736000642-781f7a0a75c1?q=80&w=2273&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1746655421130-9fba824e19f5?q=80&w=2832&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1743875929006-803ea54cafc1?q=80&w=3165&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1745432740811-28b17cc47b94?q=80&w=3174&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1743299472561-ae1f1b25f5b5?q=80&w=3174&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1745853707137-bde430b762aa?q=80&w=3170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1745965976680-d00be7dc0377?q=80&w=2443&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1666816943145-bac390ca866c?q=80&w=3132&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1664526937033-fe2c11f1be25?q=80&w=3132&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1667036679091-6da384768075?q=80&w=3174&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1642427749670-f20e2e76ed8c?q=80&w=2960&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+    "https://images.unsplash.com/photo-1741736000642-781f7a0a75c1?q=80&w=2273&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
 ];
 
 
 const platformCurrentUser = {
-    name: "Evgen Ledo",
-    handle: "ledoteam",
+    name: "Kenji Tanaka",
+    handle: "kenji_jp",
     avatarUrl: peopleImageUrls[0], 
     isAuthor: true, 
     isVerified: true
@@ -70,20 +80,21 @@ const sampleFeedData: FeedPostData[] = [
     {
         id: 'post1',
         author: {
-            name: 'Sarah Miller',
-            handle: 'sarahdesigns',
-            avatarUrl: peopleImageUrls[2], 
+            name: 'Aya Suzuki',
+            handle: 'ayas_art',
+            avatarUrl: peopleImageUrls[2 % peopleImageUrls.length], 
             isVerified: true,
             isAuthor: false,
+            status: "Sketching new #ChainsawMan piece!", 
         },
-        timestamp: '2h ago',
-        content: "Just shipped a new feature for our project! 🚀 So proud of the team's hard work. Check it out and let me know your thoughts! #webdev #reactjs #newfeature",
-        mediaUrl: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        timestamp: '3h ago',
+        content: "Just finished this piece of Yuji Itadori from #JujutsuKaisen! What do you all think? Always looking for feedback. ✨ #FanArt #AnimeArt #Illustration",
+        mediaUrl: "https://images.unsplash.com/photo-1613376023733-0a73315d9b06?q=80&w=2800&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", 
         mediaType: 'image',
-        stats: { likes: 152, comments: 18 },
+        stats: { likes: 182, comments: 22 },
         comments: [
-            { id: 'cmt1-1', authorName: 'John Doe', avatarUrl: peopleImageUrls[3], text: 'Looks amazing, Sarah!', timestamp: '1h ago' }, 
-            { id: 'cmt1-2', authorName: 'Jane Smith', avatarUrl: peopleImageUrls[4], text: 'Great job! Can\'t wait to try it.', timestamp: '30m ago' }, 
+            { id: 'cmt1-1', authorName: platformCurrentUser.name, avatarUrl: platformCurrentUser.avatarUrl, text: 'This is incredible, Aya-san! The colors are amazing.', timestamp: '2h ago' }, 
+            { id: 'cmt1-2', authorName: 'Rina_chan', avatarUrl: peopleImageUrls[4 % peopleImageUrls.length], text: 'So talented! 🔥 Love your style!', timestamp: '1h ago' }, 
         ]
     },
     {
@@ -94,38 +105,73 @@ const sampleFeedData: FeedPostData[] = [
             avatarUrl: platformCurrentUser.avatarUrl,
             isVerified: platformCurrentUser.isVerified,
             isAuthor: true,
+            status: "Planning next trip to Kyoto! 🌸", 
         },
         timestamp: '1d ago',
-        content: "Exploring the new Next.js 14 features. Server actions are a game changer! What are your favorite updates? #nextjs #javascript",
-        stats: { likes: 280, comments: 45 },
+        content: "Just got back from an awesome haul in Akihabara! 🛍️ Found some rare retro games and cool new Gunpla. What are your must-visit shops there? #Akihabara #TokyoFinds #GamingHeaven #Gunpla",
+        mediaUrl: "https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", 
+        mediaType: 'image',
+        stats: { likes: 310, comments: 58 },
         comments: [
-             { id: 'cmt2-1', authorName: 'Alex Brown', avatarUrl: peopleImageUrls[5], text: 'Totally agree! The performance improvements are noticeable too.', timestamp: '23h ago' }, 
-             { id: 'cmt2-2', authorName: 'Emily White', avatarUrl: peopleImageUrls[6], text: 'I\'m still wrapping my head around some of the new routing conventions.', timestamp: '22h ago' }, 
+             { id: 'cmt2-1', authorName: 'Hiro_Games', avatarUrl: peopleImageUrls[5 % peopleImageUrls.length], text: 'Nice haul, Kenji-san! You gotta check out Super Potato next time for retro stuff!', timestamp: '23h ago' }, 
+             { id: 'cmt2-2', authorName: 'Mei_ko', avatarUrl: peopleImageUrls[6 % peopleImageUrls.length], text: 'Akiba is the best! I always spend too much at the Gachapon halls. 😂', timestamp: '22h ago' }, 
         ]
     },
     {
         id: 'post3',
         author: {
-            name: 'TechReviewer',
-            handle: 'gadgetguru',
-            avatarUrl: peopleImageUrls[7], 
+            name: 'Hiroshi Plays',
+            handle: 'hiro_games',
+            avatarUrl: peopleImageUrls[7 % peopleImageUrls.length], 
             isAuthor: false,
+            isVerified: true,
+            status: "Level grinding in 'Chronos Odyssey'! ⚔️", 
         },
-        timestamp: '3d ago',
-        content: "Just posted a new video reviewing the latest AI tools for developers. Link in bio! #AI #DevTools #TechReview",
-        mediaUrl: "https://images.unsplash.com/photo-1677756119517-756a188d2d94?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", 
+        timestamp: '2d ago',
+        content: "Just sank another 50 hours into the new 'Tales of Fantasia Rebirth' JRPG. The story is captivating! Anyone else playing it? No spoilers! #JRPG #GamingJP #NewRelease #FantasyRPG",
+        mediaUrl: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2942&auto=format&fit=crop&ixlib-rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", 
         mediaType: 'image', 
-        stats: { likes: 95, comments: 12 },
-        comments: []
+        stats: { likes: 215, comments: 33 },
+        comments: [
+            { id: 'cmt3-1', authorName: 'AkiNetGamer', avatarUrl: peopleImageUrls[8 % peopleImageUrls.length], text: 'On my list! Heard good things about the combat system.', timestamp: '1d ago' },
+            { id: 'cmt3-2', authorName: platformCurrentUser.name, avatarUrl: platformCurrentUser.avatarUrl, text: 'Downloading it tonight! Thanks for the recommendation, Hiroshi-san!', timestamp: '1d ago' },
+        ]
+    },
+    {
+        id: 'post4',
+        author: {
+            name: 'RamenLover Taro',
+            handle: 'TaroEatsRamen',
+            avatarUrl: peopleImageUrls[9 % peopleImageUrls.length],
+            isVerified: false,
+            isAuthor: false,
+            status: "Searching for the ultimate Tonkotsu... 🍜", 
+        },
+        timestamp: '4d ago',
+        content: "What's the undisputed KING of ramen toppings? 🍜 Let your voice be heard! #RamenWars #JapaneseFood #PollTime #FoodieJP",
+        mediaType: 'poll',
+        pollOptions: ["Chashu (Braised Pork)", "Ajitama (Seasoned Egg)", "Nori (Seaweed)", "Menma (Bamboo Shoots)"],
+        initialVotes: [120, 95, 60, 45], 
+        stats: { likes: 150, comments: 75 }, 
+        comments: [
+            { id: 'cmt4-1', authorName: 'SushiSasha', avatarUrl: peopleImageUrls[10 % peopleImageUrls.length], text: 'Ajitama for the win! That creamy yolk... 🤤', timestamp: '3d ago' },
+            { id: 'cmt4-2', authorName: 'Kenji_jp', avatarUrl: platformCurrentUser.avatarUrl, text: 'Chashu all the way! More meat!', timestamp: '3d ago' },
+        ]
     }
 ];
 
 
 
 const mockHashtags = [
-  '#ReactJS', '#NextJS', '#JavaScript', '#TypeScript', '#TailwindCSS', '#Design', 
-  '#UIUX', '#WebDevelopment', '#Frontend', '#Inspiration', '#Productivity', '#Tech',
-  '#DarkMode', '#CSSArt', '#DevCommunity', '#CodingLife'
+  '#Anime', '#Manga', '#JRPG', '#VisualNovel', '#LightNovel',
+  '#Sushi', '#Ramen', '#Takoyaki', '#Matcha',
+  '#JPop', '#JRock', '#CityPop',
+  '#Tokyo', '#Kyoto', '#Osaka', '#Hokkaido',
+  '#Cosplay', '#FanArt', '#Figurines', '#Gunpla',
+  '#StudioGhibli', '#Shonen', '#Shojo', '#Isekai', '#SliceOfLife',
+  '#GamingJP', '#IndieJP', '#RetroGamingJP',
+  '#HarajukuFashion', '#Kimono', '#StreetwearJP',
+  '#TravelJapan', '#LearnJapanese', '#SakuraSeason'
 ];
 
 type IconType = ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
@@ -148,7 +194,7 @@ const mockNotifications: NotificationItemData[] = [
         icon: UserPlus,
         iconColorClass: 'text-sky-500',
         title: 'New Follower',
-        description: 'Amanda L. started following you.',
+        description: 'Rina_chan started following you.', 
         timestamp: '5m ago',
         isRead: false,
         performerAvatarUrl: peopleImageUrls[1 % peopleImageUrls.length]
@@ -158,7 +204,7 @@ const mockNotifications: NotificationItemData[] = [
         icon: ThumbsUp,
         iconColorClass: 'text-rose-500',
         title: 'Post Liked',
-        description: 'John B. liked your recent post about Next.js.',
+        description: "Takeshi_san liked your post: 'Top 5 Spring Anime Debuts'.", 
         timestamp: '30m ago',
         isRead: false,
         performerAvatarUrl: peopleImageUrls[2 % peopleImageUrls.length]
@@ -168,7 +214,7 @@ const mockNotifications: NotificationItemData[] = [
         icon: MessageCircle, 
         iconColorClass: 'text-green-500',
         title: 'New Comment',
-        description: 'Andrew K. commented: "Great insights!"',
+        description: "Mei_ko commented on your 'Hidden Gem JRPGs' list: 'Totally agree with #3!'", 
         timestamp: '1h ago',
         isRead: true,
         performerAvatarUrl: peopleImageUrls[3 % peopleImageUrls.length]
@@ -178,7 +224,7 @@ const mockNotifications: NotificationItemData[] = [
         icon: Info,
         iconColorClass: 'text-amber-500',
         title: 'System Update',
-        description: 'Platform maintenance scheduled for tonight at 2 AM.',
+        description: 'Platform maintenance scheduled for tonight at 2 AM JST.', 
         timestamp: '3h ago',
         isRead: true,
     },
@@ -186,14 +232,14 @@ const mockNotifications: NotificationItemData[] = [
 
 const NotificationEntry = ({ notification }: { notification: NotificationItemData }) => (
     <DropdownMenu.Item 
-        onSelect={() => displayPlaceholderAlert(`Viewing notification: "${notification.title}"`)}
+        onSelect={() => console.log(`Viewing notification: "${notification.title}"`)}
         className={`flex items-start space-x-3 px-3 py-2.5 text-sm outline-none transition-colors cursor-pointer w-full 
                     ${notification.isRead ? 'text-[var(--page-text-secondary)] hover:bg-[var(--card-bg-hover)]' : 'text-[var(--page-text-primary)] bg-[var(--notification-unread-bg)] hover:bg-[var(--notification-unread-bg-hover)]'}`}
     >
         {notification.performerAvatarUrl ? (
-            <img src={notification.performerAvatarUrl} alt={notification.title} className="w-8 h-8 rounded-full object-cover mt-0.5 flex-shrink-0" />
+            <img src={notification.performerAvatarUrl} alt={notification.title} className="w-8 h-8 rounded-2xl object-cover mt-0.5 flex-shrink-0" />
         ) : (
-            <div className={`w-8 h-8 rounded-full bg-[var(--profile-avatar-bg)] flex items-center justify-center flex-shrink-0 mt-0.5 ${notification.iconColorClass || 'text-[var(--page-text-secondary)]'}`}>
+            <div className={`w-8 h-8 rounded-2xl bg-[var(--profile-avatar-bg)] flex items-center justify-center flex-shrink-0 mt-0.5 ${notification.iconColorClass || 'text-[var(--page-text-secondary)]'}`}>
                 <notification.icon size={18} />
             </div>
         )}
@@ -212,9 +258,8 @@ const NotificationsDropdown = () => {
     const [notifications, setNotifications] = useState(mockNotifications);
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
-    
     const markAllAsRead = () => {
-        displayPlaceholderAlert('Performing "Mark all notifications as read"');
+        console.log('Performing "Mark all notifications as read"');
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     };
 
@@ -250,7 +295,7 @@ const NotificationsDropdown = () => {
                     )}
                      <DropdownMenu.Separator className="h-px bg-[var(--border-color-primary)] my-0" />
                      <DropdownMenu.Item 
-                        onSelect={() => displayPlaceholderAlert("Redirecting to 'All Notifications' page")}
+                        onSelect={() => console.log("Redirecting to 'All Notifications' page")}
                         className="flex items-center justify-center space-x-2 px-3 py-2.5 text-sm text-[var(--accent-primary)] hover:bg-[var(--card-bg-hover)] rounded-b-md cursor-pointer outline-none transition-colors font-medium">
                         <span>View all notifications</span>
                         <ArrowRightFromLine size={14}/>
@@ -285,20 +330,17 @@ const ThemeSwitchMechanism = () => {
 };
 
 const AppBrandingAndTheme = () => (
-  <div className="flex items-center justify-between mb-6">
-    
-    <div className="w-10 h-10 bg-[var(--brand-logo-bg)] rounded-lg flex items-center justify-center text-[var(--brand-logo-text)] shadow-md">
-      <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6"> 
-        <rect x="4" y="14" width="16" height="4" rx="2" />
-        <rect x="7" y="9" width="10" height="4" rx="2" />
-        <rect x="10" y="4" width="4" height="4" rx="2" />
+  <div className="flex items-center space-x-3 mb-6">
+    <div className="w-10 h-10 bg-[var(--brand-logo-bg)] rounded-lg flex items-center justify-center text-[var(--brand-logo-text)] shadow-md flex-shrink-0">
+      <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6">
+        <path d="M20 4H4C3.44772 4 3 4.44772 3 5V6H21V5C21 4.44772 20.5523 4 20 4Z" />
+        <path d="M18 7H6C5.44772 7 5 7.44772 5 8V20H7V14H17V20H19V8C19 7.44772 18.5523 7 18 7ZM12 8V11H12.01V8H12Z" />
+        <path d="M4 7H2V20H4V7Z" />
+        <path d="M20 7H22V20H20V7Z" />
       </svg>
     </div>
-    
-    
-    <div className="flex items-center space-x-1">
-      <NotificationsDropdown />
-      <ThemeSwitchMechanism />
+    <div className="flex-grow min-w-0">
+      <NavigationSearch />
     </div>
   </div>
 );
@@ -319,7 +361,6 @@ const NavigationSearch = () => {
       return;
     }
 
-    
     const currentSearchValue = value.toLowerCase();
     const filtered = mockHashtags.filter(tag => 
       tag.substring(1).toLowerCase().startsWith(currentSearchValue) 
@@ -329,14 +370,13 @@ const NavigationSearch = () => {
   };
 
   const handleHashtagSelect = (hashtag: string) => {
-    displayPlaceholderAlert(`Searching for ${hashtag}`);
     setSearchTerm(hashtag); 
     setIsDropdownOpen(false);
     setFilteredHashtags([]);
   };
 
   return (
-    <div className="relative mb-6">
+    <div className="relative">
       <Search 
         size={18} 
         strokeWidth={2.5} 
@@ -346,8 +386,7 @@ const NavigationSearch = () => {
         type="text"
         value={searchTerm}
         onChange={handleSearchChange}
-        onFocus={() => { 
-            
+        onFocus={() => {
             if (searchTerm.trim() !== '' && filteredHashtags.length > 0) {
                 setIsDropdownOpen(true); 
             }
@@ -362,9 +401,9 @@ const NavigationSearch = () => {
             <div 
               key={tag}
               onClick={() => handleHashtagSelect(tag)}
-              className="px-4 py-2.5 text-sm text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] cursor-pointer transition-colors"
+              className="px-4 py-2.5 text-sm text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] cursor-pointer transition-colors group"
             >
-              {tag}
+              <span className="text-[var(--accent-primary)] group-hover:underline">{tag}</span>
             </div>
           ))}
         </div>
@@ -374,53 +413,60 @@ const NavigationSearch = () => {
 };
 
 const ProfileSummaryDisplay = () => (
-  <div className="bg-[var(--card-bg)] p-5 rounded-xl mb-6 shadow-lg">
-    <div className="relative h-16 mb-4">
-        <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full bg-[var(--profile-avatar-bg)] border-4 border-[var(--profile-avatar-border)] flex items-center justify-center shadow-xl overflow-hidden">
-             {platformCurrentUser.avatarUrl ? (
-                <img src={platformCurrentUser.avatarUrl} alt={platformCurrentUser.name} className="w-full h-full object-cover" />
-             ) : (
-                <UserCircle2 size={56} className="text-[var(--page-text-secondary)]" />
-             )}
-        </div>
+  <div className="bg-[var(--card-bg)] rounded-xl mb-6 shadow-lg">
+    <div 
+      className="h-28 w-full bg-cover bg-center rounded-t-xl" 
+      style={{ backgroundImage: "url('https://images.unsplash.com/photo-1519638399535-1b036603ac77?q=80&w=3131&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')" }}
+    >
+
     </div>
-    <div className="text-center mt-8">
-        <h2 className="text-xl font-[var(--font-heading)] font-semibold text-[var(--page-text-primary)]">{platformCurrentUser.name}</h2>
-        <p className="text-xs text-[var(--accent-primary)] mb-2">@{platformCurrentUser.handle}</p>
-        <div className="flex justify-center space-x-6 my-4">
+
+    <div className="p-5">
+      <div className="w-24 h-24 rounded-2xl bg-[var(--profile-avatar-bg)] border-4 border-[var(--card-bg)] flex items-center justify-center shadow-xl overflow-hidden mx-auto -mt-16 mb-4">
+           {platformCurrentUser.avatarUrl ? (
+              <img src={platformCurrentUser.avatarUrl} alt={platformCurrentUser.name} className="w-full h-full object-cover" />
+           ) : (
+              <UserCircle2 size={56} className="text-[var(--page-text-secondary)]" />
+           )}
+      </div>
+      <div className="text-center">
+          <h2 className="text-xl font-[var(--font-heading)] font-semibold text-[var(--page-text-primary)]">{platformCurrentUser.name}</h2>
+          <p className="text-xs text-[var(--accent-primary)] mb-2">@{platformCurrentUser.handle}</p>
+          <div className="flex justify-center space-x-6 my-4">
             <div>
-                <p className="text-lg font-semibold text-[var(--page-text-primary)]">1984</p>
+                <p className="text-lg font-semibold text-[var(--page-text-primary)]">789</p>
                 <p className="text-xs text-[var(--page-text-secondary)]">Followers</p>
             </div>
             <div>
-                <p className="text-lg font-semibold text-[var(--page-text-primary)]">1002</p>
+                <p className="text-lg font-semibold text-[var(--page-text-primary)]">321</p>
                 <p className="text-xs text-[var(--page-text-secondary)]">Following</p>
             </div>
-        </div>
-        <p className="text-sm text-[var(--page-text-secondary)] leading-relaxed my-4 px-2">
-            ✨ Hello, I&apos;m UX/UI designer. Open to the new projects. ✨
-        </p>
-        <button 
-            onClick={() => displayPlaceholderAlert("Redirecting to 'My Profile' page")}
-            className="w-full bg-[var(--button-bg)] hover:bg-[var(--button-bg-hover)] text-[var(--button-text)] font-medium py-2.5 px-4 rounded-lg text-sm transition-colors duration-200 cursor-pointer shadow-sm hover:shadow-md">
-            My Profile
-        </button>
+          </div>
+          <p className="text-sm text-[var(--page-text-secondary)] leading-relaxed my-4 px-2">
+              🇯🇵 Avid anime watcher & manga reader. Exploring the best of Japan! Currently diving into <em>One Piece</em>.
+          </p>
+          <button 
+              onClick={() => console.log("Redirecting to 'My Profile' page")}
+              className="w-full bg-[var(--button-bg)] hover:bg-[var(--button-bg-hover)] text-[var(--button-text)] font-medium py-2.5 px-4 rounded-lg text-sm transition-colors duration-200 cursor-pointer shadow-sm hover:shadow-md">
+              View Profile
+          </button>
+      </div>
     </div>
   </div>
 );
 
-const ExpertiseTags = () => {
-    const userSkillsList = ["UX Design", "Copywriting", "Mobile", "Research", "User Interview", "JS", "Logo"];
+const UserInterestsDisplay = () => { 
+    const userInterestsList = ["Shonen", "Slice of Life", "J-RPG", "Visual Novels", "Sushi Making", "Harajuku Style", "City Pop"]; 
     return (
         <div className="mb-6">
-            <h3 className="text-xs font-semibold text-[var(--page-text-secondary)] uppercase tracking-wider mb-3 font-[var(--font-heading)]">Skills</h3>
+            <h3 className="text-xs font-semibold text-[var(--page-text-secondary)] uppercase tracking-wider mb-3 font-[var(--font-heading)]">Interests</h3> 
             <div className="flex flex-wrap gap-2">
-                {userSkillsList.map(skillItem => (
+                {userInterestsList.map(interestItem => (
                     <span 
-                        key={skillItem} 
-                        onClick={() => displayPlaceholderAlert(`Filtering by skill: '${skillItem}'`)}
+                        key={interestItem} 
+                        onClick={() => console.log(`Filtering by interest: '${interestItem}'`)}
                         className="bg-[var(--button-bg)] text-[var(--button-text)] text-xs px-3 py-1.5 rounded-full cursor-pointer hover:bg-[var(--button-bg-hover)] transition-colors duration-150 shadow-sm">
-                        {skillItem}
+                        {interestItem}
                     </span>
                 ))}
             </div>
@@ -437,9 +483,9 @@ interface CommunityInfo {
 
 const GroupAffiliations = () => {
     const userCommunities: CommunityInfo[] = [
-        { id:1, name: "UX designers community", members: 32, icon: <CircleDotDashed size={22} className="text-[var(--accent-primary)]" /> },
-        { id:2, name: "Frontend developers", members: 12, icon: <BriefcaseBusiness size={22} className="text-emerald-500" /> },
-        
+        { id:1, name: "Anime Watch Club", members: 32, icon: <Tv2 size={22} className="text-[var(--accent-primary)]" /> }, 
+        { id:2, name: "Manga Readers Unite", members: 12, icon: <BookOpen size={22} className="text-emerald-500" /> }, 
+        { id:3, name: "Tokyo Street Snaps", members: 45, icon: <Camera size={22} className="text-blue-500" /> }, 
     ];
     return (
         <div className="mb-4">
@@ -451,7 +497,7 @@ const GroupAffiliations = () => {
                 {userCommunities.map(communityItem => (
                     <div 
                         key={communityItem.id} 
-                        onClick={() => displayPlaceholderAlert(`Redirecting to community: '${communityItem.name}'`)}
+                        onClick={() => console.log(`Redirecting to community: '${communityItem.name}'`)}
                         className="flex items-center space-x-3.5 p-2.5 rounded-lg hover:bg-[var(--card-bg-hover)] cursor-pointer transition-colors duration-150 group">
                         <div className="w-10 h-10 bg-[var(--card-bg)] rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                             {communityItem.icon} 
@@ -475,9 +521,6 @@ interface StoryViewerProps {
 }
 
 const StoryViewer = ({ story, onClose, onNext }: StoryViewerProps) => {
-  
-
-  
   useEffect(() => {
     const timer = setTimeout(() => {
       onNext();
@@ -485,7 +528,6 @@ const StoryViewer = ({ story, onClose, onNext }: StoryViewerProps) => {
     return () => clearTimeout(timer);
   }, [story, onNext]); 
 
-  
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -501,15 +543,12 @@ const StoryViewer = ({ story, onClose, onNext }: StoryViewerProps) => {
       key={story.id} 
       className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-[100] p-4 animate-in fade-in-0"
     >
-      
       <button 
         onClick={onClose} 
         className="absolute top-5 right-5 text-white/70 hover:text-white transition-colors cursor-pointer z-[102]"
       >
         <X size={32} strokeWidth={2.5} />
       </button>
-
-      
       <div className="relative max-w-md w-full aspect-[9/16] bg-zinc-800 rounded-lg overflow-hidden shadow-2xl">
         {story.avatarUrl ? (
             <img 
@@ -522,7 +561,6 @@ const StoryViewer = ({ story, onClose, onNext }: StoryViewerProps) => {
                 <ImageIcon size={64} className="text-zinc-500" />
             </div>
         )}
-        
         <div className="absolute top-0 left-0 p-4 flex items-center space-x-2 bg-gradient-to-b from-black/50 to-transparent w-full">
           {story.avatarUrl ? (
             <img src={story.avatarUrl} alt={story.name} className="w-8 h-8 rounded-2xl object-cover border-2 border-white/50" />
@@ -531,13 +569,10 @@ const StoryViewer = ({ story, onClose, onNext }: StoryViewerProps) => {
           )}
           <span className="text-sm text-white font-semibold font-[var(--font-heading)] drop-shadow-md">{story.name}</span>
         </div>
-
-        
         <div className="absolute top-2 left-2 right-2 h-1 bg-white/30 rounded-full overflow-hidden">
             <div className="h-full bg-[var(--accent-primary)] animate-story-progress origin-left"></div>
         </div>
       </div>
-       
        <style jsx>{`
         @keyframes story-progress-animation {
           from { transform: scaleX(0); }
@@ -579,14 +614,12 @@ const StoryEntryDisplay = ({ profile, onStoryClick, showActiveRing }: { profile:
 
 const UserStoriesGallery = ({ onStoryClick }: { onStoryClick: (story: StoryProfile, allStories: StoryProfile[]) => void }) => {
     const storyProfilesData: StoryProfile[] = [
-        
         {
             id: 'currentUserStory',
             name: platformCurrentUser.name,
             avatarUrl: platformCurrentUser.avatarUrl,
             hasActiveStory: true 
         },
-        
         { id: '1', name: 'Amanda', avatarUrl: peopleImageUrls[1 % peopleImageUrls.length], hasActiveStory: true }, 
         { id: '2', name: 'John B.', avatarUrl: peopleImageUrls[2 % peopleImageUrls.length] },
         { id: '3', name: 'Andrew K.', avatarUrl: peopleImageUrls[3 % peopleImageUrls.length] },
@@ -631,6 +664,11 @@ const CreateNewPostWidget = ({ onPostSubmit }: CreatePostWidgetProps) => {
 
     const imageInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
+    
+    
+    const previewUrlRefForCleanup = useRef<string | null>(null);
+    
+    const successfullySubmittedUrlRef = useRef<string | null>(null);
 
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
     const [postDetailsToSchedule, setPostDetailsToSchedule] = useState<Omit<Parameters<CreatePostWidgetProps['onPostSubmit']>[0], 'timestamp'> | null>(null);
@@ -641,12 +679,24 @@ const CreateNewPostWidget = ({ onPostSubmit }: CreatePostWidgetProps) => {
 
     useEffect(() => {
        
-        return () => {
-            if (previewUrl) {
-                URL.revokeObjectURL(previewUrl);
-            }
-        };
+       previewUrlRefForCleanup.current = previewUrl;
     }, [previewUrl]);
+
+    useEffect(() => {
+       
+        return () => {
+            
+            if (previewUrlRefForCleanup.current && previewUrlRefForCleanup.current !== successfullySubmittedUrlRef.current) {
+                URL.revokeObjectURL(previewUrlRefForCleanup.current);
+                console.log("CreateNewPostWidget unmount: Revoked (unsubmitted) preview URL:", previewUrlRefForCleanup.current);
+            } else if (previewUrlRefForCleanup.current && previewUrlRefForCleanup.current === successfullySubmittedUrlRef.current) {
+                console.log("CreateNewPostWidget unmount: Preview URL was submitted, NOT revoking:", previewUrlRefForCleanup.current);
+            }
+            
+            previewUrlRefForCleanup.current = null;
+            successfullySubmittedUrlRef.current = null; 
+        };
+    }, []); 
 
    
     useEffect(() => {
@@ -670,57 +720,83 @@ const CreateNewPostWidget = ({ onPostSubmit }: CreatePostWidgetProps) => {
 
     const resetMediaState = () => {
         setSelectedFile(null);
-        if (previewUrl) {
-            URL.revokeObjectURL(previewUrl);
+        
+        const urlToRevoke = previewUrlRefForCleanup.current; 
+        if (urlToRevoke && urlToRevoke !== successfullySubmittedUrlRef.current) {
+            URL.revokeObjectURL(urlToRevoke);
+            console.log("CreateNewPostWidget.resetMediaState: Revoked (unsubmitted) preview URL:", urlToRevoke);
+        } else if (urlToRevoke && urlToRevoke === successfullySubmittedUrlRef.current) {
+            console.log("CreateNewPostWidget.resetMediaState: Preview URL was submitted, NOT revoking:", urlToRevoke);
         }
-        setPreviewUrl(null);
+        setPreviewUrl(null); 
+
+        if (imageInputRef.current) imageInputRef.current.value = '';
+        if (videoInputRef.current) videoInputRef.current.value = '';
+        
     };
 
     const triggerImageUpload = () => {
-        resetMediaState();
         imageInputRef.current?.click();
     };
 
     const triggerVideoUpload = () => {
-        resetMediaState();
         videoInputRef.current?.click();
     };
     
-    const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'video') => {
+    const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
-            resetMediaState(); 
-            setSelectedFile(file);
-            const objectUrl = URL.createObjectURL(file);
-            setPreviewUrl(objectUrl);
-            setSelectedPostType(type);
-        } else {
-            resetMediaState();
-            setSelectedPostType('text'); 
+        
+        const oldUrlToRevoke = previewUrlRefForCleanup.current;
+        if (oldUrlToRevoke && oldUrlToRevoke !== successfullySubmittedUrlRef.current) {
+            URL.revokeObjectURL(oldUrlToRevoke);
+            console.log("CreateNewPostWidget.handleFileSelection: Revoked old preview URL from state:", oldUrlToRevoke);
         }
+        
+        setPreviewUrl(null); 
+        setSelectedFile(null); 
+
+        if (file) {
+            setSelectedFile(file);
+            const newObjectUrl = URL.createObjectURL(file);
+            setPreviewUrl(newObjectUrl); 
+            console.log("CreateNewPostWidget.handleFileSelection: Created new preview URL:", newObjectUrl);
+        } else {
+            
+        }
+        
         if (event.target) {
             event.target.value = '';
         }
     };
 
-    const selectPostTypeOption = (type: 'photo' | 'video' | 'poll') => {
+    const selectPostTypeOption = (newPostType: 'photo' | 'video' | 'poll') => {
         setFormError(null);
-        if (type === selectedPostType && type !== 'poll') { 
+
+        if (selectedPostType === newPostType && (newPostType === 'photo' || newPostType === 'video')) {
             setSelectedPostType('text');
-            resetMediaState();
-           
-        } else {
-            setSelectedPostType(type);
             resetMediaState(); 
-            
-            if (type === 'photo') {
-                triggerImageUpload();
-            } else if (type === 'video') {
-                triggerVideoUpload();
-            } else if (type === 'poll') {
-                 setPollOptions(['', '']); 
-               
-            }
+            setPollOptions(['', '']); 
+            return;
+        }
+        
+        if (selectedPostType === newPostType && newPostType === 'poll') {
+            return; 
+        }
+        
+        resetMediaState(); 
+        
+        if (newPostType !== 'poll') {
+            setPollOptions(['', '']);
+        }
+
+        setSelectedPostType(newPostType);
+
+        if (newPostType === 'photo') {
+            triggerImageUpload();
+        } else if (newPostType === 'video') {
+            triggerVideoUpload();
+        } else if (newPostType === 'poll') {
+            setPollOptions(['', '']); 
         }
     };
 
@@ -765,12 +841,16 @@ const CreateNewPostWidget = ({ onPostSubmit }: CreatePostWidgetProps) => {
             content: postText,
         };
 
+        let blobUrlPassedToSubmit: string | undefined = undefined;
+
         if (selectedPostType === 'photo' && selectedFile && previewUrl) {
             postDetails.mediaUrl = previewUrl; 
             postDetails.mediaType = 'image';
+            blobUrlPassedToSubmit = previewUrl;
         } else if (selectedPostType === 'video' && selectedFile && previewUrl) {
             postDetails.mediaUrl = previewUrl; 
             postDetails.mediaType = 'video';
+            blobUrlPassedToSubmit = previewUrl;
         } else if (selectedPostType === 'poll') {
             const validPollOptions = pollOptions.map(opt => opt.trim()).filter(opt => opt !== '');
             if (validPollOptions.length < 2) {
@@ -790,10 +870,20 @@ const CreateNewPostWidget = ({ onPostSubmit }: CreatePostWidgetProps) => {
         onPostSubmit(postDetails);
         setFormSuccess("Post successfully created!")
         
+        
+        if (blobUrlPassedToSubmit) {
+            successfullySubmittedUrlRef.current = blobUrlPassedToSubmit;
+            console.log("Post submitted with media URL, marked to NOT be revoked by CreateNewPostWidget unmount:", blobUrlPassedToSubmit);
+        }
+
         setPostText('');
         setSelectedPostType('text');
-        resetMediaState();
+        setSelectedFile(null);
+        setPreviewUrl(null); 
         setPollOptions(['', '']);
+        
+        if (imageInputRef.current) imageInputRef.current.value = '';
+        if (videoInputRef.current) videoInputRef.current.value = '';
     };
 
     const handleSchedule = () => {
@@ -804,12 +894,16 @@ const CreateNewPostWidget = ({ onPostSubmit }: CreatePostWidgetProps) => {
             content: postText,
         };
 
+        let blobUrlPassedToSchedule: string | undefined = undefined;
+
         if (selectedPostType === 'photo' && selectedFile && previewUrl) {
             currentPostDetails.mediaUrl = previewUrl; 
             currentPostDetails.mediaType = 'image';
+            blobUrlPassedToSchedule = previewUrl;
         } else if (selectedPostType === 'video' && selectedFile && previewUrl) {
             currentPostDetails.mediaUrl = previewUrl; 
             currentPostDetails.mediaType = 'video';
+            blobUrlPassedToSchedule = previewUrl;
         } else if (selectedPostType === 'poll') {
             const validPollOptions = pollOptions.map(opt => opt.trim()).filter(opt => opt !== '');
             if (validPollOptions.length < 2) {
@@ -843,11 +937,21 @@ const CreateNewPostWidget = ({ onPostSubmit }: CreatePostWidgetProps) => {
             setFormSuccess(`Post scheduled for ${formattedDate}.`);
             console.log("Post scheduled for:", dateTime, "with data:", postDetailsToSchedule);
             
+            
+            if (postDetailsToSchedule.mediaUrl && (postDetailsToSchedule.mediaType === 'image' || postDetailsToSchedule.mediaType === 'video')) {
+                successfullySubmittedUrlRef.current = postDetailsToSchedule.mediaUrl;
+                 console.log("Post scheduled with media URL, marked to NOT be revoked by CreateNewPostWidget unmount:", postDetailsToSchedule.mediaUrl);
+            }
+
             setPostText('');
             setSelectedPostType('text');
-            resetMediaState();
+            setSelectedFile(null);
+            setPreviewUrl(null); 
             setPollOptions(['', '']);
             setPostDetailsToSchedule(null);
+            
+            if (imageInputRef.current) imageInputRef.current.value = '';
+            if (videoInputRef.current) videoInputRef.current.value = '';
         }
         setIsScheduleModalOpen(false);
     };
@@ -858,20 +962,20 @@ const CreateNewPostWidget = ({ onPostSubmit }: CreatePostWidgetProps) => {
             <input 
                 type="file" 
                 ref={imageInputRef} 
-                onChange={(e) => handleFileSelection(e, 'photo')} 
+                onChange={handleFileSelection} 
                 accept="image/*" 
                 className="hidden" 
             />
             <input 
                 type="file" 
                 ref={videoInputRef} 
-                onChange={(e) => handleFileSelection(e, 'video')} 
+                onChange={handleFileSelection} 
                 accept="video/*" 
                 className="hidden" 
             />
 
             <div className="flex items-start space-x-3 sm:space-x-4">
-                <div className="flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[var(--profile-avatar-bg)] flex items-center justify-center mt-0.5 overflow-hidden">
+                <div className="flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-[var(--profile-avatar-bg)] flex items-center justify-center mt-0.5 overflow-hidden">
                     {platformCurrentUser.avatarUrl ? (
                         <img src={platformCurrentUser.avatarUrl} alt={platformCurrentUser.name} className="w-full h-full object-cover" />
                     ) : (
@@ -1038,6 +1142,7 @@ interface FeedPostAuthor {
     avatarUrl?: string; 
     isVerified?: boolean;
     isAuthor?: boolean; 
+    status?: string; 
 }
 
 interface FeedPostStats {
@@ -1069,6 +1174,10 @@ interface FeedPostData {
 const FeedItemDisplay = ({ post }: { post: FeedPostData }) => {
     const [commentText, setCommentText] = useState('');
     const [currentComments, setCurrentComments] = useState<FeedPostComment[]>(post.comments || []);
+
+    
+    const [isLiked, setIsLiked] = useState(false);
+    const [currentLikes, setCurrentLikes] = useState(post.stats?.likes || 0);
 
    
     const [selectedPollOption, setSelectedPollOption] = useState<number | null>(null);
@@ -1122,11 +1231,47 @@ const FeedItemDisplay = ({ post }: { post: FeedPostData }) => {
         }
     };
 
+    const handleLikeToggle = () => {
+        if (isLiked) {
+            setCurrentLikes(prevLikes => prevLikes - 1);
+        } else {
+            setCurrentLikes(prevLikes => prevLikes + 1);
+        }
+        setIsLiked(prevIsLiked => !prevIsLiked);
+    };
+
+    const handleShareAction = async () => {
+        const shareData = {
+            title: `Check out this post by ${post.author.name}`,
+            text: post.content.substring(0, 100) + (post.content.length > 100 ? '...' : ''), 
+            url: window.location.href, 
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+                console.log('Post shared successfully via native share!');
+            } catch (error) {
+                console.error('Error using native share:', error);
+            }
+        } else {
+            
+            try {
+                await navigator.clipboard.writeText(shareData.url);
+                console.log('Native share not available. Link copied to clipboard!');
+                
+            } catch (error) {
+                console.error('Failed to copy link to clipboard:', error);
+                console.log('Native share not available and failed to copy link.');
+            }
+        }
+    };
+
     return (
         <div className="bg-[var(--card-bg)] rounded-xl p-4 sm:p-5 shadow-md mb-6">
             
             <div className="flex items-start space-x-3 mb-3">
-                <div className="flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[var(--profile-avatar-bg)] flex items-center justify-center overflow-hidden">
+                <div className="flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-[var(--profile-avatar-bg)] flex items-center justify-center overflow-hidden">
                     {post.author.avatarUrl ? (
                         <img src={post.author.avatarUrl} alt={post.author.name} className="w-full h-full object-cover" />
                     ) : (
@@ -1136,12 +1281,17 @@ const FeedItemDisplay = ({ post }: { post: FeedPostData }) => {
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center">
                         <span className="text-sm sm:text-base font-semibold text-[var(--page-text-primary)] font-[var(--font-heading)] mr-1 truncate">{post.author.name}</span>
-                        {post.author.isVerified && <CheckCircle2 size={16} className="text-[var(--icon-color-verified)] fill-[var(--icon-color-verified-fill)] mr-1 flex-shrink-0" />}
+                        {post.author.isVerified && <CheckCircle2 size={16} className="fill-[var(--icon-color-verified-fill)] mr-1 flex-shrink-0" />}
                         <span className="text-xs sm:text-sm text-[var(--page-text-secondary)] truncate">@{post.author.handle}</span>
                         <span className="text-xs text-[var(--page-text-secondary)] mx-1.5">•</span>
                         <span className="text-xs text-[var(--page-text-secondary)] flex-shrink-0">{post.timestamp}</span>
                     </div>
-                    <p className="text-xs text-[var(--page-text-secondary)]">In some cases you may see a third-party client name...</p>
+                   
+                    {post.author.status ? (
+                        <p className="text-xs text-[var(--page-text-secondary)] truncate">{post.author.status}</p>
+                    ) : (
+                        <p className="text-xs text-[var(--page-text-secondary)] truncate">Sharing their latest updates!</p> 
+                    )}
                 </div>
                 
                 <DropdownMenu.Root>
@@ -1159,13 +1309,13 @@ const FeedItemDisplay = ({ post }: { post: FeedPostData }) => {
                             {post.author.isAuthor && (
                                 <>
                                     <DropdownMenu.Item 
-                                        onSelect={() => displayPlaceholderAlert("Performing 'Edit post'")}
+                                        onSelect={() => console.log("Performing 'Edit post'")}
                                         className="flex items-center space-x-2.5 px-3 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] rounded-md cursor-pointer outline-none transition-colors">
                                         <Edit3 size={16} className="text-[var(--page-text-secondary)]" />
                                         <span>Edit post</span>
                                     </DropdownMenu.Item>
                                     <DropdownMenu.Item 
-                                        onSelect={() => displayPlaceholderAlert("Performing 'Delete post'")}
+                                        onSelect={() => console.log("Performing 'Delete post'")}
                                         className="flex items-center space-x-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-md cursor-pointer outline-none transition-colors">
                                         <Trash2 size={16} />
                                         <span>Delete post</span>
@@ -1177,13 +1327,13 @@ const FeedItemDisplay = ({ post }: { post: FeedPostData }) => {
                                 onSelect={() => {
                                     if (navigator.clipboard && window.location.href) {
                                         navigator.clipboard.writeText(window.location.href)
-                                            .then(() => displayPlaceholderAlert("Link copied to clipboard!"))
+                                            .then(() => console.log("Link copied to clipboard!"))
                                             .catch(err => {
                                                 console.error("Failed to copy link: ", err);
-                                                displayPlaceholderAlert("Failed to copy link.");
+                                                console.log("Failed to copy link.");
                                             });
                                     } else {
-                                        displayPlaceholderAlert("Clipboard API not available or no URL found.");
+                                        console.log("Clipboard API not available or no URL found.");
                                     }
                                 }}
                                 className="flex items-center space-x-2.5 px-3 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] rounded-md cursor-pointer outline-none transition-colors">
@@ -1191,14 +1341,14 @@ const FeedItemDisplay = ({ post }: { post: FeedPostData }) => {
                                 <span>Copy link to post</span>
                             </DropdownMenu.Item>
                             <DropdownMenu.Item 
-                                onSelect={() => displayPlaceholderAlert("Performing 'Embed post'")}
+                                onSelect={() => console.log("Performing 'Embed post'")}
                                 className="flex items-center space-x-2.5 px-3 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] rounded-md cursor-pointer outline-none transition-colors">
                                 <Code2 size={16} className="text-[var(--page-text-secondary)]" />
                                 <span>Embed post</span>
                             </DropdownMenu.Item>
                             <DropdownMenu.Separator className="h-px bg-[var(--border-color-primary)] my-1" />
                             <DropdownMenu.Item 
-                                onSelect={() => displayPlaceholderAlert("Performing 'Report post'")}
+                                onSelect={() => console.log("Performing 'Report post'")}
                                 className="flex items-center space-x-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-md cursor-pointer outline-none transition-colors">
                                 <Flag size={16} />
                                 <span>Report post</span>
@@ -1210,7 +1360,8 @@ const FeedItemDisplay = ({ post }: { post: FeedPostData }) => {
 
             
             <p className="text-sm sm:text-base text-[var(--page-text-primary)] leading-relaxed mb-3 whitespace-pre-wrap">
-                {post.content}
+               
+                {renderContentWithStyledHashtags(post.content)}
             </p>
 
             
@@ -1267,15 +1418,19 @@ const FeedItemDisplay = ({ post }: { post: FeedPostData }) => {
 
             
             <div className="flex items-center justify-start text-[var(--page-text-secondary)] mb-3 pt-2 border-t border-[var(--border-color-primary)]">
-                <button className="flex items-center space-x-1.5 hover:text-[var(--accent-primary)] transition-colors cursor-pointer p-2 -ml-2">
-                    <ThumbsUp size={18} />
-                    {post.stats && <span className="text-xs font-medium">{post.stats.likes > 0 ? post.stats.likes : ''}</span>}
+                <button 
+                    onClick={handleLikeToggle}
+                    className={`flex items-center space-x-1.5 hover:text-[var(--accent-primary)] transition-colors cursor-pointer p-2 -ml-2 ${isLiked ? 'text-[var(--accent-primary)]' : 'text-[var(--page-text-secondary)]'}`}>
+                    <ThumbsUp size={18} className={isLiked ? 'fill-[var(--accent-primary)]' : ''} />
+                    {currentLikes > 0 && <span className="text-xs font-medium">{currentLikes}</span>}
                 </button>
                 <button className="flex items-center space-x-1.5 hover:text-[var(--icon-color-comment-action)] transition-colors cursor-pointer p-2">
                     <MessageSquareText size={18} />
-                    {post.stats && <span className="text-xs font-medium">{post.stats.comments > 0 ? post.stats.comments : ''}</span>}
+                    {post.stats && post.stats.comments > 0 && <span className="text-xs font-medium">{post.stats.comments}</span>}
                 </button>
-                <button className="p-2 hover:text-[var(--icon-color-share-action)] transition-colors cursor-pointer -mr-2">
+                <button 
+                    onClick={handleShareAction}
+                    className="p-2 hover:text-[var(--icon-color-share-action)] transition-colors cursor-pointer -mr-2">
                     <Send size={18} />
                 </button>
             </div>
@@ -1285,7 +1440,7 @@ const FeedItemDisplay = ({ post }: { post: FeedPostData }) => {
                 <div className="space-y-3 pt-3 border-t border-[var(--border-color-primary)] mb-3">
                     {currentComments.map(comment => (
                         <div key={comment.id} className="flex items-start space-x-2.5 text-xs">
-                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-[var(--profile-avatar-bg)] flex items-center justify-center overflow-hidden">
+                            <div className="flex-shrink-0 w-7 h-7 rounded-2xl bg-[var(--profile-avatar-bg)] flex items-center justify-center overflow-hidden">
                                 {comment.avatarUrl ? (
                                     <img src={comment.avatarUrl} alt={comment.authorName} className="w-full h-full object-cover" />
                                 ) : (
@@ -1304,7 +1459,7 @@ const FeedItemDisplay = ({ post }: { post: FeedPostData }) => {
 
             
             <div className="flex items-center space-x-2.5 pt-3 border-t border-[var(--border-color-primary)]">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--profile-avatar-bg)] flex items-center justify-center overflow-hidden">
+                <div className="flex-shrink-0 w-8 h-8 rounded-2xl bg-[var(--profile-avatar-bg)] flex items-center justify-center overflow-hidden">
                     {platformCurrentUser.avatarUrl ? (
                         <img src={platformCurrentUser.avatarUrl} alt={platformCurrentUser.name} className="w-full h-full object-cover" />
                     ) : (
@@ -1347,18 +1502,18 @@ const UserAccountWidget = () => {
     return (
         <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
-                <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-[var(--card-bg-hover)] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]">
-                    <div className="flex items-center space-x-3">
-                        <div className="w-9 h-9 rounded-full bg-[var(--profile-avatar-bg)] flex items-center justify-center text-[var(--page-text-primary)] font-semibold text-sm overflow-hidden">
+                <button className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-[var(--card-bg-hover)] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]">
+                    <div className="flex items-center space-x-2">
+                        <div className="w-7 h-7 rounded-2xl bg-[var(--profile-avatar-bg)] flex items-center justify-center text-[var(--page-text-primary)] font-semibold overflow-hidden">
                             {platformCurrentUser.avatarUrl ? (
                                 <img src={platformCurrentUser.avatarUrl} alt={platformCurrentUser.name} className="w-full h-full object-cover" />
                             ) : (
-                                <UserCircle2 size={22} className="text-[var(--page-text-secondary)]" />
+                                <UserCircle2 size={18} className="text-[var(--page-text-secondary)]" />
                             )}
                         </div>
-                        <span className="text-sm font-medium text-[var(--page-text-primary)] font-[var(--font-heading)] truncate">{platformCurrentUser.name}</span>
+                        <span className="text-xs font-medium text-[var(--page-text-primary)] font-[var(--font-heading)] truncate">{platformCurrentUser.name}</span>
                     </div>
-                    <ChevronDown size={18} className="text-[var(--page-text-secondary)]" />
+                    <ChevronDown size={16} className="text-[var(--page-text-secondary)]" />
                 </button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
@@ -1369,26 +1524,32 @@ const UserAccountWidget = () => {
                 >
                     <DropdownMenu.Label className="px-3 py-2 text-xs text-[var(--page-text-secondary)] font-[var(--font-heading)]">My Account</DropdownMenu.Label>
                     <DropdownMenu.Item 
-                        onSelect={() => displayPlaceholderAlert("Redirecting to 'View Profile'")}
+                        onSelect={() => console.log("UserAccount: View Profile clicked")} 
                         className="flex items-center space-x-2.5 px-3 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] rounded-md cursor-pointer outline-none transition-colors">
                         <User size={16} className="text-[var(--page-text-secondary)]" />
                         <span>View Profile</span>
                     </DropdownMenu.Item>
                     <DropdownMenu.Item 
-                        onSelect={() => displayPlaceholderAlert("Redirecting to 'Account Settings'")}
+                        onSelect={() => console.log("UserAccount: Saved Content clicked")} 
+                        className="flex items-center space-x-2.5 px-3 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] rounded-md cursor-pointer outline-none transition-colors">
+                        <Bookmark size={16} className="text-[var(--page-text-secondary)]" />
+                        <span>Saved Content</span>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item 
+                        onSelect={() => console.log("UserAccount: Content Preferences clicked")} 
+                        className="flex items-center space-x-2.5 px-3 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] rounded-md cursor-pointer outline-none transition-colors">
+                        <ListFilter size={16} className="text-[var(--page-text-secondary)]" />
+                        <span>Content Preferences</span>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item 
+                        onSelect={() => console.log("UserAccount: Account Settings clicked")} 
                         className="flex items-center space-x-2.5 px-3 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] rounded-md cursor-pointer outline-none transition-colors">
                         <Settings size={16} className="text-[var(--page-text-secondary)]" />
                         <span>Account Settings</span>
                     </DropdownMenu.Item>
-                    <DropdownMenu.Item 
-                        onSelect={() => displayPlaceholderAlert("Redirecting to 'Billing & Subscriptions'")}
-                        className="flex items-center space-x-2.5 px-3 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] rounded-md cursor-pointer outline-none transition-colors">
-                        <CreditCard size={16} className="text-[var(--page-text-secondary)]" />
-                        <span>Billing & Subscriptions</span>
-                    </DropdownMenu.Item>
                     <DropdownMenu.Separator className="h-px bg-[var(--border-color-primary)] my-1" />
                     <DropdownMenu.Item 
-                        onSelect={() => displayPlaceholderAlert("Performing 'Logout'")}
+                        onSelect={() => console.log("UserAccount: Logout clicked")} 
                         className="flex items-center space-x-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-md cursor-pointer outline-none transition-colors">
                         <LogOut size={16} />
                         <span>Logout</span>
@@ -1421,8 +1582,6 @@ interface ActivityItemData {
     performer: ActivityPerformer;
     timestamp: string;
     targetText?: string; 
-    amount?: string; 
-    amountLabel?: string; 
     groupName?: string; 
     canBeThanked?: boolean; 
 }
@@ -1447,22 +1606,22 @@ const ActivityItemDisplay = ({ item, onDiscardRequest }: { item: ActivityItemDat
 
     const handleThankAction = () => {
         setIsThanked(true);
-        displayPlaceholderAlert(`Performing "Thank ${item.performer.name}"`);
+        console.log(`Encouragement sent to ${item.performer.name} for item ${item.id}`);
     };
 
     const handleJoinGroupAction = () => {
         setIsJoined(true);
-        
+        console.log(`Joined group: ${item.groupName || item.id}`);
     };
 
     const performerName = <span className="font-semibold text-[var(--page-text-primary)]">{item.performer.name}</span>;
     let activityTextDetails = <></>;
 
     switch (item.type) {
-        case 'subscription': activityTextDetails = <>{performerName} {item.targetText || 'subscribed on you'}.</>; break;
-        case 'purchase_video': activityTextDetails = <>{performerName} {item.targetText || 'bought your video'}.</>; break;
-        case 'tip_received': activityTextDetails = <>{performerName} {item.targetText || 'sent you a tip'}.</>; break;
-        case 'job_request': activityTextDetails = <>{performerName} {item.targetText || 'sent you a job request'}.</>; break;
+        case 'subscription': activityTextDetails = <>{performerName} {item.targetText || 'started following your updates'}.</>; break;
+        case 'purchase_video': activityTextDetails = <>{performerName} {item.targetText || 'acquired your content'}.</>; break;
+        case 'tip_received': activityTextDetails = <>{performerName} {item.targetText || 'sent you an offering'}.</>; break;
+        case 'job_request': activityTextDetails = <>{performerName} {item.targetText || 'requested your skills'}.</>; break;
         case 'group_invite': activityTextDetails = <>{item.performer.isGroup ? performerName : "Invitation to join"} {item.groupName || 'group'}.</>; break;
     }
 
@@ -1471,13 +1630,13 @@ const ActivityItemDisplay = ({ item, onDiscardRequest }: { item: ActivityItemDat
             <div className="flex items-start space-x-3">
                 <div className="relative flex-shrink-0">
                     {item.performer.avatarUrl && !item.performer.isGroup ? (
-                        <img src={item.performer.avatarUrl} alt={item.performer.name} className="w-10 h-10 rounded-full object-cover" />
+                        <img src={item.performer.avatarUrl} alt={item.performer.name} className="w-10 h-10 rounded-2xl object-cover" />
                     ) : item.performer.isGroup ? (
-                        <div className="w-10 h-10 rounded-full bg-orange-500/20 border-2 border-orange-500 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-2xl bg-orange-500/20 border-2 border-orange-500 flex items-center justify-center">
                             <div className="w-5 h-5 rounded-full bg-orange-500"></div>
                         </div>
                     ) : (
-                        <div className="w-10 h-10 rounded-full bg-[var(--profile-avatar-bg)] flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-2xl bg-[var(--profile-avatar-bg)] flex items-center justify-center">
                             <UserCircle2 size={24} className="text-[var(--page-text-secondary)]" />
                         </div>
                     )}
@@ -1493,13 +1652,7 @@ const ActivityItemDisplay = ({ item, onDiscardRequest }: { item: ActivityItemDat
                         {activityTextDetails}
                         <span className="text-xs text-[var(--page-text-secondary)]/80 ml-1">• {item.timestamp}</span>
                     </p>
-                    
-                    {item.amount && (
-                        <p className="text-base font-medium text-[var(--page-text-primary)] mt-1">
-                            {item.amount}
-                            {item.amountLabel && <span className="text-xs text-[var(--page-text-secondary)] ml-0.5">{item.amountLabel}</span>}
-                        </p>
-                    )}
+
                 </div>
             </div>
 
@@ -1510,7 +1663,7 @@ const ActivityItemDisplay = ({ item, onDiscardRequest }: { item: ActivityItemDat
                             onClick={handleThankAction}
                             className="text-xs bg-[var(--accent-primary)] text-[var(--accent-text-on-primary)] px-3.5 py-1.5 rounded-full hover:bg-[var(--accent-primary-hover)] transition-colors cursor-pointer font-medium"
                         >
-                            Thanks
+                            Ganbare!
                         </button>
                     )}
                     {item.canBeThanked && isThanked && (
@@ -1518,7 +1671,7 @@ const ActivityItemDisplay = ({ item, onDiscardRequest }: { item: ActivityItemDat
                             disabled
                             className="flex items-center text-xs bg-[var(--button-thanked-bg)] text-[var(--button-thanked-text)] px-3.5 py-1.5 rounded-full cursor-not-allowed font-medium"
                         >
-                            <CheckCircle2 size={14} className="mr-1.5" /> Thanked
+                            <CheckCircle2 size={14} className="mr-1.5" /> Encouraged!
                         </button>
                     )}
                     {item.type === 'group_invite' && (
@@ -1526,7 +1679,6 @@ const ActivityItemDisplay = ({ item, onDiscardRequest }: { item: ActivityItemDat
                             {!isJoined && (
                                 <button 
                                     onClick={() => {
-                                        
                                         onDiscardRequest(item.id); 
                                     }}
                                     className="text-xs bg-[var(--button-discard-bg)] text-[var(--button-discard-text)] px-3.5 py-1.5 rounded-full hover:opacity-80 transition-opacity cursor-pointer font-medium"
@@ -1560,33 +1712,38 @@ const ActivityItemDisplay = ({ item, onDiscardRequest }: { item: ActivityItemDat
 const RecentActivitiesManager = () => {
     const initialActivities: ActivityItemData[] = [
         {
-            id: 'act1', type: 'subscription', 
-            performer: { name: 'Vitaliy Akterskiy', avatarUrl: peopleImageUrls[2 % peopleImageUrls.length], isVerifiedOnAvatar: true }, 
-            timestamp: '3 min ago', targetText: 'subscribed on you'
-        },
-        {
             id: 'act2', type: 'tip_received', 
-            performer: { name: 'Evgeniy Alexandrov', avatarUrl: peopleImageUrls[3 % peopleImageUrls.length] }, 
-            timestamp: '7 hrs ago', targetText: 'sent you a tip', 
-            amount: '$10.00', amountLabel: '/tip', canBeThanked: true
-        },
-        {
-            id: 'act3', type: 'purchase_video', 
-            performer: { name: 'Maksym Karafizi', avatarUrl: peopleImageUrls[4 % peopleImageUrls.length] }, 
-            timestamp: '6 hrs ago', targetText: 'bought your video', 
-            amount: '$90.00', amountLabel: '/purchase', canBeThanked: true
-        },
-        {
-            id: 'act4', type: 'job_request', 
-            performer: { name: 'Rosaline Kumbirai', avatarUrl: peopleImageUrls[5 % peopleImageUrls.length] }, 
-            timestamp: '1 hr ago', targetText: 'sent you a job request', 
-            amount: '$20.00', amountLabel: '/purchase', canBeThanked: true 
+            performer: { name: 'Haru Ito', avatarUrl: peopleImageUrls[3 % peopleImageUrls.length] }, 
+            timestamp: '7 hrs ago', 
+            targetText: 'created a new poll: "Favorite Studio Ghibli film?"',
+            canBeThanked: true
         },
         {
             id: 'act5', type: 'group_invite', 
-            performer: { name: 'UX designers group', isGroup: true, isVerifiedOnAvatar: true }, 
+            performer: { name: 'J-RPG Legends Guild', isGroup: true, isVerifiedOnAvatar: true }, 
             timestamp: '12 hrs ago',
-            groupName: 'UX designers group'
+            groupName: 'J-RPG Legends Guild'
+        },
+        {
+            id: 'act1', type: 'subscription', 
+            performer: { name: 'Yuki Sato', avatarUrl: peopleImageUrls[2 % peopleImageUrls.length], isVerifiedOnAvatar: true }, 
+            timestamp: '3 min ago', 
+            targetText: 'just posted a new theory about "Attack on Titan"!',
+            canBeThanked: true
+        },
+        {
+            id: 'act3', type: 'purchase_video', 
+            performer: { name: 'Aoi Nakamura', avatarUrl: peopleImageUrls[4 % peopleImageUrls.length] }, 
+            timestamp: '6 hrs ago', 
+            targetText: 'is watching your latest story about Akihabara.',
+            canBeThanked: true
+        },
+        {
+            id: 'act4', type: 'job_request', 
+            performer: { name: 'Ren Suzuki (Sakura Studios)', avatarUrl: peopleImageUrls[5 % peopleImageUrls.length] }, 
+            timestamp: '1 hr ago', 
+            targetText: 'commented on your "Cosplay Design Ideas" post.', 
+            canBeThanked: true 
         },
     ];
 
@@ -1619,30 +1776,32 @@ interface MobileTopNavbarProps {
 const MobileTopNavbar = ({ onMenuClick, onProfileClick }: MobileTopNavbarProps) => {
     return (
         <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-16 px-4 bg-[var(--card-bg)] border-b border-[var(--border-color-primary)] shadow-sm">
-            
             <button onClick={onMenuClick} className="p-2 text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] rounded-full cursor-pointer">
                 <Menu size={24} />
             </button>
-
-            
-            <div className="w-8 h-8 bg-[var(--brand-logo-bg)] rounded-lg flex items-center justify-center text-[var(--brand-logo-text)]">
-                 <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5">
-                    <rect x="4" y="14" width="16" height="4" rx="2" />
-                    <rect x="7" y="9" width="10" height="4" rx="2" />
-                    <rect x="10" y="4" width="4" height="4" rx="2" />
-                </svg>
-            </div>
-
-            
-            <button onClick={onProfileClick} className="p-0.5 rounded-full hover:ring-2 hover:ring-[var(--accent-primary)] cursor-pointer">
-                <div className="w-8 h-8 rounded-full bg-[var(--profile-avatar-bg)] flex items-center justify-center overflow-hidden">
-                    {platformCurrentUser.avatarUrl ? (
-                        <img src={platformCurrentUser.avatarUrl} alt={platformCurrentUser.name} className="w-full h-full object-cover" />
-                    ) : (
-                        <UserCircle2 size={20} className="text-[var(--page-text-secondary)]" />
-                    )}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                <div className="w-8 h-8 bg-[var(--brand-logo-bg)] rounded-lg flex items-center justify-center text-[var(--brand-logo-text)]">
+                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5">
+                        <path d="M20 4H4C3.44772 4 3 4.44772 3 5V6H21V5C21 4.44772 20.5523 4 20 4Z" />
+                        <path d="M18 7H6C5.44772 7 5 7.44772 5 8V20H7V14H17V20H19V8C19 7.44772 18.5523 7 18 7ZM12 8V11H12.01V8H12Z" />
+                        <path d="M4 7H2V20H4V7Z" />
+                        <path d="M20 7H22V20H20V7Z" />
+                    </svg>
                 </div>
-            </button>
+            </div>
+            <div className="flex items-center space-x-1">
+                <NotificationsDropdown />
+                <ThemeSwitchMechanism />
+                <button onClick={onProfileClick} className="p-0.5 rounded-xl hover:ring-2 hover:ring-[var(--accent-primary)] cursor-pointer">
+                    <div className="w-8 h-8 rounded-2xl bg-[var(--profile-avatar-bg)] flex items-center justify-center overflow-hidden">
+                        {platformCurrentUser.avatarUrl ? (
+                            <img src={platformCurrentUser.avatarUrl} alt={platformCurrentUser.name} className="w-full h-full object-cover" />
+                        ) : (
+                            <UserCircle2 size={20} className="text-[var(--page-text-secondary)]" />
+                        )}
+                    </div>
+                </button>
+            </div>
         </div>
     );
 };
@@ -1653,8 +1812,6 @@ const PlatformClientView = () => {
   const [allStoriesForViewer, setAllStoriesForViewer] = useState<StoryProfile[]>([]);
   const [currentStoryIndexInViewer, setCurrentStoryIndexInViewer] = useState<number>(-1);
   const [feedPosts, setFeedPosts] = useState<FeedPostData[]>(sampleFeedData);
-  
-  
   const [isMobileLeftSidebarOpen, setIsMobileLeftSidebarOpen] = useState(false);
   const [isMobileRightSidebarOpen, setIsMobileRightSidebarOpen] = useState(false);
 
@@ -1663,8 +1820,6 @@ const PlatformClientView = () => {
   const toggleMobileLeftSidebar = () => setIsMobileLeftSidebarOpen(!isMobileLeftSidebarOpen);
   const toggleMobileRightSidebar = () => setIsMobileRightSidebarOpen(!isMobileRightSidebarOpen);
 
-  
-  
   const openStoryViewer = (clickedStory: StoryProfile, allStories: StoryProfile[]) => {
     const clickedIndex = allStories.findIndex(s => s.id === clickedStory.id);
     if (clickedIndex !== -1) {
@@ -1710,26 +1865,22 @@ const PlatformClientView = () => {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[var(--page-bg)] text-[var(--page-text-primary)] font-[var(--font-body)]">
-      
       <MobileTopNavbar 
         onMenuClick={toggleMobileLeftSidebar} 
         onProfileClick={toggleMobileRightSidebar} 
       />
-      
       <div className="flex flex-1 overflow-hidden">
-        
         {isMobileLeftSidebarOpen && (
             <div className="fixed inset-0 z-50 flex md:hidden">
-                <aside className="w-3/4 max-w-sm bg-[var(--card-bg)] p-5 border-r border-[var(--border-color-primary)] flex flex-col space-y-3 h-full overflow-y-auto shadow-xl">
+                <aside className="w-3/4 max-w-sm p-5 flex flex-col space-y-3 h-full overflow-y-auto shadow-xl bg-[var(--page-bg)]">
                     <div className="flex justify-end mb-2">
                         <button onClick={toggleMobileLeftSidebar} className="p-2 text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] rounded-full">
                             <X size={24}/>
                         </button>
                     </div>
                     <AppBrandingAndTheme />
-                    <NavigationSearch />
                     <ProfileSummaryDisplay />
-                    <ExpertiseTags />
+                    <UserInterestsDisplay /> 
                     <GroupAffiliations />
                     <div className="mt-auto pt-6">
                         <p className="text-xs text-[var(--page-text-secondary)] text-center">&copy; {new Date().getFullYear()} Platform Hub. All rights reserved.</p>
@@ -1738,20 +1889,16 @@ const PlatformClientView = () => {
                 <div onClick={toggleMobileLeftSidebar} className="flex-1 bg-black/50"></div> 
             </div>
         )}
-        
-        <aside className="w-[24%] max-w-sm bg-[var(--card-bg)] p-5 border-r border-[var(--border-color-primary)] flex-shrink-0 hidden md:flex flex-col space-y-3 h-full overflow-y-auto shadow-xl scrollbar-thin scrollbar-thumb-[var(--scrollbar-thumb)] scrollbar-track-[var(--scrollbar-track)]">
+        <aside className="w-[24%] max-w-sm p-5 flex-shrink-0 hidden md:flex flex-col space-y-3 h-full overflow-y-auto shadow-xl bg-[var(--page-bg)] scrollbar-thin scrollbar-thumb-[var(--scrollbar-thumb)] scrollbar-track-[var(--scrollbar-track)]">
           <AppBrandingAndTheme />
-          
-          <NavigationSearch />
           <ProfileSummaryDisplay />
-          <ExpertiseTags />
+          <UserInterestsDisplay /> 
           <GroupAffiliations />
           <div className="mt-auto pt-6">
             <p className="text-xs text-[var(--page-text-secondary)] text-center">&copy; {new Date().getFullYear()} Platform Hub. All rights reserved.</p>
           </div>
         </aside>
 
-        
         <main className="flex-1 bg-[var(--page-bg)] p-6 md:p-8 lg:p-10 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-[var(--scrollbar-thumb)] scrollbar-track-[var(--scrollbar-track)] pt-20 md:pt-8 lg:pt-10">
           <UserStoriesGallery onStoryClick={openStoryViewer} />
           <CreateNewPostWidget onPostSubmit={addNewPostToFeed} />
@@ -1770,31 +1917,47 @@ const PlatformClientView = () => {
           </div>
         </main>
 
-        
         {isMobileRightSidebarOpen && (
             <div className="fixed inset-0 z-50 flex justify-end lg:hidden">
                 <div onClick={toggleMobileRightSidebar} className="flex-1 bg-black/50"></div> 
-                <aside className="w-3/4 max-w-xs bg-[var(--card-bg)] p-5 border-l border-[var(--border-color-primary)] flex flex-col space-y-0 h-full overflow-y-auto shadow-xl">
+                
+                <aside className="w-3/4 max-w-xs bg-[var(--page-bg)] p-5 flex flex-col space-y-0 h-full overflow-y-auto shadow-xl">
                      <div className="flex justify-start mb-2">
                         <button onClick={toggleMobileRightSidebar} className="p-2 text-[var(--page-text-primary)] hover:bg-[var(--card-bg-hover)] rounded-full">
                             <X size={24}/>
                         </button>
                     </div>
-                    <UserAccountWidget />
-                    <div className="flex-1 bg-[var(--card-bg)] rounded-b-xl p-4 pt-0 text-[var(--page-text-secondary)] font-[var(--font-heading)] shadow-none mt-0 border-t-0">
-                        <h3 className="text-sm font-semibold my-3 text-center text-[var(--page-text-primary)] sticky top-0 bg-[var(--card-bg)] py-2 -mx-4 px-4 border-b border-[var(--border-color-primary)]">Recent Activity</h3>
-                        <RecentActivitiesManager />
+                   
+                    <div className="bg-[var(--card-bg)] rounded-xl shadow-lg mb-4">
+                        <UserAccountWidget />
+                    </div>
+                    <div className="bg-[var(--card-bg)] rounded-xl shadow-lg p-4 flex-1 flex flex-col overflow-hidden">
+                        <h3 className="text-sm font-semibold my-3 text-center text-[var(--page-text-primary)] sticky top-0 bg-[var(--card-bg)] py-2 -mx-4 px-4 border-b border-[var(--border-color-primary)] z-10">Recent Activity</h3>
+                        <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-[var(--scrollbar-thumb)] scrollbar-track-[var(--scrollbar-track)] pr-1 -mr-1">
+                           <RecentActivitiesManager />
+                        </div>
                     </div>
                 </aside>
             </div>
         )}
         
-        <aside className="w-[22%] max-w-xs bg-[var(--card-bg)] p-5 border-l border-[var(--border-color-primary)] flex-shrink-0 hidden lg:flex flex-col space-y-0 h-full overflow-y-auto shadow-xl scrollbar-thin scrollbar-thumb-[var(--scrollbar-thumb)] scrollbar-track-[var(--scrollbar-track)]">
-          <UserAccountWidget />
+       
+        <aside className="w-[22%] max-w-xs bg-[var(--page-bg)] p-5 flex-shrink-0 hidden lg:flex flex-col space-y-0 h-full overflow-y-auto shadow-xl scrollbar-thin scrollbar-thumb-[var(--scrollbar-thumb)] scrollbar-track-[var(--scrollbar-track)]">
+         
+          <div className="bg-[var(--card-bg)] rounded-xl shadow-lg mb-4 p-3 flex items-center justify-between">
+            <div className="flex items-center space-x-1">
+              <NotificationsDropdown />
+              <ThemeSwitchMechanism />
+            </div>
+            <UserAccountWidget />
+          </div>
           
-           <div className="flex-1 bg-[var(--card-bg)] rounded-b-xl p-4 pt-0 text-[var(--page-text-secondary)] font-[var(--font-heading)] shadow-none mt-0 border-t-0">
-            <h3 className="text-sm font-semibold my-3 text-center text-[var(--page-text-primary)] sticky top-0 bg-[var(--card-bg)] py-2 -mx-4 px-4 border-b border-[var(--border-color-primary)]">Recent Activity</h3>
-            <RecentActivitiesManager />
+          
+           <div className="bg-[var(--card-bg)] rounded-xl shadow-lg flex-1 flex flex-col overflow-hidden">
+            <h3 className="text-sm font-semibold text-center mb-2 text-[var(--page-text-primary)] sticky top-0 bg-[var(--card-bg)] py-2 -mx-4 px-4 border-b border-[var(--border-color-primary)] z-10">Recent Activity</h3>
+            <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-[var(--scrollbar-thumb)] scrollbar-track-[var(--scrollbar-track)] pr-1 -mr-1">
+                <RecentActivitiesManager />
+            </div>
           </div>
         </aside>
       </div>
@@ -1824,119 +1987,121 @@ const CreatorPlatformPage = () => {
 const GlobalThemeStyles = () => (
   <style jsx global>{`
     :root {
-      /* Base Page */
-      --page-bg: #ffffff; /* Light: White */
-      --page-text-primary: #18181b; /* Light: Zinc 900 */
-      --page-text-secondary: #52525b; /* Light: Zinc 600 */
-      --page-text-tertiary: #71717a; /* Light: Zinc 500 - For timestamps etc. */
-      --border-color-primary: #e4e4e7; /* Light: Zinc 200 */
-      --border-color-secondary: #d4d4d8; /* Light: Zinc 300 */
+      
+      
+      --page-bg: #F9FAFB; 
+      --page-text-primary: #1F2937; 
+      --page-text-secondary: #6B7280; 
+      --page-text-tertiary: #9CA3AF; 
+      --border-color-primary: #E5E7EB; 
+      --border-color-secondary: #D1D5DB; 
 
-      /* Cards & Interactive Elements */
-      --card-bg: #f4f4f5; /* Light: Zinc 100 */
-      --card-bg-hover: #e4e4e7; /* Light: Zinc 200 */
-      --input-bg: #ffffff; /* Light: White */
-      --input-text: #18181b; /* Light: Zinc 900 */
-      --input-placeholder: #a1a1aa; /* Light: Zinc 400 */
-      --button-bg: #e4e4e7; /* Light: Zinc 200 */
-      --button-bg-hover: #d4d4d8; /* Light: Zinc 300 */
-      --button-text: #18181b; /* Light: Zinc 900 */
+      
+      --card-bg: #F3F4F6; 
+      --card-bg-hover: #E5E7EB; 
+      --input-bg: #FFFFFF; 
+      --input-text: #1F2937; 
+      --input-placeholder: #9CA3AF; 
+      --button-bg: #E5E7EB; 
+      --button-bg-hover: #D1D5DB; 
+      --button-text: #1F2937; 
 
-      /* Accent Colors */
-      --accent-primary: #f59e0b; /* Light: Amber 500 */
-      --accent-primary-hover: #d97706; /* Light: Amber 600 */
-      --accent-text-on-primary: #ffffff; /* Text on accent */
+      
+      --accent-primary: #F472B6; 
+      --accent-primary-hover: #EC4899; 
+      --accent-text-on-primary: #FFFFFF; 
 
-      /* Specific UI Elements from Design */
-      --profile-avatar-bg: #e4e4e7; /* Light: Zinc 200 */
-      --profile-avatar-border: #ffffff; /* Light: White */
+      
+      --profile-avatar-bg: #E5E7EB; 
+      --profile-avatar-border: #F9FAFB; 
       --brand-logo-bg: var(--accent-primary);
       --brand-logo-text: var(--accent-text-on-primary);
 
-      /* Scrollbar - Light Theme */
-      --scrollbar-thumb: #a1a1aa; /* zinc-400 */
-      --scrollbar-track: #f4f4f5; /* zinc-100 */
+      
+      --scrollbar-thumb: #9CA3AF; 
+      --scrollbar-track: #F3F4F6; 
 
-      /* Fonts - UPDATED TO USE NEXT/FONT VARIABLES */
+      
       --font-heading: var(--font-playfair-display), serif;
       --font-body: var(--font-merriweather), sans-serif;
 
-      /* Icon Specific Colors - Light Theme */
-      --icon-color-photo: #22c55e; /* Tailwind green-500 */
-      --icon-color-video: #0ea5e9; /* Tailwind sky-500 */
-      --icon-color-poll: #ef4444;  /* Tailwind red-500 */
-      --icon-color-verified: #0ea5e9; /* Tailwind sky-500 */
-      --icon-color-verified-fill: #0ea5e9; /* Tailwind sky-500 */
-      --icon-color-comment-action: #0ea5e9; /* Tailwind sky-500 */
-      --icon-color-share-action: #22c55e; /* Tailwind green-500 */
-
-      /* Activity Feed Polish - Light Theme */
-      --avatar-verified-badge-bg: #facc15; /* Yellow-400 for the check on avatar */
-      --avatar-verified-badge-icon-color: #18181b; /* Darker icon for contrast on yellow */
-      --button-thanked-bg: #52525b; /* Zinc-600 for thanked button */
-      --button-thanked-text: #e4e4e7; /* Zinc-200 for thanked text */
-      --button-discard-bg: var(--button-thanked-bg); /* Same as thanked for discard */
-      --button-discard-text: var(--button-thanked-text);
-
-      /* NEW Notification Colors - Light Theme */
-      --notification-unread-bg: #fee2e2; /* Light Red 100 for unread */
-      --notification-unread-bg-hover: #fecaca; /* Light Red 200 for unread hover */
-    }
-
-    html.dark {
-      /* Base Page */
-      --page-bg: #18181b; /* Dark: Zinc 900 */
-      --page-text-primary: #f4f4f5; /* Dark: Zinc 100 */
-      --page-text-secondary: #a1a1aa; /* Dark: Zinc 400 */
-      --page-text-tertiary: #71717a; /* Dark: Zinc 500 - For timestamps etc. */
-      --border-color-primary: #3f3f46; /* Dark: Zinc 700 */
-      --border-color-secondary: #52525b; /* Dark: Zinc 600 */
-
-      /* Cards & Interactive Elements */
-      --card-bg: #27272a; /* Dark: Zinc 800 */
-      --card-bg-hover: #3f3f46; /* Dark: Zinc 700 */
-      --input-bg: #3f3f46; /* Dark: Zinc 700 */
-      --input-text: #f4f4f5; /* Dark: Zinc 100 */
-      --input-placeholder: #71717a; /* Dark: Zinc 500 */
-      --button-bg: #3f3f46; /* Dark: Zinc 700 */
-      --button-bg-hover: #52525b; /* Dark: Zinc 600 */
-      --button-text: #f4f4f5; /* Dark: Zinc 100 */
-
-      /* Accent Colors */
-      --accent-primary: #facc15; /* Dark: Yellow 400 */
-      --accent-primary-hover: #eab308; /* Dark: Yellow 500 */
-      --accent-text-on-primary: #18181b; /* Text on accent (darker for contrast on yellow) */
       
-      /* Specific UI Elements from Design */
-      --profile-avatar-bg: #3f3f46; /* Dark: Zinc 700 */
-      --profile-avatar-border: var(--card-bg); /* Dark: Matches card background */
-      --brand-logo-bg: var(--accent-primary);
-      --brand-logo-text: var(--accent-text-on-primary);
+      --icon-color-photo: #22C55E; 
+      --icon-color-video: #0EA5E9; 
+      --icon-color-poll: var(--accent-primary);  
+      --icon-color-verified: var(--accent-primary); 
+      --icon-color-verified-fill: var(--accent-primary); 
+      --icon-color-comment-action: #0EA5E9; 
+      --icon-color-share-action: #22C55E; 
 
-      /* Scrollbar - Dark Theme */
-      --scrollbar-thumb: #52525b; /* zinc-600 */
-      --scrollbar-track: #27272a; /* zinc-800 */
-
-      /* Icon Specific Colors - Dark Theme (same as light for now for emphasis) */
-      --icon-color-photo: #22c55e;
-      --icon-color-video: #0ea5e9;
-      --icon-color-poll: #ef4444;
-      --icon-color-verified: #0ea5e9;
-      --icon-color-verified-fill: #0ea5e9;
-      --icon-color-comment-action: #0ea5e9;
-      --icon-color-share-action: #22c55e;
-
-      /* Activity Feed Polish - Dark Theme */
-      --avatar-verified-badge-bg: #facc15; 
-      --avatar-verified-badge-icon-color: #18181b;
-      --button-thanked-bg: #3f3f46; /* Zinc-700 for thanked button in dark */
-      --button-thanked-text: #d4d4d8; /* Zinc-300 for thanked text in dark */
+      
+      --avatar-verified-badge-bg: #FBCFE8; 
+      --avatar-verified-badge-icon-color: #DB2777; 
+      --button-thanked-bg: #D1D5DB; 
+      --button-thanked-text: #4B5563; 
       --button-discard-bg: var(--button-thanked-bg);
       --button-discard-text: var(--button-thanked-text);
 
-      /* NEW Notification Colors - Dark Theme */
-      --notification-unread-bg: #57272a; /* Darker Red-ish for unread (tailwind red-900 with some transparency or mix) */
-      --notification-unread-bg-hover: #6b2f31; /* Darker Red-ish hover */
+      
+      --notification-unread-bg: #FCE7F3; 
+      --notification-unread-bg-hover: #FBCFE8; 
+    }
+
+    html.dark {
+      
+      
+      --page-bg: #111111; 
+      --page-text-primary: #E5E7EB; 
+      --page-text-secondary: #9CA3AF; 
+      --page-text-tertiary: #6B7280; 
+      --border-color-primary: #333333; 
+      --border-color-secondary: #444444; 
+
+      
+      --card-bg: #1F1F1F; 
+      --card-bg-hover: #2D2D2D; 
+      --input-bg: #2D2D2D; 
+      --input-text: #E5E7EB; 
+      --input-placeholder: #6B7280; 
+      --button-bg: #2D2D2D; 
+      --button-bg-hover: #444444; 
+      --button-text: #E5E7EB; 
+
+      
+      --accent-primary: #EF4444; 
+      --accent-primary-hover: #DC2626; 
+      --accent-text-on-primary: #FFFFFF; 
+      
+      
+      --profile-avatar-bg: #2D2D2D; 
+      --profile-avatar-border: var(--card-bg); 
+      --brand-logo-bg: var(--accent-primary);
+      --brand-logo-text: var(--accent-text-on-primary);
+
+      
+      --scrollbar-thumb: #6B7280; 
+      --scrollbar-track: #1F1F1F; 
+
+      
+      --icon-color-photo: #22C55E; 
+      --icon-color-video: #0EA5E9; 
+      --icon-color-poll: var(--accent-primary); 
+      --icon-color-verified: var(--accent-primary); 
+      --icon-color-verified-fill: var(--accent-primary); 
+      --icon-color-comment-action: #0EA5E9; 
+      --icon-color-share-action: #22C55E; 
+
+      
+      --avatar-verified-badge-bg: #991B1B; 
+      --avatar-verified-badge-icon-color: #FEE2E2; 
+      --button-thanked-bg: #4B5563; 
+      --button-thanked-text: #D1D5DB; 
+      --button-discard-bg: var(--button-thanked-bg);
+      --button-discard-text: var(--button-thanked-text);
+
+      
+      --notification-unread-bg: rgba(239, 68, 68, 0.15); 
+      --notification-unread-bg-hover: rgba(239, 68, 68, 0.25); 
     }
 
     body {
@@ -1949,8 +2114,6 @@ const GlobalThemeStyles = () => (
         font-family: var(--font-heading);
     }
 
-    /* Custom scrollbar styles using CSS variables */
-    /* For Webkit browsers */
     ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
@@ -1967,7 +2130,6 @@ const GlobalThemeStyles = () => (
       background: color-mix(in srgb, var(--scrollbar-thumb) 70%, black);
     }
 
-    /* For Firefox - Note: scrollbar-color on html or body is often better */
     html {
       scrollbar-width: thin;
       scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
@@ -1975,7 +2137,7 @@ const GlobalThemeStyles = () => (
   `}</style>
 );
 
-// --- NEW: Schedule Post Modal Component ---
+
 interface SchedulePostModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -2075,6 +2237,6 @@ const SchedulePostModal = ({ isOpen, onClose, onConfirmSchedule, postContentPrev
         </div>
     );
 };
-// --- END Schedule Post Modal Component ---
+
 
 export default CreatorPlatformPage;
