@@ -1,2088 +1,1044 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import { ThemeProvider, useTheme } from "next-themes";
 import {
-    Sun,
-    Moon,
-    Search as SearchIcon,
-    Bell,
-    UserCircle2,
-    Briefcase,
-    ShoppingBag,
-    Film,
-    Heart,
-    CreditCard,
-    ArrowRight,
-    Plus,
-    Wifi,
-    Apple as AppleIcon,
-    TrendingUp,
-    DollarSign,
-    ShoppingCart,
-    Tv,
-    HelpCircle,
-    Smartphone,
-    HeartPulse,
-    Laptop as LaptopIcon,
-    Shirt,
-    Plane,
-    MoreHorizontal,
     ChevronDown,
-    Settings,
-    LogOut,
-    User,
-    AlertCircle,
-    CheckCircle,
-    Gift,
-    Bitcoin,
-    Twitter,
-    Facebook,
-    Instagram,
     Linkedin,
-    LifeBuoy,
-    FileText,
-    ShieldCheck,
-    X as XIcon,
-    Home,
-    Car,
-    GraduationCap,
-    PiggyBank,
-    Edit3,
-    Trash2,
+    Instagram,
+    Facebook,
+    Globe,
+    ArrowDown,
+    Moon,
+    Sun,
+    Circle,
+    Layers,
+    Zap,
+    CircleDot,
+    GalleryHorizontalEnd,
+    Target,
+    Play,
+    UserCircle,
+    ArrowUpRight,
+    ArrowUp,
+    ArrowRight,
+    CreditCard,
+    Wifi,
 } from "lucide-react";
-import { FaCcVisa, FaCcMastercard, FaApple, FaAmazon, FaGoogle, FaPaypal, FaMicrosoft } from "react-icons/fa";
-import { SiNike, SiTesla, SiNetflix, SiCocacola, SiSpotify, SiAdobe } from "react-icons/si";
-import React, { useState, SetStateAction, Dispatch, useEffect, useRef, useContext, createContext } from "react";
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 
-const GlobalThemeStyles = () => (
-    <style jsx global>{`
-        @import url("https://fonts.googleapis.com/css2?family=Finlandica:wght@400;500;600;700&display=swap");
-
-        :root {
-            /* Light Theme Variables */
-            --page-bg: #f0f2f5;
-            --page-text-primary: #18181b;
-            --page-text-secondary: #52525b;
-            --card-bg: transparent;
-            --card-border-color: #e4e4e7;
-            --dropdown-bg: #ffffff;
-            --dropdown-border-color: #e4e4e7;
-            --card-text-primary: #18181b;
-            --card-text-secondary: #71717a;
-            --card-alt-text: #ffffff;
-            --border-color-primary: #e4e4e7;
-            --progress-track: #e5e7eb;
-            --progress-fill: #3b82f6;
-            --accent-primary: #3b82f6;
-            --accent-secondary: #10b981;
-            --accent-negative: #ef4444;
-            --accent-positive: #10b981;
-            --brand-text-color: #18181b;
-            --icon-color: #52525b;
-            --icon-hover-color: #18181b;
-            --icon-bg-accent: #e0f2fe;
-            --input-bg: #e4e4e7;
-            --input-text: #18181b;
-            --input-placeholder: #a1a1aa;
-            --button-primary-bg: #d6e7df;
-            --button-primary-text: #18181b;
-            --button-secondary-bg: #e4e4e7;
-            --button-secondary-text: #18181b;
-            --button-tertiary-bg: #d1d5db;
-            --button-tertiary-text: #1f2937;
-            --link-text: #3b82f6;
-            --link-hover-text: #2563eb;
-            --scrollbar-thumb: #cbd5e1;
-            --scrollbar-track: #e2e8f0;
-            --font-heading: "Finlandica", sans-serif;
-            --font-body: "Finlandica", sans-serif;
-            --chart-tooltip-bg: #ffffff;
-            --chart-tooltip-text: #18181b;
-            --avatar-bg: #d1d5db;
-            --icon-specific-bg: #ffffff;
-            --icon-specific-color: #18181b;
-        }
-
-        html.dark {
-            /* Dark Theme Variable Overrides */
-            --page-bg: #0a0a0a;
-            --page-text-primary: #e4e4e7;
-            --page-text-secondary: #a1a1aa;
-            --card-bg: transparent;
-            --card-border-color: #3f3f46;
-            --dropdown-bg: #1f2937;
-            --dropdown-border-color: #3f3f46;
-            --card-text-primary: #f4f4f5;
-            --card-text-secondary: #a1a1aa;
-            --card-alt-text: #ffffff;
-            --border-color-primary: #3f3f46;
-            --progress-track: #374151;
-            --progress-fill: #60a5fa;
-            --accent-primary: #60a5fa;
-            --accent-secondary: #34d399;
-            --accent-negative: #f87171;
-            --accent-positive: #34d399;
-            --brand-text-color: #ffffff;
-            --icon-color: #a1a1aa;
-            --icon-hover-color: #e4e4e7;
-            --icon-bg-accent: #1e293b;
-            --input-bg: #27272a;
-            --input-text: #f4f4f5;
-            --input-placeholder: #71717a;
-            --button-primary-bg: #d6e7df;
-            --button-primary-text: #18181b;
-            --button-secondary-bg: #3f3f46;
-            --button-secondary-text: #f4f4f5;
-            --button-tertiary-bg: #4b5563;
-            --button-tertiary-text: #e5e7eb;
-            --link-text: #60a5fa;
-            --link-hover-text: #93c5fd;
-            --scrollbar-thumb: #3f3f46;
-            --scrollbar-track: #18181b;
-            --chart-tooltip-bg: #27272a;
-            --chart-tooltip-text: #f4f4f5;
-            --avatar-bg: #374151;
-        }
-
-        body {
-            background-color: var(--page-bg);
-            color: var(--page-text-primary);
-            font-family: var(--font-body);
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--scrollbar-track);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background-color: var(--scrollbar-thumb);
-            border-radius: 10px;
-            border: 2px solid var(--scrollbar-track);
-        }
-
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6 {
-            font-family: var(--font-heading);
-            color: var(--page-text-primary);
-        }
-    `}</style>
-);
-
-const ThemeToggleButton = () => {
-    const { theme, setTheme } = useTheme();
-    const initiateThemeSwitch = () => setTheme(theme === "light" ? "dark" : "light");
-    if (!theme) return null;
+const GlobalThemeStyles = () => {
     return (
-        <button
-            onClick={initiateThemeSwitch}
-            className="p-2 rounded-full cursor-pointer bg-[var(--input-bg)] text-[var(--icon-color)] hover:text-[var(--icon-hover-color)] transition-colors"
-        >
-            {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
-        </button>
+        <style jsx global>{`
+            @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Roboto:wght@400;700&display=swap");
+
+            :root {
+                --font-heading: "Montserrat", sans-serif;
+                --font-body: "Roboto", sans-serif;
+
+                --page-bg: #f0f2f5;
+                --page-text-primary: #1a202c;
+                --page-text-secondary: #4a5568;
+                --header-text: #2d3748;
+                --nav-link-hover-bg: #edf2f7;
+                --button-bg: #3182ce;
+                --button-text: #ffffff;
+                --button-hover-bg: #2b6cb0;
+                --card-bg-dark-translucent: rgba(50, 50, 70, 0.8);
+                --card-bg-blue: #4299e1;
+                --card-bg-purple: #9f7aea;
+                --card-text: #ffffff;
+                --icon-color: #4a5568;
+                --icon-hover-color: #2b6cb0;
+                --border-color: #e2e8f0;
+                --accent-color: #3182ce;
+
+                --glass-bg-light: rgba(255, 255, 255, 0.25);
+                --glass-border-light: rgba(255, 255, 255, 0.4);
+                --glass-bg: var(--glass-bg-light);
+                --glass-border: var(--glass-border-light);
+
+                --bar-segment-inactive: #d1d5db;
+
+                --bank-card-bg: #e0e0e0;
+                --bank-card-text-primary: #1a202c;
+                --bank-card-text-secondary: #4a5568;
+                --bank-card-border: #c0c0c0;
+                --bank-card-shadow: 0px 8px 16px rgba(0, 0, 0, 0.1);
+                --bank-card-logo-color: #2d3748;
+
+                --feature-card-bg: #ffffff;
+                --feature-card-text-primary: var(--page-text-primary);
+                --feature-card-text-secondary: var(--page-text-secondary);
+                --explore-button-bg: var(--accent-color);
+                --explore-button-text: #ffffff;
+                --explore-button-hover-bg: #2b6cb0;
+
+                --scrollbar-thumb: #cbd5e0;
+                --scrollbar-track: #edf2f7;
+
+                --details-button-bg: #2563eb;
+                --details-button-text: #ffffff;
+                --details-button-hover-bg: #1d4ed8;
+                --video-placeholder-bg: #e5e7eb;
+                --video-border-color: rgba(107, 114, 128, 0.3);
+                --video-border-glow: rgba(107, 114, 128, 0.4);
+
+                --testimonial-card-bg: #ffffff;
+                --testimonial-card-text-primary: var(--page-text-primary);
+                --testimonial-card-text-secondary: var(--page-text-secondary);
+                --testimonial-card-top-glow: var(--accent-color);
+
+                --footer-bg: var(--page-bg);
+                --footer-text-primary: var(--page-text-primary);
+                --footer-text-secondary: var(--page-text-secondary);
+                --footer-link-hover-color: var(--accent-color);
+                --footer-separator-color: #4b5563;
+                --footer-cta-bg: #1e293b;
+                --footer-cta-text: #e2e8f0;
+                --footer-cta-highlight: rgba(255, 255, 255, 0.1);
+
+                /* Hero Card Specific Colors - Light Theme (though they might be mostly dark as per image) */
+                --hero-card-bg-transparent-dark: rgba(56, 60, 74, 0.7); /* A dark, slightly transparent slate */
+                --hero-card-bg-blue: #3b82f6; /* Vivid Blue */
+                --hero-card-bg-purple: #8b5cf6; /* Vivid Purple */
+                --hero-card-text-primary: #ffffff;
+                --hero-card-logo-color: #ffffff;
+            }
+
+            html.dark {
+                --page-bg: #0d1117;
+                --page-text-primary: #e2e8f0;
+                --page-text-secondary: #a0aec0;
+                --header-text: #e2e8f0;
+                --nav-link-hover-bg: #2d3748;
+                --button-bg: #4a5568;
+                --button-text: #e2e8f0;
+                --button-hover-bg: #2d3748;
+                --card-bg-dark-translucent: rgba(30, 30, 50, 0.6);
+                --card-bg-blue: #3182ce;
+                --card-bg-purple: #805ad5;
+                --card-text: #f7fafc;
+                --icon-color: #a0aec0;
+                --icon-hover-color: #4299e1;
+                --border-color: #2d3748;
+                --accent-color: #4299e1;
+
+                --glass-bg-dark: rgba(30, 41, 59, 0.25);
+                --glass-border-dark: rgba(255, 255, 255, 0.1);
+                --glass-bg: var(--glass-bg-dark);
+                --glass-border: var(--glass-border-dark);
+
+                --bar-segment-inactive: #4b5563;
+
+                --bank-card-bg: #2d3748;
+                --bank-card-text-primary: #e2e8f0;
+                --bank-card-text-secondary: #a0aec0;
+                --bank-card-border: #4a5568;
+                --bank-card-shadow: 0px 8px 16px rgba(0, 0, 0, 0.3);
+                --bank-card-logo-color: #e2e8f0;
+
+                --feature-card-bg: #1e293b;
+                --feature-card-text-primary: #f8fafc;
+                --feature-card-text-secondary: #94a3b8;
+                --explore-button-bg: #f1f5f9;
+                --explore-button-text: #0f172a;
+                --explore-button-hover-bg: #e2e8f0;
+
+                --scrollbar-thumb: #4a5568;
+                --scrollbar-track: #2d3748;
+
+                --details-button-bg: #3b82f6;
+                --details-button-text: #ffffff;
+                --details-button-hover-bg: #2563eb;
+                --video-placeholder-bg: #1f2937;
+                --video-border-color: rgba(96, 165, 250, 0.4);
+                --video-border-glow: rgba(96, 165, 250, 0.6);
+
+                --testimonial-card-bg: #1e293b;
+                --testimonial-card-text-primary: #f8fafc;
+                --testimonial-card-text-secondary: #94a3b8;
+                --testimonial-card-top-glow: rgba(96, 165, 250, 0.5);
+
+                --footer-bg: var(--page-bg);
+                --footer-text-primary: var(--page-text-primary);
+                --footer-text-secondary: var(--page-text-secondary);
+                --footer-link-hover-color: var(--accent-color);
+                --footer-separator-color: #374151;
+                --footer-cta-bg: #27354d;
+                --footer-cta-text: #e2e8f0;
+                --footer-cta-highlight: rgba(255, 255, 255, 0.15);
+
+                /* Hero Card Specific Colors - Dark Theme */
+                --hero-card-bg-transparent-dark: rgba(30, 33, 42, 0.75); /* Slightly darker transparency for dark mode */
+                --hero-card-bg-blue: #2563eb; /* Slightly deeper Blue for dark */
+                --hero-card-bg-purple: #7c3aed; /* Slightly deeper Purple for dark */
+                --hero-card-text-primary: #ffffff; /* Text stays white */
+                --hero-card-logo-color: #ffffff; /* Logo stays white */
+            }
+
+            html {
+                overflow-x: hidden;
+                scroll-behavior: smooth;
+            }
+            body {
+                background-color: var(--page-bg);
+                color: var(--page-text-primary);
+                font-family: var(--font-body);
+                transition: background-color 0.3s ease, color 0.3s ease;
+                overflow-x: hidden;
+            }
+
+            h1,
+            h2,
+            h3,
+            h4,
+            h5,
+            h6 {
+                font-family: var(--font-heading);
+                color: var(--page-text-primary);
+            }
+
+            ::-webkit-scrollbar {
+                width: 8px;
+            }
+            ::-webkit-scrollbar-track {
+                background: var(--scrollbar-track);
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--scrollbar-thumb);
+                border-radius: 4px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: var(--accent-color);
+            }
+
+            @keyframes gentle-pulse {
+                0%,
+                100% {
+                    opacity: 0.35;
+                }
+                50% {
+                    opacity: 0.15;
+                }
+            }
+
+            .animate-gentle-pulse {
+                animation: gentle-pulse 10s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+        `}</style>
     );
 };
 
-type Transaction = {
-    id: string;
-    icon: React.ElementType;
-    iconBgColor?: string;
-    name: string;
-    date: string;
-    amount: number;
-    cardLastFour: string;
-};
-const mockTransactions: Transaction[] = [
-    {
-        id: "1",
-        icon: Briefcase,
-        iconBgColor: "bg-green-500/10",
-        name: "Starbucks Coffee",
-        date: "Apr 24, 5:27 PM",
-        amount: -14.99,
-        cardLastFour: "4568",
-    },
-    {
-        id: "2",
-        icon: ShoppingBag,
-        iconBgColor: "bg-pink-500/10",
-        name: "DIOR",
-        date: "Apr 06, 05:12 PM",
-        amount: -268.0,
-        cardLastFour: "4568",
-    },
-    {
-        id: "3",
-        icon: CreditCard,
-        iconBgColor: "bg-yellow-500/10",
-        name: "DKNY",
-        date: "Apr 20, 2:14 PM",
-        amount: -40.0,
-        cardLastFour: "4568",
-    },
-    {
-        id: "4",
-        icon: SiNetflix,
-        iconBgColor: "bg-red-600/10 text-red-500",
-        name: "Netflix",
-        date: "Apr 12, 07:25 PM",
-        amount: -70.0,
-        cardLastFour: "4568",
-    },
-];
-const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
-    const { icon: Icon, name, date, amount, cardLastFour, iconBgColor } = transaction;
-    const iconContainerClasses = `p-2 rounded-full bg-[var(--icon-specific-bg)]`;
-    const iconClasses = `text-[var(--icon-specific-color)]`;
+const GPNLogo = () => (
+    <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
+        <path
+            d="M18 4C10.268 4 4 10.268 4 18C4 25.732 10.268 32 18 32C25.732 32 32 25.732 32 18C32 10.268 25.732 4 18 4ZM18 29C11.9249 29 7 24.0751 7 18C7 11.9249 11.9249 7 18 7C24.0751 7 29 11.9249 29 18C29 24.0751 24.0751 29 18 29Z"
+            fill="currentColor"
+        />
 
-    const amountPresentation = amount < 0 ? "text-[var(--accent-negative)]" : "text-[var(--accent-positive)]";
-    return (
-        <li className="flex items-center justify-between py-3 px-1 hover:bg-[var(--page-bg)] rounded-md transition-colors cursor-pointer">
-            <div className="flex items-center gap-3">
-                <div className={iconContainerClasses}>
-                    <Icon size={20} className={iconClasses} />
-                </div>
-                <div>
-                    <p className="text-sm font-medium text-[var(--card-text-primary)]">{name}</p>
-                    <p className="text-xs text-[var(--card-text-secondary)]">{date}</p>
-                </div>
-            </div>
-            <div className="text-right">
-                <p className={`text-sm font-semibold ${amountPresentation}`}>
-                    {amount < 0 ? "-" : ""}${Math.abs(amount).toLocaleString("en-US", { style: "currency", currency: "USD" })}
-                </p>
-                <p className="text-xs text-[var(--card-text-secondary)]">•••• {cardLastFour}</p>
-            </div>
-        </li>
-    );
-};
-const RecentTransactions = ({ transactions, onViewAllClick }: { transactions: Transaction[]; onViewAllClick: () => void }) => (
-    <div className="bg-[var(--card-bg)] border border-[var(--card-border-color)] p-4 md:p-6 rounded-xl shadow-lg">
-        <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-[var(--card-text-primary)]">Recent transactions</h2>
-            <button
-                onClick={onViewAllClick}
-                className="text-sm text-[var(--link-text)] hover:text-[var(--link-hover-text)] font-medium flex items-center gap-1 cursor-pointer"
-            >
-                View all <ArrowRight size={14} />
-            </button>
-        </div>
-        <ul>
-            {transactions.slice(0, 4).map((tx) => (
-                <TransactionItem key={tx.id} transaction={tx} />
-            ))}
-        </ul>
-    </div>
+        <path
+            d="M18 11C14.134 11 11 14.134 11 18H14C14 15.7909 15.7909 14 18 14C20.2091 14 22 15.7909 22 18C22 20.2091 20.2091 22 18 22V25C21.866 25 25 21.866 25 18C25 14.134 21.866 11 18 11Z"
+            fill="currentColor"
+            opacity="0.8"
+        />
+
+        <circle cx="18" cy="18" r="5.5" fill="currentColor" opacity="0.3" />
+
+        <circle cx="18" cy="18" r="3" fill="var(--page-bg)" />
+    </svg>
 );
 
-type DebitCardDetails = {
-    id: string;
-    balance: number;
-    lastFour: string;
-    network: "visa" | "mastercard";
-    gradientClass: string;
-    cardHolder?: string;
-    expiryDate?: string;
-};
-const totalBalance = 10524.15;
-const mockDebitCards: DebitCardDetails[] = [
-    {
-        id: "card1",
-        balance: 4556.15,
-        lastFour: "4568",
-        network: "mastercard",
-        gradientClass: "bg-gradient-to-br from-teal-400 to-green-500",
-        cardHolder: "Kelu Sotonox",
-        expiryDate: "12/27",
-    },
-    {
-        id: "card2",
-        balance: 5968.0,
-        lastFour: "0958",
-        network: "visa",
-        gradientClass: "bg-gradient-to-br from-blue-500 to-indigo-600",
-        cardHolder: "Kelu Sotonox",
-        expiryDate: "08/25",
-    },
-];
-
-type SelectableGradient = {
-    name: string;
-    className: string;
-};
-
-const selectableCardGradients: SelectableGradient[] = [
-    { name: "Teal to Green", className: "bg-gradient-to-br from-teal-400 to-green-500" },
-    { name: "Blue to Indigo", className: "bg-gradient-to-br from-blue-500 to-indigo-600" },
-    { name: "Pink to Purple", className: "bg-gradient-to-br from-pink-500 to-purple-600" },
-    { name: "Orange to Red", className: "bg-gradient-to-br from-orange-400 to-red-500" },
-    { name: "Yellow to Lime", className: "bg-gradient-to-br from-yellow-400 to-lime-500" },
-    { name: "Cyan to Sky", className: "bg-gradient-to-br from-cyan-400 to-sky-500" },
-];
-
-const DebitCardItem = ({ card }: { card: DebitCardDetails }) => (
-    <div
-        className={`p-5 rounded-xl text-[var(--card-alt-text)] w-full aspect-[1.586] flex flex-col justify-between shadow-lg ${card.gradientClass}`}
-    >
-        <div className="flex justify-between items-start">
-            <span className="text-lg font-semibold">
-                ${card.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-            <Wifi size={24} className="opacity-80" />
-        </div>
-        <div>
-            <p className="text-xs opacity-80 mb-1">Debit Card</p>
-            <div className="flex justify-between items-end">
-                <p className="text-sm font-medium tracking-wider">•••• {card.lastFour}</p>
-                {card.network === "visa" && <FaCcVisa size={36} />}
-                {card.network === "mastercard" && <FaCcMastercard size={36} />}
-            </div>
-        </div>
-    </div>
+const GPNCreditCardLogo = () => (
+    <svg width="48" height="24" viewBox="0 0 70 35" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[var(--hero-card-logo-color)]">
+        <path d="M5 20 Q15 5 30 15 Q15 20 5 30 Z" fill="currentColor" opacity="0.9" />
+        <path d="M10 18 Q20 8 33 16 Q20 20 10 25 Z" fill="currentColor" opacity="0.7" />
+        <text x="38" y="23" fontFamily="Montserrat, sans-serif" fontWeight="bold" fontSize="18" fill="currentColor">GPN</text>
+    </svg>
 );
 
-const BalanceDisplay = ({ debitCards, onAddNewCardClick }: { debitCards: DebitCardDetails[]; onAddNewCardClick: () => void }) => (
-    <div className="bg-[var(--card-bg)] border border-[var(--card-border-color)] p-4 md:p-6 rounded-xl shadow-lg">
-        <div className="flex justify-between items-center mb-4">
-            <div>
-                <h2 className="text-lg font-semibold text-[var(--card-text-primary)] mb-1">Balance</h2>
-                <p className="text-3xl font-bold text-[var(--card-text-primary)]">
-                    ${totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-            </div>
-            <button
-                onClick={onAddNewCardClick}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--button-primary-bg)] text-[var(--button-primary-text)] hover:opacity-90 transition-opacity cursor-pointer text-sm font-medium"
-            >
-                <Plus size={18} /> Add new card
-            </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-            {debitCards.map((card) => (
-                <DebitCardItem key={card.id} card={card} />
-            ))}
-        </div>
-    </div>
-);
-
-type InvestmentItemData = {
-    id: string;
-    IconComponent: React.ElementType;
-    iconBgClass?: string;
-    name: string;
-    value: number;
-    change: number;
-};
-
-const mockInvestments: InvestmentItemData[] = [
-    { id: "inv1", IconComponent: FaApple, name: "Apple", value: 129.89, change: 3.5 },
-    { id: "inv2", IconComponent: SiTesla, name: "Tesla", value: 210.93, change: -1.2 },
-    { id: "inv3", IconComponent: SiNike, name: "Nike", value: 124.43, change: 2.8 },
-    { id: "inv4", IconComponent: SiNetflix, name: "Netflix", value: 909.05, change: 1.2 },
-    { id: "inv5", IconComponent: FaAmazon, name: "Amazon", value: 185.87, change: -2.6 },
-    { id: "inv6", IconComponent: SiCocacola, name: "Coca-Cola", value: 327.25, change: 1.8 },
-];
-
-const InvestmentItem = ({ item }: { item: InvestmentItemData }) => {
-    const changeColor = item.change >= 0 ? "text-[var(--accent-positive)]" : "text-[var(--accent-negative)]";
-    const iconContainerClasses = `p-2.5 rounded-full bg-[var(--icon-specific-bg)]`;
-    const iconColorClass = `text-[var(--icon-specific-color)]`;
-
-    return (
-        <li className="flex items-center justify-between py-3 px-1 hover:bg-[var(--page-bg)] rounded-md transition-colors cursor-pointer">
-            <div className="flex items-center gap-3">
-                <div className={iconContainerClasses}>
-                    <item.IconComponent size={22} className={iconColorClass} />
-                </div>
-                <p className="text-sm font-medium text-[var(--card-text-primary)]">{item.name}</p>
-            </div>
-            <div className="text-right">
-                <p className="text-sm font-semibold text-[var(--card-text-primary)]">
-                    ${item.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <p className={`text-xs font-medium ${changeColor}`}>{item.change.toFixed(1)}%</p>
-            </div>
-        </li>
-    );
-};
-
-const MyInvestments = ({ investments, onViewAllClick }: { investments: InvestmentItemData[]; onViewAllClick: () => void }) => (
-    <div className="bg-[var(--card-bg)] border border-[var(--card-border-color)] p-4 md:p-6 rounded-xl shadow-lg">
-        <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-[var(--card-text-primary)]">My investments</h2>
-            <button
-                onClick={onViewAllClick}
-                className="text-sm text-[var(--link-text)] hover:text-[var(--link-hover-text)] font-medium flex items-center gap-1 cursor-pointer"
-            >
-                View all <ArrowRight size={14} />
-            </button>
-        </div>
-        <ul>
-            {investments.slice(0, 5).map((item) => (
-                <InvestmentItem key={item.id} item={item} />
-            ))}
-        </ul>
-    </div>
-);
-
-type GoalItemData = {
-    id: string;
-    IconComponent: React.ElementType;
-    name: string;
-    currentAmount: number;
-    targetAmount: number;
-};
-
-const mockGoals: GoalItemData[] = [
-    { id: "goal1", IconComponent: Smartphone, name: "New iPhone", currentAmount: 500, targetAmount: 1099 },
-    { id: "goal2", IconComponent: HeartPulse, name: "Health checkup", currentAmount: 1500, targetAmount: 2000 },
-    { id: "goal3", IconComponent: LaptopIcon, name: "Laptop", currentAmount: 100, targetAmount: 1800 },
-    { id: "goal4", IconComponent: Shirt, name: "New clothes", currentAmount: 400, targetAmount: 2400 },
-    { id: "goal5", IconComponent: Plane, name: "Traveling", currentAmount: 0, targetAmount: 10000 },
-];
-
-type SelectableGoalIcon = {
-    name: string;
-    IconComponent: React.ElementType;
-};
-
-const selectableGoalIconsList: SelectableGoalIcon[] = [
-    { name: "Smartphone", IconComponent: Smartphone },
-    { name: "Health", IconComponent: HeartPulse },
-    { name: "Laptop", IconComponent: LaptopIcon },
-    { name: "Clothes", IconComponent: Shirt },
-    { name: "Travel", IconComponent: Plane },
-    { name: "Home", IconComponent: Home },
-    { name: "Car", IconComponent: Car },
-    { name: "Education", IconComponent: GraduationCap },
-    { name: "Savings", IconComponent: PiggyBank },
-    { name: "Gift", IconComponent: Gift },
-    { name: "Other", IconComponent: HelpCircle },
-];
-
-const GoalItem = ({ item }: { item: GoalItemData }) => {
-    const progressPercentage = Math.min((item.currentAmount / item.targetAmount) * 100, 100);
-    return (
-        <li className="flex items-center justify-between py-3.5 px-1 hover:bg-[var(--page-bg)] rounded-md transition-colors cursor-pointer">
-            <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-full bg-[var(--icon-specific-bg)]">
-                    <item.IconComponent size={20} className="text-[var(--icon-specific-color)]" />
-                </div>
-                <div>
-                    <p className="text-sm font-medium text-[var(--card-text-primary)]">{item.name}</p>
-                    <p className="text-xs text-[var(--card-text-secondary)]">
-                        ${item.currentAmount.toLocaleString()} of ${item.targetAmount.toLocaleString()}
-                    </p>
-                </div>
-            </div>
-
-            <div className="w-10 h-10 rounded-full bg-[var(--progress-track)] flex items-center justify-center relative overflow-hidden">
-                <div
-                    className="absolute top-0 left-0 w-full h-full bg-[var(--progress-fill)] origin-bottom"
-                    style={{ transform: `translateY(${100 - progressPercentage}%)` }}
-                ></div>
-
-                <span className="relative text-xs font-medium text-[var(--card-text-primary)] mix-blend-difference">
-                    {progressPercentage.toFixed(0)}%
-                </span>
-            </div>
-        </li>
-    );
-};
-
-const MyGoals = ({
-    goals,
-    onAddNewGoalClick,
-    onViewAllClick,
-}: {
-    goals: GoalItemData[];
-    onAddNewGoalClick: () => void;
-    onViewAllClick: () => void;
-}) => (
-    <div className="bg-[var(--card-bg)] border border-[var(--card-border-color)] p-4 md:p-6 rounded-xl shadow-lg flex flex-col h-full">
-        <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-[var(--card-text-primary)]">My goals</h2>
-            <button
-                onClick={onViewAllClick}
-                className="text-sm text-[var(--link-text)] hover:text-[var(--link-hover-text)] font-medium flex items-center gap-1 cursor-pointer"
-            >
-                View all <ArrowRight size={14} />
-            </button>
-        </div>
-        <ul className="flex-grow space-y-1 overflow-y-auto" style={{ maxHeight: "calc(100% - 100px)" }}>
-            {goals.slice(0, 3).map((item) => (
-                <GoalItem key={item.id} item={item} />
-            ))}
-        </ul>
-        <button
-            onClick={onAddNewGoalClick}
-            className="mt-auto w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--button-primary-bg)] text-[var(--button-primary-text)] hover:opacity-90 transition-opacity cursor-pointer text-sm font-medium"
-        >
-            <Plus size={18} /> Add new goal
-        </button>
-    </div>
-);
-
-type ChartDataItem = { name: string; value: number; color: string };
-
-const totalIncomeValue = 3762.11;
-const totalIncomePeriod = "Apr 2025";
-const totalIncomeData: ChartDataItem[] = [
-    { name: "Primary", value: 2800, color: "#FFB37C" },
-    { name: "Secondary", value: 962.11, color: "#9D9BFF" },
-];
-
-const totalCashbackValue = 568.24;
-const cashbackPeriod = "Apr 2025";
-const cashbackData: ChartDataItem[] = [
-    { name: "Clothes", value: 6.46, color: "#A0E7E5" },
-    { name: "Electronics", value: 150.0, color: "#FFD778" },
-    { name: "Groceries", value: 200.5, color: "#C7E6A0" },
-    { name: "Travel", value: 111.28, color: "#D9A7F7" },
-    { name: "Other", value: 100.0, color: "#FFB7C5" },
-];
-
-const totalSpendingValue = 7683.21;
-const spendingPeriod = "Spending in April";
-const spendingData: ChartDataItem[] = [
-    { name: "Transport", value: 1200, color: "#FFD778" },
-    { name: "Food", value: 2100, color: "#C7E6A0" },
-    { name: "Travel", value: 850, color: "#D9A7F7" },
-    { name: "Health", value: 500, color: "#FFB7C5" },
-    { name: "Clothes", value: 750, color: "#A0E7E5" },
-    { name: "Salary", value: 1500, color: "#FFA07A" },
-    { name: "Investments", value: 783.21, color: "#9D9BFF" },
-];
-
-const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-        return (
-            <div className="p-2.5 rounded-md shadow-lg bg-[var(--chart-tooltip-bg)] border border-[var(--border-color-primary)]">
-                <p className="text-sm font-medium text-[var(--chart-tooltip-text)]">{`${payload[0].name}: $${payload[0].value.toFixed(
-                    2
-                )}`}</p>
-            </div>
-        );
-    }
-    return null;
-};
-
-const TinyDonutChart = ({
-    title,
-    period,
-    totalValue,
-    data,
-    chartHeight = 120,
-}: {
-    title: string;
-    period: string;
-    totalValue: number;
-    data: ChartDataItem[];
-    chartHeight?: number;
-}) => (
-    <div className="p-4 rounded-xl">
-        <h3 className="text-md font-semibold text-[var(--card-text-primary)] mb-0.5">{title}</h3>
-        <p className="text-xs text-[var(--card-text-secondary)] mb-1">{period}</p>
-        <ResponsiveContainer width="100%" height={chartHeight}>
-            <PieChart>
-                <Pie
-                    data={data}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius="60%"
-                    outerRadius="80%"
-                    paddingAngle={data.length > 1 ? 2 : 0}
-                    stroke="none"
-                >
-                    {data.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-        </ResponsiveContainer>
-        <p className="text-xl font-bold text-[var(--card-text-primary)] mt-2 text-center">
-            ${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </p>
-    </div>
-);
-
-const CashbackDonutChart = () => {
-    const [activeCashbackIndex, setActiveCashbackIndex] = useState(0);
-
-    return (
-        <div className="p-4 rounded-xl relative">
-            <h3 className="text-md font-semibold text-[var(--card-text-primary)] mb-0.5">Cashback</h3>
-            <p className="text-xs text-[var(--card-text-secondary)] mb-1">{cashbackPeriod}</p>
-            <ResponsiveContainer width="100%" height={120}>
-                <PieChart>
-                    <Pie
-                        data={cashbackData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius="60%"
-                        outerRadius="80%"
-                        paddingAngle={2}
-                        stroke="none"
-                        activeIndex={activeCashbackIndex}
-                        onMouseEnter={(_, index) => setActiveCashbackIndex(index)}
-                    >
-                        {cashbackData.map((entry, index) => (
-                            <Cell
-                                key={`cell-${index}`}
-                                fill={entry.color}
-                                className={index === activeCashbackIndex ? "opacity-100" : "opacity-70"}
-                            />
-                        ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                </PieChart>
-            </ResponsiveContainer>
-            <p className="text-xl font-bold text-[var(--card-text-primary)] mt-2 text-center">
-                ${totalCashbackValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-        </div>
-    );
-};
-
-const SpendingBreakdownChart = () => (
-    <div className="p-4 md:p-6 rounded-xl h-full flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-[var(--card-text-primary)]">{spendingPeriod}</h2>
-        </div>
-        <div className="flex-grow flex flex-col items-center gap-6">
-            <div className="w-full h-72 relative">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={spendingData}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            innerRadius="70%"
-                            outerRadius="90%"
-                            paddingAngle={2}
-                            stroke="none"
-                        >
-                            {spendingData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                        </Pie>
-                        <Tooltip content={<CustomTooltip />} />
-                    </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <p className="text-xs text-[var(--card-text-secondary)]">Total spending</p>
-                    <p className="text-2xl font-bold text-[var(--card-text-primary)]">
-                        ${totalSpendingValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                </div>
-            </div>
-            <div className="w-full space-y-2.5 text-sm overflow-y-auto pt-4" style={{ maxHeight: "220px" }}>
-                {spendingData.map((item) => (
-                    <div key={item.name} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></span>
-                            <span className="text-[var(--card-text-secondary)]">{item.name}</span>
-                        </div>
-                        <span className="font-medium text-[var(--card-text-primary)]">
-                            ${item.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    </div>
-);
-
-const FinancialAnalyticsCard = () => (
-    <div className="bg-[var(--card-bg)] border border-[var(--card-border-color)] p-4 md:p-6 rounded-xl shadow-lg grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-1 flex flex-col gap-6">
-            <TinyDonutChart title="Total income" period={totalIncomePeriod} totalValue={totalIncomeValue} data={totalIncomeData} />
-            <CashbackDonutChart />
-        </div>
-        <div className="lg:col-span-2 h-full">
-            <SpendingBreakdownChart />
-        </div>
-    </div>
-);
-
-type TransferContact = {
-    id: string;
-    name?: string;
-    avatarUrl?: string;
-    bgColor?: string;
-    initials?: string;
-};
-
-type AccountOption = {
-    id: string;
-    name: string;
-    maskedNumber: string;
-    IconComponent: React.ElementType;
-    iconColor?: string;
-};
-
-const mockContacts: TransferContact[] = [
-    { id: "contact1", avatarUrl: "https://i.pravatar.cc/40?u=contact1", name: "Alice" },
-    { id: "contact2", avatarUrl: "https://i.pravatar.cc/40?u=contact2", name: "Bob" },
-    { id: "contact3", avatarUrl: "https://i.pravatar.cc/40?u=contact3", name: "Charlie" },
-    { id: "contact4", avatarUrl: "https://i.pravatar.cc/40?u=contact4", name: "Diana" },
-];
-
-const mockAccountOptions: AccountOption[] = [
-    {
-        id: "acc1",
-        name: "Visa Card",
-        maskedNumber: "•••• 6893",
-        IconComponent: FaCcVisa,
-        iconColor: "text-blue-600 dark:text-blue-400",
-    },
-    {
-        id: "acc2",
-        name: "Mastercard",
-        maskedNumber: "•••• 2278",
-        IconComponent: FaCcMastercard,
-        iconColor: "text-orange-500",
-    },
-    {
-        id: "acc3",
-        name: "Savings Account",
-        maskedNumber: "•••• 1234",
-        IconComponent: DollarSign,
-        iconColor: "text-[var(--icon-color)]",
-    },
-];
-
-const TransferContactItem = ({ contact, isSelected, onClick }: { contact: TransferContact; isSelected: boolean; onClick: () => void }) => (
-    <button
-        type="button"
-        tabIndex={0}
-        onClick={onClick}
-        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
-        className={`flex-shrink-0 rounded-full w-12 h-12 focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--card-bg)] border-2 transition-all ${
-            isSelected
-                ? "ring-2 ring-[var(--accent-primary)] ring-offset-2 ring-offset-[var(--card-bg)] border-[var(--accent-primary)]"
-                : "border-transparent"
-        } cursor-pointer`}
-    >
-        {contact.avatarUrl ? (
-            <img src={contact.avatarUrl} alt={contact.name || "Contact"} className="w-10 h-10 rounded-full object-cover" />
-        ) : (
-            <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium text-[var(--button-primary-text)] ${
-                    contact.bgColor || "bg-[var(--avatar-bg)]"
-                }`}
-            >
-                {contact.initials || "U"}
-            </div>
-        )}
-    </button>
-);
-
-interface AccountSelectorProps {
-    label: string;
-    accountOptions: AccountOption[];
-    selectedAccount: AccountOption | null;
-    onAccountChange: Dispatch<SetStateAction<AccountOption | null>>;
-    className?: string;
-    excludeId?: string;
+interface BankCardProps {
+    cardNumber: string;
+    cardHolder: string;
+    cardColorVariant: 'transparentDark' | 'solidBlue' | 'solidPurple';
 }
 
-const AccountSelector = ({ label, accountOptions, selectedAccount, onAccountChange, className, excludeId }: AccountSelectorProps) => {
-    const [open, setOpen] = useState(false);
-    const handleSelect = (option: AccountOption) => {
-        setOpen(false);
-        onAccountChange(option);
-    };
+const BankCard: React.FC<BankCardProps> = ({
+    cardNumber,
+    cardHolder,
+    cardColorVariant,
+}) => {
+    let bgColorClass = '';
+    switch (cardColorVariant) {
+        case 'transparentDark':
+            bgColorClass = 'bg-[var(--hero-card-bg-transparent-dark)] backdrop-blur-sm';
+            break;
+        case 'solidBlue':
+            bgColorClass = 'bg-[var(--hero-card-bg-blue)]';
+            break;
+        case 'solidPurple':
+            bgColorClass = 'bg-[var(--hero-card-bg-purple)]';
+            break;
+        default:
+            bgColorClass = 'bg-[var(--bank-card-bg)]';
+    }
+
     return (
-        <div className={`flex-1 relative ${className || ""}`} tabIndex={0}>
-            <label className="block text-xs text-[var(--card-text-secondary)] mb-1.5">{label}</label>
-            <div
-                className="flex items-center justify-between p-3 rounded-lg bg-[var(--input-bg)] cursor-pointer hover:bg-[var(--border-color-primary)] transition-colors"
-                onClick={() => setOpen((v) => !v)}
-                tabIndex={0}
-                onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setOpen((v) => !v)}
-            >
-                <div className="flex items-center gap-2">
-                    {selectedAccount?.IconComponent && (
-                        <selectedAccount.IconComponent size={20} className={selectedAccount.iconColor || "text-[var(--icon-color)]"} />
-                    )}
-                    <span className="text-sm font-medium text-[var(--input-text)]">{selectedAccount?.maskedNumber || "Select"}</span>
-                </div>
-                <ChevronDown size={16} className="text-[var(--input-placeholder)]" />
+        <motion.div
+            className={`w-80 h-52 rounded-xl p-6 shadow-lg flex flex-col justify-between relative overflow-hidden text-[var(--hero-card-text-primary)] border border-white/10 ${bgColorClass}`}
+            style={{
+                boxShadow: 'var(--bank-card-shadow)',
+                transformStyle: 'preserve-3d',
+            }}
+            whileHover={{ y: -10, scale: 1.05, transition: { type: "spring", stiffness: 300, damping: 15 } }}
+        >
+            <div className="flex justify-between items-start">
+                <GPNCreditCardLogo />
             </div>
-            {open && (
-                <ul className="absolute z-10 left-0 right-0 mt-1 bg-[var(--dropdown-bg)] border border-[var(--dropdown-border-color)] rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                    {accountOptions
-                        .filter((opt) => !excludeId || opt.id !== excludeId)
-                        .map((opt) => (
-                            <li
-                                key={opt.id}
-                                onClick={() => handleSelect(opt)}
-                                className="flex items-center gap-2 px-4 py-2 hover:bg-[var(--page-bg)] transition-colors cursor-pointer"
-                                tabIndex={0}
-                                onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleSelect(opt)}
-                            >
-                                <opt.IconComponent size={18} className={opt.iconColor || "text-[var(--icon-color)]"} />
-                                <span className="text-sm">
-                                    {opt.name} <span className="text-xs text-[var(--input-placeholder)]">{opt.maskedNumber}</span>
-                                </span>
-                            </li>
-                        ))}
-                </ul>
-            )}
-        </div>
+
+            <div className="text-left space-y-1 mt-auto">
+                <p className="text-xl font-mono tracking-wider">
+                    {cardNumber.replace(/(\\d{4})/g, '$1 ').trim()}
+                </p>
+                <p className="text-sm uppercase font-medium opacity-80">{cardHolder}</p>
+            </div>
+        </motion.div>
     );
 };
 
-const FastTransfer = () => {
-    const [amount, setAmount] = useState("");
-    const [fromAccount, setFromAccount] = useState<AccountOption | null>(mockAccountOptions[0] || null);
-    const [toAccount, setToAccount] = useState<AccountOption | null>(mockAccountOptions[1] || null);
-    const [selectedContactId, setSelectedContactId] = useState<string | null>(mockContacts[1]?.id || null);
-    const [showSuccess, setShowSuccess] = useState(false);
+const Header = () => {
+    const { theme, setTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
 
-    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        const numericValue = value.replace(/\$\s?/g, "");
-        if (/^\d*\.?\d*$/.test(numericValue) || numericValue === "") {
-            setAmount(numericValue);
+    useEffect(() => setMounted(true), []);
+
+    const toggleTheme = () => {
+        setTheme(theme === "dark" ? "light" : "dark");
+    };
+
+    if (!mounted) return null;
+
+    const navLinks = [
+        { name: "Features", href: "#features" },
+        { name: "About Us", href: "#about-us" },
+        { name: "Testimonials", href: "#testimonials" },
+    ];
+
+    return (
+        <motion.nav 
+            className="p-4 sticky top-0 z-50 transition-colors duration-300 ease-in-out bg-transparent"
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+            <div className="container mx-auto flex items-center justify-between">
+                <motion.a 
+                    href="#home" 
+                    className="flex items-center space-x-2 cursor-pointer" 
+                    title="GPN Bank - Home"
+                    initial={{ x: -50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+                >
+                    <GPNLogo />
+                </motion.a>
+
+                <motion.div 
+                    className="relative hidden md:flex items-center justify-center flex-grow"
+                    initial={{ y: -50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
+                >
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[90px] bg-gradient-to-br from-[#798fe1] to-[#263c8b] opacity-40 dark:opacity-30 rounded-full blur-[75px] -z-10"></div>
+                    
+                    <div className="flex items-center space-x-1 lg:space-x-2 bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-md rounded-full p-1 shadow-lg">
+                        {navLinks.map((item, index) => (
+                            <motion.a
+                                key={item.name}
+                                href={item.href}
+                                className="px-3 py-1.5 rounded-full text-sm font-medium text-[var(--page-text-primary)] hover:bg-white/10 dark:hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] transition-all duration-200 cursor-pointer"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: 0.5 + index * 0.1, ease: "easeOut" }}
+                            >
+                                {item.name}
+                            </motion.a>
+                        ))}
+                    </div>
+                </motion.div>
+
+                <motion.div 
+                    className="flex items-center space-x-4"
+                    initial={{ x: 50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+                >
+                    <button
+                        onClick={toggleTheme}
+                        className="p-2 rounded-full bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-md text-[var(--page-text-primary)] hover:bg-opacity-60 dark:hover:bg-opacity-40 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] transition-all duration-200 cursor-pointer"
+                    >
+                        {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+                    </button>
+                </motion.div>
+            </div>
+        </motion.nav>
+    );
+};
+
+const HeroSection = () => {
+    const motionX = useMotionValue(0);
+    const motionY = useMotionValue(0);
+
+    const rotateXSmall = useTransform(motionY, [-400, 400], [12, -12]);
+    const rotateYSmall = useTransform(motionX, [-400, 400], [-12, 12]);
+
+    const rotateXMedium = useTransform(motionY, [-400, 400], [18, -18]);
+    const rotateYMedium = useTransform(motionX, [-400, 400], [-18, 18]);
+
+    const rotateXLarge = useTransform(motionY, [-400, 400], [25, -25]);
+    const rotateYLarge = useTransform(motionX, [-400, 400], [-25, 25]);
+
+    const handleMouseMove = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        const { clientX, clientY, currentTarget } = event;
+        const { left, top, width, height } = currentTarget.getBoundingClientRect();
+        const x = clientX - left - width / 2;
+        const y = clientY - top - height / 2;
+        motionX.set(x);
+        motionY.set(y);
+    };
+
+    const handleMouseLeave = () => {
+        motionX.set(0);
+        motionY.set(0);
+    };
+
+    return (
+        <section
+            id="home"
+            className="relative min-h-screen flex items-center justify-center text-[var(--page-text-primary)]  pt-20 md:pt-0"
+        >
+            <div className="">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/2 h-1/2 bg-[var(--accent-color)] opacity-[0.06] dark:opacity-[0.04] rounded-full blur-[120px] animate-gentle-pulse"></div>
+
+                <div className="absolute top-[-10%] left-[-10%] w-2/5 h-2/5 bg-[#383ae6] opacity-[0.08] dark:opacity-[0.06] rounded-full blur-[100px] animate-gentle-pulse delay-200"></div>
+
+                <div className="absolute bottom-[-10%] right-[-10%] w-2/5 h-2/5 bg-[#7133a7] opacity-[0.08] dark:opacity-[0.06] rounded-full blur-[100px] animate-gentle-pulse delay-400"></div>
+            </div>
+
+            <div className="max-w-4xl mx-auto relative z-10 px-4 sm:px-6 lg:px-8">
+                <motion.h1 
+                    className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 !text-[var(--page-text-primary)] leading-tight pt-8 sm:pt-0"
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.7, delay: 0.3, ease: "easeOut" }}
+                >
+                    Banking Made Simple, <br /> Wherever You Are
+                </motion.h1>
+                <motion.p 
+                    className="text-lg md:text-xl text-[var(--page-text-secondary)] mb-10 max-w-2xl mx-auto"
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.7, delay: 0.5, ease: "easeOut" }}
+                >
+                    Your personal banking companion designed to simplify your financial life.
+                </motion.p>
+
+                <motion.div 
+                    className="relative flex justify-center items-center h-72 sm:h-80 md:h-[500px] group"
+                    style={{ perspective: '1200px' }}
+                    onMouseMove={handleMouseMove}
+                    onMouseLeave={handleMouseLeave}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.8, delay: 0.7, ease: "easeOut" }}
+                >
+                    <motion.div
+                        className="absolute"
+                        style={{
+                            rotateX: rotateXMedium,
+                            rotateY: rotateYMedium,
+                            x: -60,
+                            y: 20,
+                            rotateZ: -10,
+                            translateZ: -40,
+                            transformStyle: 'preserve-3d'
+                        }}
+                        animate={{
+                            y: [20, 15, 20],
+                        }}
+                        transition={{
+                            duration: 3.5,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: 0.2,
+                        }}
+                    >
+                        <BankCard
+                            cardNumber="4455549161186164"
+                            cardHolder="ALYSSA PRITHVI"
+                            cardColorVariant="solidBlue"
+                        />
+                    </motion.div>
+
+                    <motion.div
+                        className="absolute"
+                        style={{
+                            rotateX: rotateXSmall,
+                            rotateY: rotateYSmall,
+                            x: 70,
+                            y: 65,
+                            rotateZ: 8,
+                            translateZ: -80,
+                            transformStyle: 'preserve-3d'
+                        }}
+                        animate={{
+                            y: [65, 70, 65],
+                        }}
+                        transition={{
+                            duration: 4.5,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: 0.4,
+                        }}
+                    >
+                        <BankCard
+                            cardNumber="4455549161186164"
+                            cardHolder="ALYSSA PRITHVI"
+                            cardColorVariant="solidPurple"
+                        />
+                    </motion.div>
+
+                    <motion.div
+                        className="absolute"
+                        style={{
+                            rotateX: rotateXLarge,
+                            rotateY: rotateYLarge,
+                            x: 10,
+                            y: -10,
+                            rotateZ: 5,
+                            transformStyle: 'preserve-3d',
+                            translateZ: 0
+                        }}
+                        animate={{
+                            y: [-10, -15, -10],
+                        }}
+                        transition={{
+                            duration: 4,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: 0,
+                        }}
+                    >
+                        <BankCard
+                            cardNumber="4455549161186164"
+                            cardHolder="ALYSSA PRITHVI"
+                            cardColorVariant="transparentDark"
+                        />
+                    </motion.div>
+                </motion.div>
+
+                <motion.div 
+                    className="absolute bottom-[-80px] md:bottom-[-40px] left-1/2 -translate-x-1/2 flex flex-col items-center space-y-2 animate-bounce"
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 1.2, ease: "easeOut" }}
+                >
+                    <span className="text-sm text-[var(--page-text-secondary)]">Keep Scrolling</span>
+                    <ArrowDown size={24} className="text-[var(--page-text-secondary)]" />
+                </motion.div>
+
+                <motion.div 
+                    className="absolute bottom-6 left-0 md:bottom-8 md:left-0 z-20 text-left hidden md:flex items-center space-x-1 mb-2"
+                    initial={{ opacity: 0, x: -50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+                >
+                    <div className="flex items-center space-x-1 mb-2">
+                        <span className="block w-12 h-1.5 bg-[var(--bar-segment-inactive)] rounded-sm"></span>
+                        <span className="block w-6 h-1.5 bg-[var(--accent-color)] rounded-sm"></span>
+                    </div>
+                    <p className="text-xs md:text-sm text-[var(--page-text-secondary)] max-w-[200px] md:max-w-[240px]">
+                        Your personal banking companion designed to simplify your financial life.
+                    </p>
+                </motion.div>
+
+                <motion.div 
+                    className="absolute bottom-6 right-0 md:bottom-8 md:right-0 z-20 hidden md:flex flex-row items-center space-x-2"
+                    initial={{ opacity: 0, x: 50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+                >
+                    <div className="flex flex-row items-center space-x-2">
+                        {[Linkedin, Instagram, Facebook, Globe].map((Icon, index) => (
+                            <a
+                                key={index}
+                                href="#"
+                                className="p-2 bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-md rounded-lg shadow-md text-[var(--icon-color)] hover:text-[var(--icon-hover-color)] hover:bg-opacity-75 dark:hover:bg-opacity-60 transition-all duration-200 cursor-pointer"
+                                title={Icon.displayName || "Social Link"}
+                            >
+                                <Icon size={18} />
+                            </a>
+                        ))}
+                    </div>
+                </motion.div>
+            </div>
+        </section>
+    );
+};
+
+const ClientLogosSection = () => {
+    const logos = [
+        { icon: Layers, name: "Layers" },
+        { icon: Zap, name: "Sisyphus" },
+        { icon: CircleDot, name: "Circooles" },
+        { icon: GalleryHorizontalEnd, name: "Catalog" },
+        { icon: Target, name: "Quotient" },
+    ];
+
+    return (
+        <section className="py-12 md:py-16 bg-[var(--page-bg)]">
+            <div className="container mx-auto px-4">
+                <div className="flex flex-wrap justify-center md:justify-around items-center gap-8 md:gap-12">
+                    {logos.map((logo, index) => (
+                        <div
+                            key={index}
+                            className="flex items-center space-x-3 text-[var(--page-text-secondary)] hover:text-[var(--page-text-primary)] transition-colors duration-200 cursor-pointer"
+                        >
+                            <logo.icon size={28} className="opacity-70" />
+                            <span className="text-lg font-medium font-[var(--font-heading)] tracking-tight">{logo.name}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+};
+
+const FeaturesSection = () => {
+    const featuresData: Array<{
+        title: string;
+        description: string;
+        action?: string;
+        type: string;
+        imageUrl?: string;
+        colSpanDesktop: string;
+        revenue?: string;
+    }> = [
+        {
+            title: "Send Money To Any Account, Anytime",
+            description: "Send Money To Any Account — Fast, Easy, And Hassle-Free.",
+            action: "Explore",
+            type: "imageBackground",
+            imageUrl:
+                "https://images.unsplash.com/photo-1726056652641-de93ec003289?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+            colSpanDesktop: "md:col-span-7",
+        },
+        {
+            title: "Investment Management",
+            description: "Send Money To Any Account — Fast, Easy, And Hassle-Free.",
+            action: "Discover",
+            type: "imageBackground",
+            imageUrl:
+                "https://images.unsplash.com/photo-1651341050677-24dba59ce0fd?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+            colSpanDesktop: "md:col-span-3",
+        },
+        {
+            title: "Master Your Money Flow",
+            description:
+                "Gain unparalleled control over your financial future. Our tools empower you to manage your assets with precision and confidence.",
+            action: "Take Control",
+            type: "imageBackground",
+            imageUrl:
+                "https://images.unsplash.com/photo-1649359569078-c445b3c6a116?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+            colSpanDesktop: "md:col-span-3",
+        },
+        {
+            title: "Seamless Payments, Effortless Tracking",
+            description:
+                "Experience the ease of modern transactions. Pay, get paid, and manage your financial interactions all in one intuitive platform, complete with clear insights.",
+            action: "Explore Payments",
+            type: "imageBackground",
+            imageUrl:
+                "https://images.unsplash.com/photo-1556742044-3c52d6e88c62?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+            colSpanDesktop: "md:col-span-7",
+        },
+    ];
+
+    const renderGraphic = (type: string, feature: any) => {
+        switch (type) {
+            case "imageBackground":
+                return null;
+            case "sGraphic":
+                return (
+                    <div className="absolute inset-0 flex justify-center items-center overflow-hidden z-0">
+                        <span className="text-[10rem] md:text-[8rem] lg:text-[10rem] font-black text-[var(--accent-color)] opacity-10 select-none -rotate-12">
+                            S
+                        </span>
+                    </div>
+                );
+            case "barChart":
+                return (
+                    <div className="mt-4 h-20 flex items-end space-x-1 justify-center">
+                        {[40, 70, 30, 90, 50, 60, 20, 80].map((h, i) => (
+                            <div
+                                key={i}
+                                style={{ height: `${h}%` }}
+                                className={`w-2.5 md:w-2 lg:w-2.5 rounded-t-sm bg-[var(--accent-color)] opacity-75 hover:opacity-100 transition-opacity`}
+                            ></div>
+                        ))}
+                    </div>
+                );
+            default:
+                return null;
         }
     };
 
-    const canTransfer =
-        !!amount && parseFloat(amount) > 0 && fromAccount && toAccount && fromAccount.id !== toAccount.id && selectedContactId;
-
-    const doTransfer = () => {
-        if (!canTransfer) return;
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 2000);
-        setAmount("");
-        setFromAccount(mockAccountOptions[0]);
-        setToAccount(mockAccountOptions[1]);
-        setSelectedContactId(mockContacts[1]?.id || null);
-    };
-
     return (
-        <div className="bg-[var(--card-bg)] border border-[var(--card-border-color)] p-4 md:p-6 rounded-xl shadow-lg flex flex-col h-full">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-[var(--card-text-primary)]">Fast transfer</h2>
-            </div>
-            <div className="mb-4">
-                <p className="text-xs text-[var(--card-text-secondary)]">
-                    Limit in April: <span className="text-[var(--card-text-primary)] font-medium">$500</span> / $2000
-                </p>
-                <div className="w-full bg-[var(--progress-track)] rounded-full h-1.5 mt-1.5">
-                    <div className="bg-[var(--accent-primary)] h-1.5 rounded-full" style={{ width: "25%" }}></div>
-                </div>
-            </div>
-            <div
-                className="flex items-center gap-3 mb-5 overflow-x-auto pb-2 -mx-1 px-1"
-                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-            >
-                {mockContacts.map((contact) => (
-                    <TransferContactItem
-                        key={contact.id}
-                        contact={contact}
-                        isSelected={selectedContactId === contact.id}
-                        onClick={() => setSelectedContactId(contact.id)}
-                    />
-                ))}
-                <button
-                    type="button"
-                    className="w-10 h-10 rounded-full bg-[var(--button-tertiary-bg)] text-[var(--button-tertiary-text)] flex-shrink-0 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
-                >
-                    <Plus size={20} />
-                </button>
-            </div>
-            <div className="flex gap-4 mb-4">
-                <AccountSelector
-                    label="From"
-                    accountOptions={mockAccountOptions}
-                    selectedAccount={fromAccount}
-                    onAccountChange={setFromAccount}
-                    excludeId={toAccount?.id}
-                />
-                <AccountSelector
-                    label="To"
-                    accountOptions={mockAccountOptions}
-                    selectedAccount={toAccount}
-                    onAccountChange={setToAccount}
-                    excludeId={fromAccount?.id}
-                />
-            </div>
-            <div className="mb-5">
-                <label htmlFor="transferAmount" className="block text-xs text-[var(--card-text-secondary)] mb-1.5">
-                    Amount
-                </label>
-                <input
-                    type="text"
-                    id="transferAmount"
-                    value={amount ? `$ ${amount}` : ""}
-                    onChange={handleAmountChange}
-                    placeholder="$ 0.00"
-                    className="w-full p-3 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none transition-shadow text-lg font-semibold"
-                />
-            </div>
-            <button
-                type="button"
-                onClick={doTransfer}
-                disabled={!canTransfer}
-                className="w-full p-3.5 rounded-lg bg-[var(--button-primary-bg)] text-[var(--button-primary-text)] hover:opacity-90 transition-opacity cursor-pointer text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed mt-auto"
-            >
-                Transfer
-            </button>
-            {showSuccess && (
-                <div className="mt-4 p-3 rounded-lg bg-[var(--accent-positive)]/10 text-[var(--accent-positive)] text-center font-medium animate-fade-in">
-                    Transfer successful!
-                </div>
-            )}
-        </div>
-    );
-};
-
-type NotificationItemData = {
-    id: string;
-    IconComponent: React.ElementType;
-    iconColorClass: string;
-    iconBgClass: string;
-    title: string;
-    description: string;
-    time: string;
-};
-
-type ProfileLinkItemData = {
-    id: string;
-    text: string;
-    IconComponent: React.ElementType;
-    action?: () => void;
-    href?: string;
-};
-
-const mockNotifications: NotificationItemData[] = [
-    {
-        id: "notif1",
-        IconComponent: CheckCircle,
-        iconColorClass: "text-green-500",
-        iconBgClass: "bg-green-500/10",
-        title: "Payment Successful",
-        description: "Your payment for Tesla stocks was successful.",
-        time: "2 min ago",
-    },
-    {
-        id: "notif2",
-        IconComponent: AlertCircle,
-        iconColorClass: "text-yellow-500",
-        iconBgClass: "bg-yellow-500/10",
-        title: "Unusual Login Attempt",
-        description: "We detected a login from a new device.",
-        time: "1 hour ago",
-    },
-    {
-        id: "notif3",
-        IconComponent: Gift,
-        iconColorClass: "text-blue-500",
-        iconBgClass: "bg-blue-500/10",
-        title: "Happy Birthday!",
-        description: "Wishing you a happy birthday from Pillar!",
-        time: "1 day ago",
-    },
-];
-
-const mockProfileLinks: ProfileLinkItemData[] = [
-    { id: "plink1", text: "My Profile", IconComponent: User, href: "#profile" },
-    { id: "plink2", text: "Settings", IconComponent: Settings, href: "#settings" },
-    { id: "plink3", text: "Help Center", IconComponent: HelpCircle, href: "#help" },
-    { id: "plink4", text: "Sign Out", IconComponent: LogOut, action: () => console.log("User signed out") },
-];
-
-const ToastContext = createContext<(msg: string) => void>(() => {});
-
-const Toast = ({ message, onClose }: { message: string; onClose: () => void }) => (
-    <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl bg-[var(--dropdown-bg)] border border-[var(--dropdown-border-color)] text-[var(--card-text-primary)] font-medium animate-fade-in flex items-center gap-2">
-        <span>{message}</span>
-        <button
-            type="button"
-            className="ml-2 text-[var(--icon-color)] hover:text-[var(--icon-hover-color)] cursor-pointer"
-            onClick={onClose}
-            tabIndex={0}
-        >
-            ✕
-        </button>
-    </div>
-);
-
-const NotificationDropdown = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
-    const showToast = useContext(ToastContext);
-    if (!isOpen) return null;
-    return (
-        <div className="absolute top-full right-0 mt-2 w-80 md:w-96 bg-[var(--dropdown-bg)] border border-[var(--dropdown-border-color)] rounded-lg shadow-xl z-50">
-            <div className="p-4 border-b border-[var(--dropdown-border-color)]">
-                <h3 className="text-md font-semibold text-[var(--card-text-primary)]">Notifications</h3>
-            </div>
-            <div className="py-2 max-h-80 overflow-y-auto">
-                {mockNotifications.length === 0 && (
-                    <p className="px-4 py-3 text-sm text-[var(--card-text-secondary)]">No new notifications.</p>
-                )}
-                {mockNotifications.map((notif) => (
-                    <div
-                        key={notif.id}
-                        className="flex items-start gap-3 px-4 py-3 hover:bg-[var(--page-bg)] transition-colors cursor-pointer"
-                        onClick={() => showToast(`Performing ${notif.title}`)}
-                        tabIndex={0}
-                        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && showToast(`Performing ${notif.title}`)}
-                    >
-                        <div className={`p-2 rounded-full ${notif.iconBgClass}`}>
-                            <notif.IconComponent size={20} className={notif.iconColorClass} />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-[var(--card-text-primary)]">{notif.title}</p>
-                            <p className="text-xs text-[var(--card-text-secondary)] mb-0.5">{notif.description}</p>
-                            <p className="text-xs text-[var(--accent-primary)]">{notif.time}</p>
-                        </div>
+        <section id="features" className="py-16 md:py-24 bg-[var(--page-bg)]">
+            <div className="container mx-auto px-4">
+                <div className="mb-12 md:mb-16 flex flex-col md:flex-row md:items-end md:justify-between">
+                    <div className="md:w-1/2">
+                        <span className="text-sm font-semibold text-[var(--accent-color)] uppercase tracking-wider">Features</span>
+                        <h2 className="mt-2 text-3xl sm:text-4xl md:text-5xl font-bold text-[var(--page-text-primary)] leading-tight">
+                            Powerful Features at
+                            <br />
+                            Your Fingertips
+                        </h2>
                     </div>
-                ))}
-            </div>
-            <div className="p-3 border-t border-[var(--dropdown-border-color)] text-center">
-                <a
-                    href="#all-notifications"
-                    className="text-sm text-[var(--link-text)] hover:text-[var(--link-hover-text)] font-medium cursor-pointer"
-                    onClick={() => showToast("Redirecting to all notifications")}
-                >
-                    View all notifications
-                </a>
-            </div>
-        </div>
-    );
-};
-
-const ProfileDropdown = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
-    const showToast = useContext(ToastContext);
-    if (!isOpen) return null;
-    return (
-        <div className="absolute top-full right-0 mt-2 w-60 bg-[var(--dropdown-bg)] border border-[var(--dropdown-border-color)] rounded-lg shadow-xl z-50">
-            <div className="p-4 border-b border-[var(--dropdown-border-color)]">
-                <p className="text-sm font-semibold text-[var(--card-text-primary)]">Kelu Sotonox</p>
-                <p className="text-xs text-[var(--card-text-secondary)]">kelu.soto@example.com</p>
-            </div>
-            <div className="py-2">
-                {mockProfileLinks.map((link) => (
-                    <a
-                        key={link.id}
-                        href={link.href || "#"}
-                        onClick={(e) => {
-                            e.preventDefault();
-                            showToast(`Redirecting to ${link.text}`);
-                            if (link.action) link.action();
-                        }}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--card-text-primary)] hover:bg-[var(--page-bg)] transition-colors cursor-pointer"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                showToast(`Redirecting to ${link.text}`);
-                                if (link.action) link.action();
-                            }
-                        }}
-                    >
-                        <link.IconComponent size={18} className="text-[var(--icon-color)]" />
-                        <span>{link.text}</span>
-                    </a>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-type SearchableInvestmentOption = {
-    id: string;
-    name: string;
-    ticker?: string;
-    IconComponent: React.ElementType;
-    iconColorClass?: string;
-};
-
-const mockSearchableInvestments: SearchableInvestmentOption[] = [
-    { id: "search-aapl", name: "Apple Inc.", ticker: "AAPL", IconComponent: FaApple },
-    { id: "search-tsla", name: "Tesla, Inc.", ticker: "TSLA", IconComponent: SiTesla },
-    { id: "search-amzn", name: "Amazon.com, Inc.", ticker: "AMZN", IconComponent: FaAmazon },
-    { id: "search-googl", name: "Alphabet Inc. (Google)", ticker: "GOOGL", IconComponent: FaGoogle },
-    { id: "search-msft", name: "Microsoft Corporation", ticker: "MSFT", IconComponent: FaMicrosoft, iconColorClass: "text-blue-500" },
-    { id: "search-nflx", name: "Netflix, Inc.", ticker: "NFLX", IconComponent: SiNetflix, iconColorClass: "text-red-600" },
-    { id: "search-nke", name: "NIKE, Inc.", ticker: "NKE", IconComponent: SiNike },
-    { id: "search-ko", name: "The Coca-Cola Company", ticker: "KO", IconComponent: SiCocacola },
-    { id: "search-spot", name: "Spotify Technology S.A.", ticker: "SPOT", IconComponent: SiSpotify, iconColorClass: "text-green-500" },
-    { id: "search-adbe", name: "Adobe Inc.", ticker: "ADBE", IconComponent: SiAdobe, iconColorClass: "text-red-500" },
-    { id: "search-btc", name: "Bitcoin", ticker: "BTC", IconComponent: Bitcoin, iconColorClass: "text-orange-500" },
-    { id: "search-eth", name: "Ethereum", ticker: "ETH", IconComponent: DollarSign, iconColorClass: "text-gray-500" },
-];
-
-const SearchDropdown = ({
-    isOpen,
-    items,
-    query,
-    onSelect,
-}: {
-    isOpen: boolean;
-    items: SearchableInvestmentOption[];
-    query: string;
-    onSelect: (item: SearchableInvestmentOption) => void;
-}) => {
-    if (!isOpen) return null;
-
-    return (
-        <div className="absolute top-full left-0 mt-2 w-full max-w-md bg-[var(--dropdown-bg)] border border-[var(--dropdown-border-color)] rounded-lg shadow-xl z-50">
-            {items.length === 0 && query && (
-                <div className="p-4 text-sm text-[var(--card-text-secondary)]">
-                    No results found for "<span className="font-medium text-[var(--card-text-primary)]">{query}</span>".
+                    <p className="mt-4 md:mt-0 md:w-1/2 lg:w-2/5 text-[var(--page-text-secondary)] text-base md:text-lg leading-relaxed">
+                        Your personal banking companion designed to simplify your financial life. Your personal banking companion designed
+                        to simplify your financial life.
+                    </p>
                 </div>
-            )}
-            {items.length > 0 && (
-                <ul className="py-2 max-h-96 overflow-y-auto">
-                    {items.map((item) => (
-                        <li
-                            key={item.id}
-                            onClick={() => onSelect(item)}
-                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--page-bg)] transition-colors cursor-pointer"
-                        >
-                            <item.IconComponent size={20} className={item.iconColorClass || "text-[var(--icon-color)]"} />
-                            <span className="text-sm font-medium text-[var(--card-text-primary)]">{item.name}</span>
-                            {item.ticker && <span className="text-xs text-[var(--card-text-secondary)]">{item.ticker}</span>}
-                        </li>
-                    ))}
-                </ul>
-            )}
-            {items.length === 0 && !query && (
-                <div className="p-4 text-sm text-[var(--card-text-secondary)]">Start typing to search for investments...</div>
-            )}
-        </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-10 gap-6 lg:gap-8">
+                    {featuresData.map((feature, index) => {
+                        const isImageBgCard = feature.type === "imageBackground";
+                        const cardStyle =
+                            isImageBgCard && feature.imageUrl
+                                ? {
+                                      backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(${feature.imageUrl})`,
+                                      backgroundSize: "cover",
+                                      backgroundPosition: "center",
+                                  }
+                                : {};
+
+                        return (
+                            <div
+                                key={index}
+                                style={cardStyle}
+                                className={`relative flex flex-col bg-[var(--feature-card-bg)] p-6 sm:p-8 rounded-2xl shadow-xl overflow-hidden ${
+                                    feature.colSpanDesktop
+                                }
+                            ${index < 2 ? "min-h-[480px] md:min-h-[auto]" : "min-h-[380px] md:min-h-[auto]"} 
+                            ${index === 0 || index === 3 ? "justify-between" : ""}`}
+                            >
+                                <div className={`flex flex-col flex-grow ${isImageBgCard ? "relative z-10" : ""}`}>
+                                    <div>
+                                        <h3
+                                            className={`text-2xl lg:text-3xl font-semibold ${
+                                                isImageBgCard ? "text-white" : "text-[var(--feature-card-text-primary)]"
+                                            } mb-3 leading-snug`}
+                                        >
+                                            {feature.title}
+                                        </h3>
+                                        <p
+                                            className={`text-sm ${
+                                                isImageBgCard ? "text-slate-200" : "text-[var(--feature-card-text-secondary)]"
+                                            } mb-6 leading-relaxed`}
+                                        >
+                                            {feature.description}
+                                        </p>
+                                        {feature.revenue && (
+                                            <div className="mb-4">
+                                                <span
+                                                    className={`text-xs ${
+                                                        isImageBgCard ? "text-slate-300" : "text-[var(--feature-card-text-secondary)]"
+                                                    }`}
+                                                >
+                                                    Revenue
+                                                </span>
+                                                <p
+                                                    className={`text-2xl font-bold ${
+                                                        isImageBgCard ? "text-white" : "text-[var(--feature-card-text-primary)]"
+                                                    } mt-1`}
+                                                >
+                                                    {feature.revenue}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {!isImageBgCard && (
+                                        <div
+                                            className={`flex-grow flex items-center justify-center relative z-10 
+                                   ${index === 0 || index === 3 ? "mb-auto" : ""}`}
+                                        >
+                                            {renderGraphic(feature.type, feature)}
+                                        </div>
+                                    )}
+                                    {isImageBgCard && <div className="flex-grow"></div>}
+
+                                    {feature.action && (
+                                        <div className={`mt-auto pt-6 text-left ${index === 0 || index === 3 ? "" : "self-start"}`}>
+                                            <button
+                                                className={`px-6 py-2.5 font-semibold rounded-lg transition-colors duration-200 cursor-pointer text-sm 
+                                        ${
+                                            isImageBgCard
+                                                ? "bg-white/90 text-slate-900 hover:bg-white"
+                                                : "bg-[var(--explore-button-bg)] text-[var(--explore-button-text)] hover:bg-[var(--explore-button-hover-bg)]"
+                                        }`}
+                                            >
+                                                {feature.action}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </section>
     );
 };
 
-type FooterHelpLink = { id: string; text: string; href: string; IconComponent: React.ElementType };
-type FooterSocialLink = { id: string; name: string; href: string; IconComponent: React.ElementType };
-
-const helpLinks: FooterHelpLink[] = [
-    { id: "faq", text: "FAQ", href: "#faq", IconComponent: HelpCircle },
-    { id: "support", text: "Contact Support", href: "#support", IconComponent: LifeBuoy },
-    { id: "terms", text: "Terms of Service", href: "#terms", IconComponent: FileText },
-    { id: "privacy", text: "Privacy Policy", href: "#privacy", IconComponent: ShieldCheck },
-];
-
-const socialLinks: FooterSocialLink[] = [
-    { id: "twitter", name: "Twitter", href: "#", IconComponent: Twitter },
-    { id: "facebook", name: "Facebook", href: "#", IconComponent: Facebook },
-    { id: "instagram", name: "Instagram", href: "#", IconComponent: Instagram },
-    { id: "linkedin", name: "LinkedIn", href: "#", IconComponent: Linkedin },
-];
-
-const AppFooter = () => {
-    const showToast = useContext(ToastContext);
+const AboutUsSection = () => {
     return (
-        <footer className="bg-[var(--card-bg)] border-t border-[var(--card-border-color)] text-[var(--page-text-secondary)]">
-            <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+        <section id="about-us" className="py-16 md:py-24 bg-[var(--page-bg)] relative">
+            <div className="absolute top-1/2 -translate-y-1/2 -left-1/4 w-1/2 md:w-1/3 h-full bg-[var(--accent-color)] rounded-full filter blur-[180px] opacity-10 dark:opacity-[0.06] animate-gentle-pulse"></div>
+
+            <div className="container mx-auto px-4 relative z-10">
+                <div className="mb-8 md:mb-12 flex flex-col md:flex-row justify-between md:items-center">
+                    <div className="mb-6 md:mb-0">
+                        <span className="text-sm font-semibold text-[var(--accent-color)] uppercase tracking-wider">About Us</span>
+                        <h2 className="mt-2 text-3xl sm:text-4xl md:text-5xl font-bold text-[var(--page-text-primary)] leading-tight">
+                            More Than a Bank — <br className="sm:hidden" />A Financial Partner for Life
+                        </h2>
+                    </div>
                     <div>
-                        <h3 className="text-lg font-semibold text-[var(--page-text-primary)] mb-3">Pillar.</h3>
-                        <p className="text-sm">
-                            Your trusted partner in achieving financial clarity and growth. Manage, invest, and plan with confidence.
+                        <button className="px-6 py-3 bg-[var(--details-button-bg)] text-[var(--details-button-text)] font-semibold rounded-lg hover:bg-[var(--details-button-hover-bg)] transition-colors duration-200 cursor-pointer text-sm md:text-base">
+                            More Details
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    className="relative w-full min-h-[400px] md:min-h-[500px] bg-cover bg-center rounded-2xl shadow-xl overflow-hidden p-8 md:p-12 flex flex-col justify-center items-center text-center border-2 border-[var(--video-border-color)]"
+                    style={{
+                        backgroundImage: `url('https://images.unsplash.com/photo-1742238619061-c4470b8c0372?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')`,
+                        boxShadow: `0 0 25px -5px var(--video-border-glow), 0 0 15px -10px var(--video-border-glow)`,
+                    }}
+                >
+                    <div className="absolute inset-0 bg-black/60 z-0"></div>
+                    <div className="relative z-10 max-w-3xl">
+                        <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">Our Commitment to You</h3>
+                        <p className="text-lg md:text-xl text-slate-200 leading-relaxed">
+                            We're not just a bank; we're your dedicated financial ally. Discover our journey, our values, and how we're
+                            working to build a brighter financial future for everyone.
                         </p>
                     </div>
-                    <div>
-                        <h4 className="text-md font-semibold text-[var(--page-text-primary)] mb-3">Help & Support</h4>
-                        <ul className="space-y-2">
-                            {helpLinks.map((link) => (
-                                <li key={link.id}>
-                                    <a
-                                        href={link.href}
-                                        className="flex items-center gap-2 text-sm hover:text-[var(--link-text)] transition-colors cursor-pointer"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            showToast(`Redirecting to ${link.text}`);
-                                        }}
-                                        tabIndex={0}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter" || e.key === " ") {
-                                                e.preventDefault();
-                                                showToast(`Redirecting to ${link.text}`);
-                                            }
-                                        }}
-                                    >
-                                        <link.IconComponent size={16} />
-                                        {link.text}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
+                </div>
+            </div>
+        </section>
+    );
+};
+
+const TestimonialsSection = () => {
+    const testimonials = [
+        {
+            name: "Cameron Williamson",
+            role: "Marketing Coordinator",
+            quote: "The mobile app is incredibly intuitive. I can transfer funds, pay bills, and even top up my e-wallet in seconds. It saves me so much time!",
+            avatarUrl:
+                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        },
+        {
+            name: "Alexandra Smith",
+            role: "Product Manager",
+            quote: "The analytics dashboard provides real-time insights that help us track user engagement effectively. It has significantly improved our decision-making processes.",
+            avatarUrl:
+                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        },
+        {
+            name: "Jordan Lee",
+            role: "UX Designer",
+            quote: "I love the flexibility of the design tools. They allow for rapid prototyping and seamless collaboration with the team, making the design process much more efficient.",
+            avatarUrl:
+                "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        },
+    ];
+
+    return (
+        <section id="testimonials" className="py-16 md:py-24 bg-[var(--page-bg)] relative">
+            <div className="absolute top-1/2 -translate-y-1/2 -right-1/4 w-1/2 md:w-1/3 h-full bg-[var(--accent-color)] rounded-full filter blur-[180px] opacity-10 dark:opacity-[0.06] animate-gentle-pulse"></div>
+
+            <div className="container mx-auto px-4 relative z-10">
+                <div className="mb-12 md:mb-16 flex flex-col md:flex-row md:items-end md:justify-between">
+                    <div className="md:w-3/5 lg:w-1/2">
+                        <span className="text-sm font-semibold text-[var(--accent-color)] uppercase tracking-wider">Testimonials</span>
+                        <h2 className="mt-2 text-3xl sm:text-4xl md:text-5xl font-bold text-[var(--page-text-primary)] leading-tight">
+                            Here's What Real Users Are Saying About Us
+                        </h2>
                     </div>
-                    <div>
-                        <h4 className="text-md font-semibold text-[var(--page-text-primary)] mb-3">Connect With Us</h4>
-                        <div className="flex space-x-4">
-                            {socialLinks.map((social) => (
+                    <p className="mt-4 md:mt-0 md:w-2/5 lg:w-1/3 text-[var(--page-text-secondary)] text-base md:text-lg leading-relaxed">
+                        Your personal banking companion designed to simplify your financial life. Your personal banking companion designed
+                        to simplify your financial life.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                    {testimonials.map((testimonial, index) => (
+                        <div
+                            key={index}
+                            className="relative bg-[var(--testimonial-card-bg)] p-6 sm:p-8 rounded-2xl shadow-xl flex flex-col overflow-hidden"
+                        >
+                            <div
+                                className="absolute top-0 left-0 right-0 h-1.5 bg-[var(--testimonial-card-top-glow)] rounded-t-2xl"
+                                style={{ boxShadow: `0 0 12px 1px var(--testimonial-card-top-glow)` }}
+                            ></div>
+
+                            <div className="flex items-center mb-5 pt-3">
+                                {testimonial.avatarUrl ? (
+                                    <img
+                                        src={testimonial.avatarUrl}
+                                        alt={testimonial.name}
+                                        className="w-14 h-14 rounded-full mr-4 object-cover border-2 border-[var(--accent-color)]/50"
+                                    />
+                                ) : (
+                                    <UserCircle size={56} className="text-[var(--accent-color)] rounded-full mr-4" />
+                                )}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-[var(--testimonial-card-text-primary)]">
+                                        {testimonial.name}
+                                    </h3>
+                                    <p className="text-sm text-[var(--testimonial-card-text-secondary)]">{testimonial.role}</p>
+                                </div>
+                            </div>
+                            <p className="text-base text-[var(--testimonial-card-text-secondary)] leading-relaxed flex-grow">
+                                "{testimonial.quote}"
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+};
+
+const Footer = () => {
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    const footerLinks = [
+        { name: "Home", href: "#" },
+        { name: "Special Offers", href: "#" },
+        { name: "Blog", href: "#" },
+        { name: "About Us", href: "#" },
+        { name: "Payment & Delivery", href: "#" },
+        { name: "Contacts", href: "#" },
+    ];
+
+    return (
+        <footer className="bg-[var(--footer-bg)] text-[var(--footer-text-secondary)] relative overflow-hidden">
+            <div className="absolute -bottom-1/4 -left-1/4 w-1/2 md:w-2/5 h-1/2 bg-[var(--accent-color)] rounded-full filter blur-[150px] opacity-10 dark:opacity-[0.07] animate-gentle-pulse"></div>
+
+            <div className="border-t border-[var(--footer-separator-color)] pt-12 md:pt-16 relative z-10">
+                <div className="container mx-auto px-4 pb-8 md:pb-12">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
+                        <div className="sm:col-span-2 lg:col-span-1">
+                            <a
+                                href="#"
+                                className="inline-flex items-center text-2xl font-bold text-[var(--footer-text-primary)] hover:text-[var(--footer-link-hover-color)] transition-colors mb-4"
+                            >
+                                Catalog
+                                <ArrowUpRight size={20} className="ml-1.5" />
+                            </a>
+                            <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                {footerLinks.map((link) => (
+                                    <li key={link.name}>
+                                        <a
+                                            href={link.href}
+                                            className="hover:text-[var(--footer-link-hover-color)] transition-colors duration-200 cursor-pointer"
+                                        >
+                                            {link.name}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div className="space-y-5 text-sm">
+                            <div>
+                                <p className="text-xs uppercase text-[var(--footer-text-secondary)] mb-0.5">Contact Us</p>
                                 <a
-                                    key={social.id}
-                                    href={social.href}
-                                    className="text-[var(--icon-color)] hover:text-[var(--link-text)] transition-colors cursor-pointer"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        showToast(`Redirecting to ${social.name}`);
-                                    }}
-                                    tabIndex={0}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                            e.preventDefault();
-                                            showToast(`Redirecting to ${social.name}`);
-                                        }
-                                    }}
+                                    href="tel:+18919891191"
+                                    className="font-semibold text-[var(--footer-text-primary)] hover:text-[var(--footer-link-hover-color)] transition-colors text-lg"
                                 >
-                                    <social.IconComponent size={22} />
+                                    +1 891 989-11-91
                                 </a>
-                            ))}
+                            </div>
+                            <div>
+                                <p className="text-xs uppercase text-[var(--footer-text-secondary)] mb-0.5">Location</p>
+                                <p className="text-[var(--footer-text-primary)]">2972 Westheimer Rd. Santa Ana, Illinois 85486</p>
+                            </div>
+                            <div>
+                                <p className="text-xs uppercase text-[var(--footer-text-secondary)] mb-0.5">Email</p>
+                                <a
+                                    href="mailto:hello@logoipsum.com"
+                                    className="text-[var(--footer-text-primary)] hover:text-[var(--footer-link-hover-color)] transition-colors"
+                                >
+                                    hello@logoipsum.com
+                                </a>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col justify-between items-start lg:items-end text-sm">
+                            <div className="mb-6 lg:mb-0 lg:text-right">
+                                <p className="text-xs uppercase text-[var(--footer-text-secondary)] mb-0.5">Mo-Fr</p>
+                                <p className="font-semibold text-[var(--footer-text-primary)] text-xl">9am – 6pm</p>
+                            </div>
+                            <div className="flex flex-col lg:items-end items-start w-full">
+                                <button
+                                    onClick={scrollToTop}
+                                    className="mb-3 p-2 bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-md rounded-lg shadow-md text-[var(--icon-color)] hover:text-[var(--icon-hover-color)] hover:bg-opacity-75 dark:hover:bg-opacity-60 transition-all duration-200 cursor-pointer"
+                                    title="Back to Top"
+                                >
+                                    <ArrowUp size={18} />
+                                </button>
+                                <p className="text-xs text-[var(--footer-text-secondary)]/70">
+                                    &copy; {new Date().getFullYear()} GPN Banking. All rights reserved.
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div className="border-t border-[var(--card-border-color)] pt-6 text-center text-sm">
-                    <p>&copy; {new Date().getFullYear()} Pillar Inc. All rights reserved.</p>
                 </div>
             </div>
         </footer>
     );
 };
 
-const MobileSearchModal = ({
-    isOpen,
-    onClose,
-    searchQuery,
-    setSearchQuery,
-    handleSearchInputChange,
-    handleSearchInputFocus,
-    isSearchDropdownVisible,
-    filteredInvestments,
-    handleInvestmentSelect,
-    searchDropdownRef,
-    mobileSearchInputRef,
-}: {
-    isOpen: boolean;
-    onClose: () => void;
-    searchQuery: string;
-    setSearchQuery: Dispatch<SetStateAction<string>>;
-    handleSearchInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-    handleSearchInputFocus: () => void;
-    isSearchDropdownVisible: boolean;
-    filteredInvestments: SearchableInvestmentOption[];
-    handleInvestmentSelect: (item: SearchableInvestmentOption) => void;
-    searchDropdownRef: React.RefObject<HTMLDivElement | null>;
-    mobileSearchInputRef: React.RefObject<HTMLInputElement | null>;
-}) => {
-    useEffect(() => {
-        if (isOpen && mobileSearchInputRef.current) {
-            mobileSearchInputRef.current.focus();
-        }
-    }, [isOpen, mobileSearchInputRef]);
-
-    useEffect(() => {
-        const handleEscapeKey = (event: KeyboardEvent) => {
-            if (event.key === "Escape") {
-                onClose();
-            }
-        };
-        if (isOpen) {
-            document.addEventListener("keydown", handleEscapeKey);
-        } else {
-            document.removeEventListener("keydown", handleEscapeKey);
-        }
-        return () => document.removeEventListener("keydown", handleEscapeKey);
-    }, [isOpen, onClose]);
-
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 z-40 flex flex-col items-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
-            <div
-                className="relative w-full max-w-xl p-4 mt-[10vh] bg-[var(--dropdown-bg)] rounded-lg shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-                ref={searchDropdownRef}
-            >
-                <button
-                    onClick={onClose}
-                    className="absolute top-3 right-3 text-[var(--icon-color)] hover:text-[var(--icon-hover-color)] cursor-pointer p-1 rounded-full hover:bg-[var(--input-bg)] transition-colors"
-                >
-                    <XIcon size={20} />
-                </button>
-                <div className="relative">
-                    <SearchIcon
-                        size={18}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--input-placeholder)] pointer-events-none"
-                    />
-                    <input
-                        ref={mobileSearchInputRef}
-                        type="search"
-                        placeholder="Search investments..."
-                        value={searchQuery}
-                        onChange={handleSearchInputChange}
-                        onFocus={handleSearchInputFocus}
-                        className="w-full pl-10 pr-4 py-3 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none transition-shadow text-base"
-                    />
-                </div>
-
-                <SearchDropdown
-                    isOpen={isSearchDropdownVisible && searchQuery.length > 0}
-                    items={filteredInvestments}
-                    query={searchQuery}
-                    onSelect={(item) => {
-                        handleInvestmentSelect(item);
-                        onClose();
-                    }}
-                />
-            </div>
-        </div>
-    );
-};
-
-interface AddGoalModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSaveGoal: (newGoalData: Omit<GoalItemData, "id">) => void;
-    selectableIcons: SelectableGoalIcon[];
-}
-
-const AddGoalModal = ({ isOpen, onClose, onSaveGoal, selectableIcons }: AddGoalModalProps) => {
-    const [goalName, setGoalName] = useState("");
-    const [selectedIconName, setSelectedIconName] = useState(selectableIcons[0]?.name || "");
-    const [currentAmountStr, setCurrentAmountStr] = useState("");
-    const [targetAmountStr, setTargetAmountStr] = useState("");
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (isOpen) {
-            setGoalName("");
-            setSelectedIconName(selectableIcons[0]?.name || "");
-            setCurrentAmountStr("");
-            setTargetAmountStr("");
-            setErrorMessage(null);
-        }
-    }, [isOpen, selectableIcons]);
-
-    const handleSave = () => {
-        setErrorMessage(null);
-        const currentAmount = parseFloat(currentAmountStr);
-        const targetAmount = parseFloat(targetAmountStr);
-
-        if (!goalName.trim()) {
-            setErrorMessage("Goal name is required.");
-            return;
-        }
-        if (!targetAmountStr.trim() || isNaN(targetAmount) || targetAmount <= 0) {
-            setErrorMessage("Valid target amount is required.");
-            return;
-        }
-        if (currentAmountStr.trim() && (isNaN(currentAmount) || currentAmount < 0)) {
-            setErrorMessage("Current amount must be a valid number or empty.");
-            return;
-        }
-        if (!isNaN(currentAmount) && currentAmount > targetAmount) {
-            setErrorMessage("Current amount cannot exceed target amount.");
-            return;
-        }
-
-        const selectedIconObject = selectableIcons.find((icon) => icon.name === selectedIconName);
-        if (!selectedIconObject) {
-            setErrorMessage("Please select a valid icon.");
-            return;
-        }
-
-        onSaveGoal({
-            name: goalName.trim(),
-            IconComponent: selectedIconObject.IconComponent,
-            currentAmount: isNaN(currentAmount) ? 0 : currentAmount,
-            targetAmount: targetAmount,
-        });
-    };
-
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-            <div
-                className="bg-[var(--dropdown-bg)] p-6 rounded-xl shadow-2xl w-full max-w-md text-[var(--card-text-primary)]"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-semibold">Add New Goal</h3>
-                    <button
-                        onClick={onClose}
-                        className="text-[var(--icon-color)] hover:text-[var(--icon-hover-color)] cursor-pointer p-1 rounded-full hover:bg-[var(--input-bg)]"
-                    >
-                        <XIcon size={22} />
-                    </button>
-                </div>
-
-                {errorMessage && (
-                    <div className="mb-4 p-3 bg-red-500/10 text-red-700 dark:text-red-400 border border-red-700/20 rounded-md text-sm">
-                        {errorMessage}
-                    </div>
-                )}
-
-                <div className="space-y-4">
-                    <div>
-                        <label htmlFor="goalName" className="block text-sm font-medium text-[var(--card-text-secondary)] mb-1">
-                            Goal Name
-                        </label>
-                        <input
-                            type="text"
-                            id="goalName"
-                            value={goalName}
-                            onChange={(e) => setGoalName(e.target.value)}
-                            className="w-full p-2.5 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none"
-                            placeholder="e.g., Save for Vacation"
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="goalIcon" className="block text-sm font-medium text-[var(--card-text-secondary)] mb-1">
-                            Icon
-                        </label>
-                        <select
-                            id="goalIcon"
-                            value={selectedIconName}
-                            onChange={(e) => setSelectedIconName(e.target.value)}
-                            className="w-full p-2.5 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none appearance-none cursor-pointer"
-                        >
-                            {selectableIcons.map((icon) => (
-                                <option key={icon.name} value={icon.name}>
-                                    {icon.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label htmlFor="currentAmount" className="block text-sm font-medium text-[var(--card-text-secondary)] mb-1">
-                            Current Amount (Optional)
-                        </label>
-                        <input
-                            type="text"
-                            id="currentAmount"
-                            value={currentAmountStr}
-                            onChange={(e) => setCurrentAmountStr(e.target.value.replace(/[^\d.]/g, ""))}
-                            className="w-full p-2.5 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none"
-                            placeholder="e.g., 100.00"
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="targetAmount" className="block text-sm font-medium text-[var(--card-text-secondary)] mb-1">
-                            Target Amount
-                        </label>
-                        <input
-                            type="text"
-                            id="targetAmount"
-                            value={targetAmountStr}
-                            onChange={(e) => setTargetAmountStr(e.target.value.replace(/[^\d.]/g, ""))}
-                            className="w-full p-2.5 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none"
-                            placeholder="e.g., 1000.00"
-                        />
-                    </div>
-                </div>
-
-                <div className="mt-6 flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2.5 rounded-lg bg-[var(--button-secondary-bg)] text-[var(--button-secondary-text)] hover:opacity-90 transition-opacity cursor-pointer text-sm font-medium"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        className="px-4 py-2.5 rounded-lg bg-[var(--button-primary-bg)] text-[var(--button-primary-text)] hover:opacity-90 transition-opacity cursor-pointer text-sm font-medium"
-                    >
-                        Save Goal
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-interface AddCardModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSaveCard: (newCardData: Omit<DebitCardDetails, "id" | "balance">) => void;
-    selectableGradients: SelectableGradient[];
-}
-
-const AddCardModal = ({ isOpen, onClose, onSaveCard, selectableGradients }: AddCardModalProps) => {
-    const [cardHolder, setCardHolder] = useState("");
-    const [cardNumber, setCardNumber] = useState("");
-    const [expiryMonth, setExpiryMonth] = useState("");
-    const [expiryYear, setExpiryYear] = useState("");
-    const [cvv, setCvv] = useState("");
-    const [network, setNetwork] = useState<"visa" | "mastercard">("visa");
-    const [selectedGradientClass, setSelectedGradientClass] = useState(selectableGradients[0]?.className || "");
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (isOpen) {
-            setCardHolder("");
-            setCardNumber("");
-            setExpiryMonth("");
-            setExpiryYear("");
-            setCvv("");
-            setNetwork("visa");
-            setSelectedGradientClass(selectableGradients[0]?.className || "");
-            setErrorMessage(null);
-        }
-    }, [isOpen, selectableGradients]);
-
-    const formatCardNumber = (value: string) => {
-        return value
-            .replace(/\D/g, "")
-            .replace(/(.{4})/g, "$1 ")
-            .trim()
-            .slice(0, 19);
-    };
-
-    const formatExpiry = (value: string) => {
-        return value.replace(/\D/g, "").slice(0, 2);
-    };
-
-    const formatCvv = (value: string) => {
-        return value.replace(/\D/g, "").slice(0, 4);
-    };
-
-    const handleSave = () => {
-        setErrorMessage(null);
-
-        if (!cardHolder.trim()) {
-            setErrorMessage("Cardholder name is required.");
-            return;
-        }
-        if (cardNumber.replace(/\s/g, "").length < 15 || cardNumber.replace(/\s/g, "").length > 16) {
-            setErrorMessage("Invalid card number length.");
-            return;
-        }
-        if (!/^(0[1-9]|1[0-2])$/.test(expiryMonth)) {
-            setErrorMessage("Invalid expiry month.");
-            return;
-        }
-        const currentYearShort = new Date().getFullYear() % 100;
-        if (!/^\d{2}$/.test(expiryYear) || parseInt(expiryYear) < currentYearShort) {
-            setErrorMessage("Invalid expiry year.");
-            return;
-        }
-        if (cvv.length < 3 || cvv.length > 4) {
-            setErrorMessage("Invalid CVV length.");
-            return;
-        }
-        if (!selectedGradientClass) {
-            setErrorMessage("Please select a card style.");
-            return;
-        }
-
-        const lastFour = cardNumber.replace(/\s/g, "").slice(-4);
-
-        onSaveCard({
-            cardHolder: cardHolder.trim(),
-            lastFour: lastFour,
-            network: network,
-            gradientClass: selectedGradientClass,
-            expiryDate: `${expiryMonth}/${expiryYear}`,
-        });
-        onClose();
-    };
-
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-            <div
-                className="bg-[var(--dropdown-bg)] p-6 rounded-xl shadow-2xl w-full max-w-lg text-[var(--card-text-primary)]"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-semibold">Add New Debit Card</h3>
-                    <button
-                        onClick={onClose}
-                        className="text-[var(--icon-color)] hover:text-[var(--icon-hover-color)] cursor-pointer p-1 rounded-full hover:bg-[var(--input-bg)]"
-                    >
-                        <XIcon size={22} />
-                    </button>
-                </div>
-
-                {errorMessage && (
-                    <div className="mb-4 p-3 bg-red-500/10 text-red-700 dark:text-red-400 border border-red-700/20 rounded-md text-sm">
-                        {errorMessage}
-                    </div>
-                )}
-
-                <div className="space-y-4">
-                    <div>
-                        <label htmlFor="cardHolder" className="block text-sm font-medium text-[var(--card-text-secondary)] mb-1">
-                            Cardholder Name
-                        </label>
-                        <input
-                            type="text"
-                            id="cardHolder"
-                            value={cardHolder}
-                            onChange={(e) => setCardHolder(e.target.value)}
-                            className="w-full p-2.5 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none"
-                            placeholder="e.g., John Doe"
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="cardNumber" className="block text-sm font-medium text-[var(--card-text-secondary)] mb-1">
-                            Card Number
-                        </label>
-                        <input
-                            type="text"
-                            id="cardNumber"
-                            value={cardNumber}
-                            onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                            className="w-full p-2.5 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none"
-                            placeholder="0000 0000 0000 0000"
-                        />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                        <div>
-                            <label htmlFor="expiryMonth" className="block text-sm font-medium text-[var(--card-text-secondary)] mb-1">
-                                Expiry MM
-                            </label>
-                            <input
-                                type="text"
-                                id="expiryMonth"
-                                value={expiryMonth}
-                                onChange={(e) => setExpiryMonth(formatExpiry(e.target.value))}
-                                className="w-full p-2.5 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none"
-                                placeholder="MM"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="expiryYear" className="block text-sm font-medium text-[var(--card-text-secondary)] mb-1">
-                                Expiry YY
-                            </label>
-                            <input
-                                type="text"
-                                id="expiryYear"
-                                value={expiryYear}
-                                onChange={(e) => setExpiryYear(formatExpiry(e.target.value))}
-                                className="w-full p-2.5 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none"
-                                placeholder="YY"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="cvv" className="block text-sm font-medium text-[var(--card-text-secondary)] mb-1">
-                                CVV
-                            </label>
-                            <input
-                                type="text"
-                                id="cvv"
-                                value={cvv}
-                                onChange={(e) => setCvv(formatCvv(e.target.value))}
-                                className="w-full p-2.5 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none"
-                                placeholder="123"
-                            />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="cardNetwork" className="block text-sm font-medium text-[var(--card-text-secondary)] mb-1">
-                                Network
-                            </label>
-                            <select
-                                id="cardNetwork"
-                                value={network}
-                                onChange={(e) => setNetwork(e.target.value as "visa" | "mastercard")}
-                                className="w-full p-2.5 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none appearance-none cursor-pointer"
-                            >
-                                <option value="visa">Visa</option>
-                                <option value="mastercard">Mastercard</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label htmlFor="cardStyle" className="block text-sm font-medium text-[var(--card-text-secondary)] mb-1">
-                                Card Style
-                            </label>
-                            <select
-                                id="cardStyle"
-                                value={selectedGradientClass}
-                                onChange={(e) => setSelectedGradientClass(e.target.value)}
-                                className="w-full p-2.5 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none appearance-none cursor-pointer"
-                            >
-                                {selectableGradients.map((grad) => (
-                                    <option key={grad.name} value={grad.className}>
-                                        {grad.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-6 flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2.5 rounded-lg bg-[var(--button-secondary-bg)] text-[var(--button-secondary-text)] hover:opacity-90 transition-opacity cursor-pointer text-sm font-medium"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        className="px-4 py-2.5 rounded-lg bg-[var(--button-primary-bg)] text-[var(--button-primary-text)] hover:opacity-90 transition-opacity cursor-pointer text-sm font-medium"
-                    >
-                        Save Card
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-interface ViewAllModalProps<T> {
-    isOpen: boolean;
-    onClose: () => void;
-    title: string;
-    items: T[];
-    renderItem: (item: T, index?: number) => React.ReactNode;
-    itemContainerClassName?: string;
-}
-
-const ViewAllModal = <T extends { id: string }>({
-    isOpen,
-    onClose,
-    title,
-    items,
-    renderItem,
-    itemContainerClassName = "space-y-1",
-}: ViewAllModalProps<T>) => {
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-            <div
-                className="bg-[var(--dropdown-bg)] p-6 rounded-xl shadow-2xl w-full max-w-2xl text-[var(--card-text-primary)] flex flex-col"
-                style={{ maxHeight: "85vh" }}
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex justify-between items-center mb-6 flex-shrink-0">
-                    <h3 className="text-xl font-semibold">{title}</h3>
-                    <button
-                        onClick={onClose}
-                        className="text-[var(--icon-color)] hover:text-[var(--icon-hover-color)] cursor-pointer p-1 rounded-full hover:bg-[var(--input-bg)]"
-                    >
-                        <XIcon size={22} />
-                    </button>
-                </div>
-                {items.length === 0 ? (
-                    <p className="text-center text-[var(--card-text-secondary)] py-8">No items to display.</p>
-                ) : (
-                    <ul className={`flex-grow overflow-y-auto ${itemContainerClassName}`}>
-                        {items.map((item, index) => {
-                            const element = renderItem(item, index) as React.ReactElement;
-                            return React.cloneElement(element, { key: item.id });
-                        })}
-                    </ul>
-                )}
-            </div>
-        </div>
-    );
-};
-
-const FinancePlatformDisplay = () => {
-    const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
-    const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [filteredInvestments, setFilteredInvestments] = useState<SearchableInvestmentOption[]>([]);
-    const [isSearchDropdownVisible, setIsSearchDropdownVisible] = useState(false);
-    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-    const [userGoals, setUserGoals] = useState<GoalItemData[]>(mockGoals);
-    const [isAddGoalModalOpen, setIsAddGoalModalOpen] = useState(false);
-    const [userDebitCards, setUserDebitCards] = useState<DebitCardDetails[]>(mockDebitCards);
-    const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false);
-    const [isViewAllTransactionsOpen, setIsViewAllTransactionsOpen] = useState(false);
-    const [isViewAllGoalsOpen, setIsViewAllGoalsOpen] = useState(false);
-    const [isViewAllInvestmentsOpen, setIsViewAllInvestmentsOpen] = useState(false);
-    const [toastMsg, setToastMsg] = useState<string | null>(null);
-    const toastTimeout = useRef<NodeJS.Timeout | null>(null);
-    const showToast = (msg: string) => {
-        setToastMsg(msg);
-        if (toastTimeout.current) clearTimeout(toastTimeout.current);
-        toastTimeout.current = setTimeout(() => setToastMsg(null), 2200);
-    };
-
-    const notificationRef = useRef<HTMLDivElement>(null);
-    const profileRef = useRef<HTMLDivElement>(null);
-    const bellRef = useRef<HTMLButtonElement>(null);
-    const profileImgRef = useRef<HTMLImageElement>(null);
-    const searchInputRef = useRef<HTMLInputElement>(null);
-    const mobileSearchInputRef = useRef<HTMLInputElement>(null);
-    const searchDropdownRef = useRef<HTMLDivElement | null>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (
-                showNotificationDropdown &&
-                notificationRef.current &&
-                !notificationRef.current.contains(event.target as Node) &&
-                bellRef.current &&
-                !bellRef.current.contains(event.target as Node)
-            ) {
-                setShowNotificationDropdown(false);
-            }
-            if (
-                showProfileDropdown &&
-                profileRef.current &&
-                !profileRef.current.contains(event.target as Node) &&
-                profileImgRef.current &&
-                !profileImgRef.current.contains(event.target as Node)
-            ) {
-                setShowProfileDropdown(false);
-            }
-            if (isSearchDropdownVisible && searchDropdownRef.current && !searchDropdownRef.current.contains(event.target as Node)) {
-                const activeSearchInput =
-                    (document.activeElement === searchInputRef.current && searchInputRef.current?.contains(event.target as Node)) ||
-                    (document.activeElement === mobileSearchInputRef.current &&
-                        mobileSearchInputRef.current?.contains(event.target as Node));
-                if (!activeSearchInput) {
-                    setIsSearchDropdownVisible(false);
-                }
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [showNotificationDropdown, showProfileDropdown, isSearchDropdownVisible]);
-
-    useEffect(() => {
-        if (searchQuery.trim() === "") {
-            setFilteredInvestments([]);
-            if (document.activeElement !== searchInputRef.current && document.activeElement !== mobileSearchInputRef.current) {
-                setIsSearchDropdownVisible(false);
-            }
-            return;
-        }
-        const lowerCaseQuery = searchQuery.toLowerCase();
-        const results = mockSearchableInvestments.filter(
-            (item) =>
-                item.name.toLowerCase().includes(lowerCaseQuery) || (item.ticker && item.ticker.toLowerCase().includes(lowerCaseQuery))
-        );
-        setFilteredInvestments(results);
-        setIsSearchDropdownVisible(true);
-    }, [searchQuery]);
-
-    const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchQuery(event.target.value);
-    };
-
-    const prepareSearchDropdown = () => {
-        setIsSearchDropdownVisible(true);
-        if (searchQuery.trim() === "" && filteredInvestments.length === 0) {
-            setFilteredInvestments([]);
-        }
-    };
-
-    const selectSearchItem = (item: SearchableInvestmentOption) => {
-        console.log("Selected investment:", item);
-        setSearchQuery(item.name);
-        setIsSearchDropdownVisible(false);
-        if (isMobileSearchOpen) {
-            setIsMobileSearchOpen(false);
-        }
-    };
-
-    const openMobileSearchModal = () => {
-        setIsMobileSearchOpen(true);
-    };
-
-    const closeMobileSearchModal = () => {
-        setIsMobileSearchOpen(false);
-    };
-
-    const handleAddNewGoal = (newGoalData: Omit<GoalItemData, "id">) => {
-        const newGoal: GoalItemData = {
-            ...newGoalData,
-            id: `goal-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        };
-        setUserGoals((prevGoals) => [...prevGoals, newGoal]);
-        setIsAddGoalModalOpen(false);
-    };
-
-    const handleSaveNewCard = (newCardData: Omit<DebitCardDetails, "id" | "balance">) => {
-        const newCard: DebitCardDetails = {
-            ...newCardData,
-            id: `card-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            balance: Math.floor(Math.random() * 5000) + 1000,
-        };
-        setUserDebitCards((prevCards) => [...prevCards, newCard]);
-        setIsAddCardModalOpen(false);
-    };
-
-    const allTransactions = [...mockTransactions, ...mockTransactions.map((tx, idx) => ({ ...tx, id: tx.id + "-2" }))];
-    const allInvestments = [...mockInvestments, ...mockInvestments.map((inv, idx) => ({ ...inv, id: inv.id + "-2" }))];
-
-    return (
-        <ToastContext.Provider value={showToast}>
-            <div className={`min-h-screen flex flex-col`}>
-                <GlobalThemeStyles />
-                <header className="p-4 md:p-6 lg:p-8 flex justify-between items-center">
-                    <h1 className="text-3xl font-bold text-[var(--brand-text-color)]">Pillar.</h1>
-                    <div className="flex items-center gap-2 md:gap-4">
-                        <div className="relative hidden md:block" ref={searchDropdownRef}>
-                            <SearchIcon
-                                size={18}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--input-placeholder)] pointer-events-none"
-                            />
-                            <input
-                                ref={searchInputRef}
-                                type="search"
-                                placeholder="Search investments..."
-                                value={searchQuery}
-                                onChange={handleSearchInputChange}
-                                onFocus={prepareSearchDropdown}
-                                className="pl-10 pr-4 py-2 rounded-lg bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent-primary)] outline-none transition-shadow w-full md:w-64 lg:w-72"
-                            />
-                            <SearchDropdown
-                                isOpen={isSearchDropdownVisible && !isMobileSearchOpen}
-                                items={filteredInvestments}
-                                query={searchQuery}
-                                onSelect={selectSearchItem}
-                            />
-                        </div>
-                        <button
-                            onClick={openMobileSearchModal}
-                            className="md:hidden p-2 rounded-full cursor-pointer bg-[var(--input-bg)] text-[var(--icon-color)] hover:text-[var(--icon-hover-color)] transition-colors"
-                        >
-                            <SearchIcon size={20} />
-                        </button>
-
-                        <ThemeToggleButton />
-                        <div className="relative">
-                            <button
-                                ref={bellRef}
-                                onClick={() => setShowNotificationDropdown((prev) => !prev)}
-                                className="text-[var(--icon-color)] hover:text-[var(--icon-hover-color)] cursor-pointer transition-colors p-1.5 rounded-full hover:bg-[var(--input-bg)]"
-                            >
-                                <Bell size={24} />
-                            </button>
-                            <div ref={notificationRef}>
-                                <NotificationDropdown
-                                    isOpen={showNotificationDropdown}
-                                    onClose={() => setShowNotificationDropdown(false)}
-                                />
-                            </div>
-                        </div>
-                        <div className="relative">
-                            <img
-                                ref={profileImgRef}
-                                src="https://i.pravatar.cc/32?u=userProfile"
-                                alt="User Profile"
-                                className="w-8 h-8 rounded-full object-cover cursor-pointer"
-                                onClick={() => setShowProfileDropdown((prev) => !prev)}
-                            />
-                            <div ref={profileRef}>
-                                <ProfileDropdown isOpen={showProfileDropdown} onClose={() => setShowProfileDropdown(false)} />
-                            </div>
-                        </div>
-                    </div>
-                </header>
-                <main className="flex-grow p-4 md:p-6 lg:p-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-1 flex flex-col gap-6">
-                            <RecentTransactions transactions={allTransactions} onViewAllClick={() => setIsViewAllTransactionsOpen(true)} />
-                            <MyGoals
-                                goals={userGoals}
-                                onAddNewGoalClick={() => setIsAddGoalModalOpen(true)}
-                                onViewAllClick={() => setIsViewAllGoalsOpen(true)}
-                            />
-                        </div>
-                        <div className="lg:col-span-1 flex flex-col gap-6">
-                            <BalanceDisplay debitCards={userDebitCards} onAddNewCardClick={() => setIsAddCardModalOpen(true)} />
-                            <FinancialAnalyticsCard />
-                        </div>
-                        <div className="lg:col-span-1 flex flex-col gap-6">
-                            <MyInvestments investments={allInvestments} onViewAllClick={() => setIsViewAllInvestmentsOpen(true)} />
-                            <FastTransfer />
-                        </div>
-                    </div>
-                </main>
-                <AppFooter />
-                <MobileSearchModal
-                    isOpen={isMobileSearchOpen}
-                    onClose={closeMobileSearchModal}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    handleSearchInputChange={handleSearchInputChange}
-                    handleSearchInputFocus={prepareSearchDropdown}
-                    isSearchDropdownVisible={isSearchDropdownVisible && searchQuery.length > 0}
-                    filteredInvestments={filteredInvestments}
-                    handleInvestmentSelect={selectSearchItem}
-                    searchDropdownRef={searchDropdownRef}
-                    mobileSearchInputRef={mobileSearchInputRef}
-                />
-                <AddGoalModal
-                    isOpen={isAddGoalModalOpen}
-                    onClose={() => setIsAddGoalModalOpen(false)}
-                    onSaveGoal={handleAddNewGoal}
-                    selectableIcons={selectableGoalIconsList}
-                />
-                <AddCardModal
-                    isOpen={isAddCardModalOpen}
-                    onClose={() => setIsAddCardModalOpen(false)}
-                    onSaveCard={handleSaveNewCard}
-                    selectableGradients={selectableCardGradients}
-                />
-
-                <ViewAllModal<Transaction>
-                    isOpen={isViewAllTransactionsOpen}
-                    onClose={() => setIsViewAllTransactionsOpen(false)}
-                    title="All Transactions"
-                    items={allTransactions}
-                    renderItem={(item: Transaction) => <TransactionItem transaction={item} />}
-                    itemContainerClassName="space-y-0 divide-y divide-[var(--border-color-primary)]"
-                />
-
-                <ViewAllModal<GoalItemData>
-                    isOpen={isViewAllGoalsOpen}
-                    onClose={() => setIsViewAllGoalsOpen(false)}
-                    title="All Goals"
-                    items={userGoals}
-                    renderItem={(item: GoalItemData) => <GoalItem item={item} />}
-                />
-
-                <ViewAllModal<InvestmentItemData>
-                    isOpen={isViewAllInvestmentsOpen}
-                    onClose={() => setIsViewAllInvestmentsOpen(false)}
-                    title="All Investments"
-                    items={allInvestments}
-                    renderItem={(item: InvestmentItemData) => <InvestmentItem item={item} />}
-                />
-                {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
-            </div>
-        </ToastContext.Provider>
-    );
-};
-
-export default function Page() {
+const LandingPage = () => {
     return (
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-            <FinancePlatformDisplay />
+            <GlobalThemeStyles />
+            <div className="flex flex-col min-h-screen bg-[var(--page-bg)] font-[var(--font-body)] ">
+                <Header />
+                <main className="flex-grow">
+                    <HeroSection />
+                    <ClientLogosSection />
+                    <FeaturesSection />
+                    <AboutUsSection />
+                    <TestimonialsSection />
+                </main>
+                <Footer />
+            </div>
         </ThemeProvider>
     );
-}
+};
+
+export default LandingPage;
