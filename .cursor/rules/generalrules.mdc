@@ -68,7 +68,6 @@ Follow these rules when you write code:
 - UI MUST be visually appealing. There is a major emphasis on visually impressive UI design in this project, please try your best to make sure the UIs you create are modern, contemporary, and visually appealing.
 - Team recommends using the following packages to enhance your UI (when necessary):
     react-icons
-    lucide-react
     motion
     shadcn-ui
     recharts

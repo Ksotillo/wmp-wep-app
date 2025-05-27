@@ -1,64 +1,1952 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import Image from "next/image";
-import { ThemeProvider } from "next-themes";
+import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
-import { motion, useAnimation, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import { FiMoon, FiSun, FiMail } from "react-icons/fi";
-import dynamic from "next/dynamic";
+import {
+    FiSearch,
+    FiPlus,
+    FiFolder,
+    FiFile,
+    FiGrid,
+    FiList,
+    FiMoreVertical,
+    FiHome,
+    FiLock,
+    FiUsers,
+    FiTrash2,
+    FiSettings,
+    FiBell,
+    FiChevronDown,
+    FiChevronRight,
+    FiCheckSquare,
+    FiX,
+    FiMoon,
+    FiSun,
+    FiUser,
+    FiLogOut,
+    FiUpload,
+    FiImage,
+    FiShare2,
+    FiDownload,
+    FiMove,
+    FiEye,
+    FiCode,
+    FiAlertTriangle,
+} from "react-icons/fi";
+import { RiFileExcelLine, RiDashboardLine } from "react-icons/ri";
+import { motion } from "framer-motion";
+import { ThemeProvider } from "next-themes";
+
+interface Folder {
+    id: string;
+    name: string;
+    path: string;
+    parent: string | null;
+    isExpanded?: boolean;
+    children?: Folder[];
+    files?: File[];
+}
+
+interface File {
+    id: string;
+    name: string;
+    type: string;
+    size: string;
+    uploadedBy: string;
+    uploadedByEmail: string;
+    dateModified: string;
+}
+
+const DocumentDashboard = () => {
+    const [mounted, setMounted] = useState(false);
+    const { theme, setTheme } = useTheme();
+    const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+    const [selectedFileType, setSelectedFileType] = useState<string>("all");
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [foldersExpanded, setFoldersExpanded] = useState(true);
+    const [selectedItems, setSelectedItems] = useState<string[]>([]);
+    const [showFolderModal, setShowFolderModal] = useState(false);
+    const [newFolderName, setNewFolderName] = useState("");
+    const [folderPath, setFolderPath] = useState("/");
+    const [currentFolder, setCurrentFolder] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const itemsPerPage = 5;
+    const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string }[]>([{ id: null, name: "All files" }]);
+    const [previewFile, setPreviewFile] = useState<File | null>(null);
+    const [showPreviewModal, setShowPreviewModal] = useState(false);
+    const [showSharingModal, setShowSharingModal] = useState(false);
+    const [sharingEmails, setSharingEmails] = useState("");
+    const [filesToShare, setFilesToShare] = useState<string[]>([]);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
+    const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
+    const [rootFiles, setRootFiles] = useState<File[]>([
+        {
+            id: "1",
+            name: "Dashboard tech requirements",
+            type: "docx",
+            size: "220 KB",
+            uploadedBy: "Amélie",
+            uploadedByEmail: "amelie@example.com",
+            dateModified: "2024-01-15",
+        },
+        {
+            id: "2",
+            name: "Marketing site requirements",
+            type: "docx",
+            size: "488 KB",
+            uploadedBy: "Ammar",
+            uploadedByEmail: "ammar@example.com",
+            dateModified: "2024-01-14",
+        },
+        {
+            id: "3",
+            name: "Q4_2023 Reporting",
+            type: "pdf",
+            size: "1.2 MB",
+            uploadedBy: "Amélie",
+            uploadedByEmail: "amelie@example.com",
+            dateModified: "2024-01-10",
+        },
+        {
+            id: "4",
+            name: "Q3_2023 Reporting",
+            type: "pdf",
+            size: "1.3 MB",
+            uploadedBy: "Sienna",
+            uploadedByEmail: "sienna@example.com",
+            dateModified: "2023-10-15",
+        },
+        {
+            id: "5",
+            name: "Q2_2023 Reporting",
+            type: "pdf",
+            size: "1.1 MB",
+            uploadedBy: "Olly Shi",
+            uploadedByEmail: "olly@example.com",
+            dateModified: "2023-07-10",
+        },
+        {
+            id: "6",
+            name: "Q1_2023 Reporting",
+            type: "pdf",
+            size: "1.8 MB",
+            uploadedBy: "Mathilde",
+            uploadedByEmail: "mathilde@example.com",
+            dateModified: "2023-04-05",
+        },
+        {
+            id: "7",
+            name: "FY_2022-23 Financials",
+            type: "xls",
+            size: "628 KB",
+            uploadedBy: "Sienna",
+            uploadedByEmail: "sienna@example.com",
+            dateModified: "2023-12-28",
+        },
+        {
+            id: "8",
+            name: "FY_2021-22 Financials",
+            type: "xls",
+            size: "544 KB",
+            uploadedBy: "Sienna",
+            uploadedByEmail: "sienna@example.com",
+            dateModified: "2022-12-30",
+        },
+    ]);
+
+    const [folderStructure, setFolderStructure] = useState<Folder[]>([
+        {
+            id: "f1",
+            name: "Sophie's files",
+            path: "/Sophie's files",
+            parent: null,
+            isExpanded: false,
+            children: [
+                {
+                    id: "f1-1",
+                    name: "Projects",
+                    path: "/Sophie's files/Projects",
+                    parent: "f1",
+                    isExpanded: false,
+                    files: [
+                        {
+                            id: "file-1",
+                            name: "Marketing Campaign Draft",
+                            type: "docx",
+                            size: "352 KB",
+                            uploadedBy: "Sophie",
+                            uploadedByEmail: "sophie@example.com",
+                            dateModified: "2023-12-10",
+                        },
+                        {
+                            id: "file-2",
+                            name: "Budget Overview Q4",
+                            type: "xls",
+                            size: "1.2 MB",
+                            uploadedBy: "Sophie",
+                            uploadedByEmail: "sophie@example.com",
+                            dateModified: "2023-12-15",
+                        },
+                        {
+                            id: "file-3",
+                            name: "Campaign Assets",
+                            type: "zip",
+                            size: "4.7 MB",
+                            uploadedBy: "Sophie",
+                            uploadedByEmail: "sophie@example.com",
+                            dateModified: "2023-12-18",
+                        },
+                    ],
+                },
+                {
+                    id: "f1-2",
+                    name: "Resources",
+                    path: "/Sophie's files/Resources",
+                    parent: "f1",
+                    isExpanded: false,
+                    files: [
+                        {
+                            id: "file-4",
+                            name: "Brand Guidelines 2023",
+                            type: "pdf",
+                            size: "5.8 MB",
+                            uploadedBy: "Sophie",
+                            uploadedByEmail: "sophie@example.com",
+                            dateModified: "2023-11-20",
+                        },
+                        {
+                            id: "file-5",
+                            name: "Stock Photos Collection",
+                            type: "zip",
+                            size: "24.3 MB",
+                            uploadedBy: "Sophie",
+                            uploadedByEmail: "sophie@example.com",
+                            dateModified: "2023-10-05",
+                        },
+                    ],
+                },
+            ],
+            files: [
+                {
+                    id: "file-6",
+                    name: "Personal Notes",
+                    type: "docx",
+                    size: "78 KB",
+                    uploadedBy: "Sophie",
+                    uploadedByEmail: "sophie@example.com",
+                    dateModified: "2024-01-03",
+                },
+                {
+                    id: "file-7",
+                    name: "Project Timeline",
+                    type: "pdf",
+                    size: "450 KB",
+                    uploadedBy: "Sophie",
+                    uploadedByEmail: "sophie@example.com",
+                    dateModified: "2023-12-28",
+                },
+            ],
+        },
+        {
+            id: "f2",
+            name: "Dashboard UI",
+            path: "/Dashboard UI",
+            parent: null,
+            isExpanded: false,
+            children: [
+                {
+                    id: "f2-1",
+                    name: "Components",
+                    path: "/Dashboard UI/Components",
+                    parent: "f2",
+                    isExpanded: false,
+                    files: [
+                        {
+                            id: "file-8",
+                            name: "Button Components",
+                            type: "tsx",
+                            size: "12.5 KB",
+                            uploadedBy: "Ammar",
+                            uploadedByEmail: "ammar@example.com",
+                            dateModified: "2024-01-15",
+                        },
+                        {
+                            id: "file-9",
+                            name: "Card Variants",
+                            type: "tsx",
+                            size: "18.2 KB",
+                            uploadedBy: "Ammar",
+                            uploadedByEmail: "ammar@example.com",
+                            dateModified: "2024-01-15",
+                        },
+                        {
+                            id: "file-10",
+                            name: "Navigation Elements",
+                            type: "tsx",
+                            size: "22.7 KB",
+                            uploadedBy: "Ammar",
+                            uploadedByEmail: "ammar@example.com",
+                            dateModified: "2024-01-16",
+                        },
+                    ],
+                },
+                {
+                    id: "f2-2",
+                    name: "Layouts",
+                    path: "/Dashboard UI/Layouts",
+                    parent: "f2",
+                    isExpanded: false,
+                    files: [
+                        {
+                            id: "file-11",
+                            name: "Dashboard Layout",
+                            type: "tsx",
+                            size: "8.3 KB",
+                            uploadedBy: "Mathilde",
+                            uploadedByEmail: "mathilde@example.com",
+                            dateModified: "2024-01-12",
+                        },
+                        {
+                            id: "file-12",
+                            name: "Analytics Layout",
+                            type: "tsx",
+                            size: "7.5 KB",
+                            uploadedBy: "Mathilde",
+                            uploadedByEmail: "mathilde@example.com",
+                            dateModified: "2024-01-14",
+                        },
+                    ],
+                },
+            ],
+            files: [
+                {
+                    id: "file-13",
+                    name: "UI Design System",
+                    type: "fig",
+                    size: "34.2 MB",
+                    uploadedBy: "Mathilde",
+                    uploadedByEmail: "mathilde@example.com",
+                    dateModified: "2023-12-20",
+                },
+                {
+                    id: "file-14",
+                    name: "Component Library Documentation",
+                    type: "pdf",
+                    size: "2.8 MB",
+                    uploadedBy: "Mathilde",
+                    uploadedByEmail: "mathilde@example.com",
+                    dateModified: "2023-12-22",
+                },
+            ],
+        },
+        {
+            id: "f3",
+            name: "Websites",
+            path: "/Websites",
+            parent: null,
+            isExpanded: false,
+            files: [
+                {
+                    id: "file-15",
+                    name: "Company Homepage Redesign",
+                    type: "html",
+                    size: "86.5 KB",
+                    uploadedBy: "Olly Shi",
+                    uploadedByEmail: "olly@example.com",
+                    dateModified: "2024-01-05",
+                },
+                {
+                    id: "file-16",
+                    name: "Landing Page Assets",
+                    type: "zip",
+                    size: "42.7 MB",
+                    uploadedBy: "Olly Shi",
+                    uploadedByEmail: "olly@example.com",
+                    dateModified: "2024-01-07",
+                },
+                {
+                    id: "file-17",
+                    name: "SEO Strategy",
+                    type: "docx",
+                    size: "165 KB",
+                    uploadedBy: "Sienna",
+                    uploadedByEmail: "sienna@example.com",
+                    dateModified: "2024-01-10",
+                },
+                {
+                    id: "file-18",
+                    name: "Analytics Report Dec 2023",
+                    type: "pdf",
+                    size: "1.45 MB",
+                    uploadedBy: "Sienna",
+                    uploadedByEmail: "sienna@example.com",
+                    dateModified: "2024-01-02",
+                },
+            ],
+        },
+    ]);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const switchTheme = () => {
+        setTheme(theme === "dark" ? "light" : "dark");
+    };
+
+    const toggleSelection = (id: string) => {
+        if (selectedItems.includes(id)) {
+            setSelectedItems(selectedItems.filter((item) => item !== id));
+        } else {
+            setSelectedItems([...selectedItems, id]);
+        }
+    };
+
+    const toggleViewMode = () => {
+        setViewMode(viewMode === "grid" ? "list" : "grid");
+    };
+
+    const handleFileTypeFilter = (type: string) => {
+        if (type === selectedFileType) return;
+        setSelectedFileType(type);
+        setCurrentPage(1);
+    };
+
+    const toggleFolderExpansion = (folderId: string) => {
+        setFolderStructure((prevStructure) => {
+            return prevStructure.map((folder) => {
+                if (folder.id === folderId) {
+                    return { ...folder, isExpanded: !folder.isExpanded };
+                } else if (folder.children) {
+                    const updatedChildren = toggleChildFolder(folder.children, folderId);
+                    return { ...folder, children: updatedChildren };
+                }
+                return folder;
+            });
+        });
+    };
+
+    const toggleChildFolder = (children: Folder[], folderId: string): Folder[] => {
+        return children.map((child) => {
+            if (child.id === folderId) {
+                return { ...child, isExpanded: !child.isExpanded };
+            } else if (child.children) {
+                return { ...child, children: toggleChildFolder(child.children, folderId) };
+            }
+            return child;
+        });
+    };
+
+    const findFolder = (folders: Folder[], id: string): Folder | null => {
+        for (const folder of folders) {
+            if (folder.id === id) {
+                return folder;
+            }
+            if (folder.children) {
+                const found = findFolder(folder.children, id);
+                if (found) return found;
+            }
+        }
+        return null;
+    };
+
+    const getCurrentFolders = (): Folder[] => {
+        if (!currentFolder) {
+            return folderStructure;
+        }
+
+        const folder = findFolder(folderStructure, currentFolder);
+        return folder?.children || [];
+    };
+
+    const getCurrentFiles = (): File[] => {
+        if (!currentFolder) {
+            return [];
+        }
+
+        const folder = findFolder(folderStructure, currentFolder);
+        return folder?.files || [];
+    };
+
+    const getCurrentFolderName = (): string => {
+        if (!currentFolder) {
+            return "All files";
+        }
+
+        const folder = findFolder(folderStructure, currentFolder);
+        return folder?.name || "All files";
+    };
+
+    const navigateToFolder = (folderId: string) => {
+        const folder = findFolder(folderStructure, folderId);
+        if (folder) {
+            setCurrentFolder(folderId);
+
+            const newBreadcrumbs = buildBreadcrumbs(folder);
+            setBreadcrumbs(newBreadcrumbs);
+        }
+    };
+
+    const navigateToRoot = () => {
+        setCurrentFolder(null);
+        setBreadcrumbs([{ id: null, name: "All files" }]);
+    };
+
+    const buildBreadcrumbs = (folder: Folder): { id: string | null; name: string }[] => {
+        const result: { id: string | null; name: string }[] = [];
+
+        result.push({ id: null, name: "All files" });
+
+        const buildPath = (currentFolder: Folder, structure: Folder[]): boolean => {
+            const topLevelFolder = structure.find((f) => f.id === currentFolder.id);
+            if (topLevelFolder) {
+                result.push({ id: topLevelFolder.id, name: topLevelFolder.name });
+                return true;
+            }
+
+            for (const folder of structure) {
+                if (folder.children) {
+                    const childFolder = folder.children.find((f) => f.id === currentFolder.id);
+                    if (childFolder) {
+                        result.push({ id: folder.id, name: folder.name });
+                        result.push({ id: childFolder.id, name: childFolder.name });
+                        return true;
+                    }
+
+                    if (folder.children && folder.children.length > 0) {
+                        const found = buildPath(currentFolder, folder.children);
+                        if (found) {
+                            result.splice(1, 0, { id: folder.id, name: folder.name });
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        };
+
+        buildPath(folder, folderStructure);
+
+        return result;
+    };
+
+    const getAvailablePaths = (): { id: string; path: string }[] => {
+        const basePaths = [{ id: "root", path: "/" }];
+
+        const extractPaths = (folders: Folder[]): { id: string; path: string }[] => {
+            let paths: { id: string; path: string }[] = [];
+
+            for (const folder of folders) {
+                paths.push({ id: folder.id, path: folder.path });
+
+                if (folder.children && folder.children.length > 0) {
+                    paths = [...paths, ...extractPaths(folder.children)];
+                }
+            }
+
+            return paths;
+        };
+
+        return [...basePaths, ...extractPaths(folderStructure)];
+    };
+
+    const getParentIdFromPath = (path: string): string | null => {
+        const allPaths = getAvailablePaths();
+        const parentFolder = allPaths.find((p) => p.path === path);
+        return parentFolder ? parentFolder.id : null;
+    };
+
+    const addChildFolder = (folders: Folder[], parentPath: string, newFolder: Folder): Folder[] => {
+        return folders.map((folder) => {
+            if (folder.path === parentPath) {
+                return {
+                    ...folder,
+                    isExpanded: true,
+                    children: folder.children ? [...folder.children, newFolder] : [newFolder],
+                };
+            } else if (folder.children) {
+                return {
+                    ...folder,
+                    children: addChildFolder(folder.children, parentPath, newFolder),
+                };
+            }
+            return folder;
+        });
+    };
+
+    const createNewFolder = () => {
+        if (!newFolderName.trim()) {
+            return;
+        }
+
+        const newFolderId = `f${Date.now()}`;
+        const newPath = folderPath === "/" ? `/${newFolderName}` : `${folderPath}/${newFolderName}`;
+
+        if (folderPath === "/") {
+            setFolderStructure([...folderStructure, { id: newFolderId, name: newFolderName, path: newPath, parent: null }]);
+        } else {
+            const updatedStructure = addChildFolder(folderStructure, folderPath, {
+                id: newFolderId,
+                name: newFolderName,
+                path: newPath,
+                parent: getParentIdFromPath(folderPath),
+            });
+
+            setFolderStructure(updatedStructure);
+        }
+
+        setNewFolderName("");
+        setShowFolderModal(false);
+    };
+
+    const renderCurrentFolders = () => {
+        const folders = getCurrentFolders();
+
+        if (folders.length === 0) {
+            return (
+                <div className="text-center p-8 text-[var(--text-secondary)]">
+                    <p>No folders found in this location</p>
+                    <button
+                        onClick={() => setShowFolderModal(true)}
+                        className="mt-4 px-4 py-2 bg-[var(--accent-primary)] text-white rounded-md hover:opacity-90 cursor-pointer"
+                    >
+                        Create New Folder
+                    </button>
+                </div>
+            );
+        }
+
+        return (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                {folders.map((folder) => (
+                    <div
+                        key={folder.id}
+                        onClick={() => navigateToFolder(folder.id)}
+                        className="bg-[var(--card-bg)] p-4 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-[var(--hover-bg)] transition-colors duration-200"
+                    >
+                        <div className="w-12 h-12 bg-[var(--icon-bg)] rounded-lg flex items-center justify-center mb-3 text-[var(--page-text-primary)]">
+                            <FiFolder size={24} className="text-white" />
+                        </div>
+                        <span className="text-sm font-medium text-[var(--page-text-primary)]">{folder.name}</span>
+                        <div className="text-xs text-[var(--text-secondary)] mt-1">{folder.files?.length || 0} files</div>
+                    </div>
+                ))}
+                <div
+                    onClick={() => setShowFolderModal(true)}
+                    className="bg-[var(--card-bg)] p-4 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-[var(--hover-bg)] transition-colors duration-200"
+                >
+                    <div className="w-12 h-12 bg-[var(--icon-bg)] rounded-lg flex items-center justify-center mb-3 text-[var(--page-text-primary)]">
+                        <FiPlus size={24} className="text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-[var(--page-text-primary)]">New Folder</span>
+                </div>
+            </div>
+        );
+    };
+
+    const renderFolderTree = (folders: Folder[]) => {
+        return (
+            <ul className="space-y-1">
+                {folders.map((folder) => (
+                    <li key={folder.id}>
+                        <div
+                            className="flex items-center gap-3 px-3 py-2 rounded-md text-[var(--sidebar-text)] hover:bg-[var(--hover-bg)] transition-colors duration-200 cursor-pointer"
+                            onClick={() => navigateToFolder(folder.id)}
+                        >
+                            {folder.children && folder.children.length > 0 ? (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleFolderExpansion(folder.id);
+                                    }}
+                                    className="text-[var(--sidebar-text)] hover:text-[var(--page-text-primary)] transition-colors duration-200"
+                                >
+                                    {folder.isExpanded ? <FiChevronDown size={14} /> : <FiChevronRight size={14} />}
+                                </button>
+                            ) : (
+                                <div className="w-3.5 h-3.5"></div>
+                            )}
+                            <FiFolder className="text-[var(--sidebar-text)]" />
+                            <span className="text-sm">{folder.name}</span>
+                        </div>
+
+                        {folder.children && folder.children.length > 0 && folder.isExpanded && (
+                            <div className="pl-4 mt-1">{renderFolderTree(folder.children)}</div>
+                        )}
+                    </li>
+                ))}
+            </ul>
+        );
+    };
+
+    const filterBySearchQuery = (files: File[]): File[] => {
+        if (!searchQuery.trim()) return files;
+
+        const query = searchQuery.toLowerCase().trim();
+        return files.filter(
+            (file) =>
+                file.name.toLowerCase().includes(query) ||
+                file.type.toLowerCase().includes(query) ||
+                file.uploadedBy.toLowerCase().includes(query)
+        );
+    };
+
+    const filteredFiles = (() => {
+        const typeFiltered = currentFolder
+            ? selectedFileType === "all"
+                ? getCurrentFiles()
+                : getCurrentFiles().filter((file) => file.type === selectedFileType)
+            : selectedFileType === "all"
+            ? rootFiles
+            : rootFiles.filter((file) => file.type === selectedFileType);
+
+        return filterBySearchQuery(typeFiltered);
+    })();
+
+    const totalPages = Math.ceil(filteredFiles.length / itemsPerPage);
+    const paginatedFiles = filteredFiles.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const changePage = (page: number) => {
+        if (page < 1 || page > totalPages) return;
+        setCurrentPage(page);
+    };
+
+    const availablePaths = getAvailablePaths();
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+        if (!selectedFile) return;
+
+        const fileName = selectedFile.name;
+        const fileExtension = fileName.split(".").pop()?.toLowerCase() || "";
+        let fileType = fileExtension;
+
+        const typeMap: { [key: string]: string } = {
+            doc: "docx",
+            docx: "docx",
+            pdf: "pdf",
+            xls: "xls",
+            xlsx: "xls",
+            csv: "xls",
+            txt: "txt",
+            jpg: "jpg",
+            jpeg: "jpg",
+            png: "jpg",
+            gif: "jpg",
+            zip: "zip",
+            rar: "zip",
+        };
+
+        if (typeMap[fileExtension]) {
+            fileType = typeMap[fileExtension];
+        }
+
+        let fileSize: string;
+        if (selectedFile.size < 1024) {
+            fileSize = `${selectedFile.size} B`;
+        } else if (selectedFile.size < 1024 * 1024) {
+            fileSize = `${Math.round(selectedFile.size / 1024)} KB`;
+        } else {
+            fileSize = `${Math.round((selectedFile.size / (1024 * 1024)) * 10) / 10} MB`;
+        }
+
+        const newFileId = `file-${Date.now()}`;
+        const uploadDate = new Date().toISOString().split("T")[0];
+
+        const newFile = {
+            id: newFileId,
+            name: fileName,
+            type: fileType,
+            size: fileSize,
+            uploadedBy: "Sophie Orwell",
+            uploadedByEmail: "sophie@example.com",
+            dateModified: uploadDate,
+        };
+
+        if (!currentFolder) {
+            setRootFiles((prevFiles) => [...prevFiles, newFile]);
+        } else {
+            setFolderStructure((prevStructure) => {
+                const addFileToNestedFolder = (folders: Folder[]): Folder[] => {
+                    return folders.map((folder) => {
+                        if (folder.id === currentFolder) {
+                            return {
+                                ...folder,
+                                files: folder.files ? [...folder.files, newFile] : [newFile],
+                            };
+                        } else if (folder.children) {
+                            return {
+                                ...folder,
+                                children: addFileToNestedFolder(folder.children),
+                            };
+                        }
+                        return folder;
+                    });
+                };
+
+                return addFileToNestedFolder(prevStructure);
+            });
+        }
+
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    const toggleAllSelection = () => {
+        if (paginatedFiles.length === 0) return;
+
+        if (selectedItems.length === paginatedFiles.length) {
+            setSelectedItems([]);
+        } else {
+            setSelectedItems(paginatedFiles.map((file) => file.id));
+        }
+    };
+
+    const areAllFilesSelected = paginatedFiles.length > 0 && selectedItems.length === paginatedFiles.length;
+
+    const openFilePreview = (file: File) => {
+        setPreviewFile(file);
+        setShowPreviewModal(true);
+    };
+
+    const openSharingModal = (fileIds: string[] = []) => {
+        setFilesToShare(fileIds.length > 0 ? fileIds : selectedItems);
+        setSharingEmails("");
+        setShowSharingModal(true);
+    };
+
+    const openDeleteModal = (fileIds: string[] = []) => {
+        setFilesToDelete(fileIds.length > 0 ? fileIds : selectedItems);
+        setShowDeleteModal(true);
+    };
+
+    const handleBulkDelete = () => {
+        setSelectedItems([]);
+        setShowDeleteModal(false);
+    };
+
+    const handleShareFiles = () => {
+        setShowSharingModal(false);
+    };
+
+    if (!mounted) {
+        return null;
+    }
+
+    return (
+        <>
+            <GlobalThemeStyles />
+            <div className="flex flex-col min-h-screen bg-[var(--page-bg)]">
+                <header className="md:hidden flex justify-between items-center p-4 border-b border-[var(--border-color)]">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-[var(--accent-primary)] rounded-md flex items-center justify-center text-white">
+                            <RiDashboardLine size={20} />
+                        </div>
+                        <span className="font-semibold text-[var(--page-text-primary)]">FileFlow</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={switchTheme}
+                            className="p-2 text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] rounded-full cursor-pointer transition-colors duration-200"
+                        >
+                            {theme === "dark" ? <FiSun size={18} /> : <FiMoon size={18} />}
+                        </button>
+                        <div className="relative">
+                            <button
+                                className="flex items-center gap-2 p-1.5 rounded-full hover:bg-[var(--hover-bg)] cursor-pointer transition-colors duration-200"
+                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            >
+                                <div className="w-8 h-8 rounded-full bg-[var(--avatar-bg)] flex items-center justify-center text-[var(--page-text-primary)]">
+                                    <span className="text-xs font-medium">SO</span>
+                                </div>
+                            </button>
+
+                            {mobileMenuOpen && (
+                                <div className="absolute right-0 mt-2 w-56 bg-[var(--card-bg-alt)] border border-[var(--border-color)] rounded-lg shadow-lg z-10">
+                                    <div className="p-3 border-b border-[var(--border-color)]">
+                                        <div className="font-medium text-[var(--page-text-primary)]">Sophie Orwell</div>
+                                        <div className="text-sm text-[var(--text-secondary)]">sophie@example.com</div>
+                                    </div>
+                                    <ul className="py-2">
+                                        <li>
+                                            <a
+                                                href="#"
+                                                className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-200 cursor-pointer"
+                                            >
+                                                <FiUser size={16} />
+                                                <span>Profile</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a
+                                                href="#"
+                                                className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-200 cursor-pointer"
+                                            >
+                                                <FiSettings size={16} />
+                                                <span>Settings</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a
+                                                href="#"
+                                                className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-200 cursor-pointer"
+                                            >
+                                                <FiBell size={16} />
+                                                <span>Notifications</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                    <div className="border-t border-[var(--border-color)] py-2">
+                                        <a
+                                            href="#"
+                                            className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-200 cursor-pointer"
+                                        >
+                                            <FiLogOut size={16} />
+                                            <span>Sign out</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </header>
+
+                <div className="flex flex-1 overflow-hidden">
+                    <aside className="hidden md:flex md:w-64 flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[var(--sidebar-bg)] h-screen sticky top-0">
+                        <div className="p-5 flex items-center gap-2">
+                            <div className="w-8 h-8 bg-[var(--accent-primary)] rounded-md flex items-center justify-center text-white">
+                                <RiDashboardLine size={20} />
+                            </div>
+                            <span className="font-semibold text-[var(--page-text-primary)]">FileFlow</span>
+                        </div>
+
+                        <div className="px-3 py-2 flex-1 overflow-y-auto">
+                            <div className="flex justify-between items-center px-3 py-1">
+                                <div className="text-xs font-medium uppercase text-[var(--text-secondary)]">File Browser</div>
+                                <button
+                                    onClick={() => setShowFolderModal(true)}
+                                    className="text-[var(--text-secondary)] hover:text-[var(--page-text-primary)] cursor-pointer"
+                                >
+                                    <FiPlus />
+                                </button>
+                            </div>
+
+                            <div className="mt-2">
+                                <button
+                                    onClick={() => {
+                                        setFoldersExpanded(!foldersExpanded);
+                                        if (!foldersExpanded) {
+                                            navigateToRoot();
+                                        }
+                                    }}
+                                    className="w-full flex items-center gap-3 px-3 py-2 text-[var(--sidebar-text)] hover:bg-[var(--hover-bg)] transition-colors duration-200 cursor-pointer"
+                                >
+                                    {foldersExpanded ? <FiChevronDown /> : <FiChevronRight />}
+                                    <span>Folders</span>
+                                </button>
+
+                                {foldersExpanded && <div className="pl-2 mt-1">{renderFolderTree(folderStructure)}</div>}
+                            </div>
+                        </div>
+
+                        <div className="mx-3 mb-4 p-4 bg-[var(--card-bg-alt)] rounded-lg">
+                            <div className="text-sm font-medium text-[var(--page-text-primary)]">Storage</div>
+                            <div className="mt-2 h-2 bg-[var(--progress-bg)] rounded-full overflow-hidden">
+                                <div className="h-full bg-[var(--accent-primary)] rounded-full" style={{ width: "40%" }}></div>
+                            </div>
+                            <div className="mt-1 text-xs text-[var(--text-secondary)]">9.2 GB of 10 GB used</div>
+                        </div>
+                    </aside>
+
+                    <main className="flex-1 overflow-y-auto bg-[var(--page-bg)] h-screen">
+                        <div className="max-w-7xl mx-auto p-4 md:p-6">
+                            {/* Top Navbar */}
+                            <div className="mb-6 p-3 flex justify-end items-center">
+                                <div className="hidden md:flex items-center gap-3">
+                                    <button
+                                        onClick={switchTheme}
+                                        className="p-2 text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] rounded-full cursor-pointer transition-colors duration-200"
+                                    >
+                                        {theme === "dark" ? <FiSun size={18} /> : <FiMoon size={18} />}
+                                    </button>
+
+                                    <div className="relative">
+                                        <button
+                                            className="flex items-center gap-2 p-1.5 rounded-full hover:bg-[var(--hover-bg)] cursor-pointer transition-colors duration-200"
+                                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                        >
+                                            <div className="w-8 h-8 rounded-full bg-[var(--avatar-bg)] flex items-center justify-center text-[var(--page-text-primary)] transition-colors duration-200">
+                                                <span className="text-xs font-medium">SO</span>
+                                            </div>
+                                            <span className="text-sm text-[var(--page-text-primary)] hidden md:block">Sophie Orwell</span>
+                                            <FiChevronDown className="text-[var(--text-secondary)]" />
+                                        </button>
+
+                                        {mobileMenuOpen && (
+                                            <div className="absolute right-0 mt-2 w-56 bg-[var(--card-bg-alt)] border border-[var(--border-color)] rounded-lg shadow-lg z-10">
+                                                <div className="p-3 border-b border-[var(--border-color)]">
+                                                    <div className="font-medium text-[var(--page-text-primary)]">Sophie Orwell</div>
+                                                    <div className="text-sm text-[var(--text-secondary)]">sophie@example.com</div>
+                                                </div>
+                                                <ul className="py-2">
+                                                    <li>
+                                                        <a
+                                                            href="#"
+                                                            className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-200 cursor-pointer"
+                                                        >
+                                                            <FiUser size={16} />
+                                                            <span>Profile</span>
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a
+                                                            href="#"
+                                                            className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-200 cursor-pointer"
+                                                        >
+                                                            <FiSettings size={16} />
+                                                            <span>Settings</span>
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a
+                                                            href="#"
+                                                            className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-200 cursor-pointer"
+                                                        >
+                                                            <FiBell size={16} />
+                                                            <span>Notifications</span>
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                                <div className="border-t border-[var(--border-color)] py-2">
+                                                    <a
+                                                        href="#"
+                                                        className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-200 cursor-pointer"
+                                                    >
+                                                        <FiLogOut size={16} />
+                                                        <span>Sign out</span>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center mb-4">
+                                <h1 className="text-xl font-semibold text-[var(--page-text-primary)]">{getCurrentFolderName()}</h1>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={toggleViewMode}
+                                        className="p-2 text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] rounded-full cursor-pointer transition-colors duration-200"
+                                    >
+                                        {viewMode === "grid" ? <FiList /> : <FiGrid />}
+                                    </button>
+                                    <button className="p-2 text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] rounded-full cursor-pointer transition-colors duration-200">
+                                        <FiMoreVertical />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Breadcrumbs Navigation */}
+                            <div className="flex items-center mb-6 overflow-x-auto py-2">
+                                <div className="flex items-center flex-nowrap">
+                                    {breadcrumbs.map((crumb, index) => (
+                                        <div key={index} className="flex items-center">
+                                            {index > 0 && <FiChevronRight className="mx-2 text-[var(--text-secondary)]" size={14} />}
+                                            <button
+                                                onClick={() => (crumb.id === null ? navigateToRoot() : navigateToFolder(crumb.id))}
+                                                className={`whitespace-nowrap text-sm ${
+                                                    index === breadcrumbs.length - 1
+                                                        ? "font-medium text-[var(--page-text-primary)]"
+                                                        : "text-[var(--text-secondary)] hover:text-[var(--page-text-primary)]"
+                                                } transition-colors duration-200`}
+                                            >
+                                                {crumb.id === null && index === breadcrumbs.length - 1 ? "" : crumb.name}
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Folder Navigation - Replace Quick Actions */}
+                            {renderCurrentFolders()}
+
+                            <div className="mb-4">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-lg font-medium text-[var(--page-text-primary)]">Files</h2>
+                                    <div className="flex items-center gap-2">
+                                        <div>
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                onChange={handleFileSelect}
+                                                className="hidden"
+                                                id="file-upload"
+                                            />
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="px-3 py-1.5 bg-[var(--accent-primary)] text-white rounded-md text-sm flex items-center gap-2 cursor-pointer transition-colors duration-200 hover:opacity-90"
+                                            >
+                                                <FiPlus size={16} />
+                                                <span>New File</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Bulk Actions Bar - Appears when files are selected */}
+                                {selectedItems.length > 0 && (
+                                    <div className="bg-[var(--selected-item-bg)] rounded-md p-3 mb-4 flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium text-[var(--page-text-primary)]">
+                                                {selectedItems.length} {selectedItems.length === 1 ? "item" : "items"} selected
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                className="px-3 py-1.5 rounded-md text-sm flex items-center gap-2 cursor-pointer transition-colors duration-200 hover:bg-[var(--hover-bg)]"
+                                                onClick={() => openSharingModal()}
+                                            >
+                                                <FiShare2 size={16} className="text-[var(--page-text-primary)]" />
+                                                <span className="text-[var(--page-text-primary)]">Share</span>
+                                            </button>
+                                            <button
+                                                className="px-3 py-1.5 rounded-md text-sm flex items-center gap-2 cursor-pointer transition-colors duration-200 hover:bg-[var(--hover-bg)]"
+                                                onClick={() => {
+                                                    /* Download files logic */
+                                                }}
+                                            >
+                                                <FiDownload size={16} className="text-[var(--page-text-primary)]" />
+                                                <span className="text-[var(--page-text-primary)]">Download</span>
+                                            </button>
+                                            <button
+                                                className="px-3 py-1.5 rounded-md text-sm flex items-center gap-2 cursor-pointer transition-colors duration-200 hover:bg-[var(--hover-bg)]"
+                                                onClick={() => {
+                                                    /* Move files logic */
+                                                }}
+                                            >
+                                                <FiMove size={16} className="text-[var(--page-text-primary)]" />
+                                                <span className="text-[var(--page-text-primary)]">Move</span>
+                                            </button>
+                                            <button
+                                                className="px-3 py-1.5 text-red-500 rounded-md text-sm flex items-center gap-2 cursor-pointer transition-colors duration-200 hover:bg-red-100/10"
+                                                onClick={() => openDeleteModal()}
+                                            >
+                                                <FiTrash2 size={16} />
+                                                <span>Delete</span>
+                                            </button>
+                                            <button
+                                                className="px-3 py-1.5 rounded-md text-sm flex items-center gap-2 cursor-pointer transition-colors duration-200 hover:bg-[var(--hover-bg)]"
+                                                onClick={() => setSelectedItems([])}
+                                            >
+                                                <FiX size={16} className="text-[var(--page-text-primary)]" />
+                                                <span className="text-[var(--page-text-primary)]">Cancel</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="relative mb-4">
+                                    <input
+                                        type="text"
+                                        placeholder="Search files..."
+                                        value={searchQuery}
+                                        onChange={(e) => {
+                                            setSearchQuery(e.target.value);
+                                            setCurrentPage(1);
+                                        }}
+                                        className="w-full px-10 py-2.5 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md text-[var(--page-text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent transition-all duration-200"
+                                    />
+                                    <FiSearch className="absolute left-3 top-3 text-[var(--text-secondary)]" />
+                                    {searchQuery && (
+                                        <button
+                                            onClick={() => {
+                                                setSearchQuery("");
+                                                setCurrentPage(1);
+                                            }}
+                                            className="absolute right-3 top-3 text-[var(--text-secondary)] hover:text-[var(--page-text-primary)] cursor-pointer transition-colors duration-200"
+                                        >
+                                            <FiX size={16} />
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="flex overflow-x-auto space-x-2 mb-4 pb-1">
+                                    <button
+                                        onClick={() => handleFileTypeFilter("all")}
+                                        className={`px-4 py-2 rounded-full text-sm whitespace-nowrap cursor-pointer transition-colors duration-200 ${
+                                            selectedFileType === "all"
+                                                ? "bg-[var(--selected-item-bg)] text-[var(--page-text-primary)]"
+                                                : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]"
+                                        }`}
+                                    >
+                                        View all
+                                    </button>
+                                    <button
+                                        onClick={() => handleFileTypeFilter("docx")}
+                                        className={`px-4 py-2 rounded-full text-sm whitespace-nowrap cursor-pointer transition-colors duration-200 ${
+                                            selectedFileType === "docx"
+                                                ? "bg-[var(--selected-item-bg)] text-[var(--page-text-primary)]"
+                                                : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]"
+                                        }`}
+                                    >
+                                        Documents
+                                    </button>
+                                    <button
+                                        onClick={() => handleFileTypeFilter("xls")}
+                                        className={`px-4 py-2 rounded-full text-sm whitespace-nowrap cursor-pointer transition-colors duration-200 ${
+                                            selectedFileType === "xls"
+                                                ? "bg-[var(--selected-item-bg)] text-[var(--page-text-primary)]"
+                                                : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]"
+                                        }`}
+                                    >
+                                        Spreadsheets
+                                    </button>
+                                    <button
+                                        onClick={() => handleFileTypeFilter("pdf")}
+                                        className={`px-4 py-2 rounded-full text-sm whitespace-nowrap cursor-pointer transition-colors duration-200 ${
+                                            selectedFileType === "pdf"
+                                                ? "bg-[var(--selected-item-bg)] text-[var(--page-text-primary)]"
+                                                : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]"
+                                        }`}
+                                    >
+                                        PDFs
+                                    </button>
+                                    <button
+                                        onClick={() => handleFileTypeFilter("jpg")}
+                                        className={`px-4 py-2 rounded-full text-sm whitespace-nowrap cursor-pointer transition-colors duration-200 ${
+                                            selectedFileType === "jpg"
+                                                ? "bg-[var(--selected-item-bg)] text-[var(--page-text-primary)]"
+                                                : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]"
+                                        }`}
+                                    >
+                                        Images
+                                    </button>
+                                </div>
+
+                                {viewMode === "grid" && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
+                                        {paginatedFiles.length === 0 ? (
+                                            <div className="col-span-full py-8 text-center text-[var(--text-secondary)]">
+                                                <p>No files found matching your criteria</p>
+                                            </div>
+                                        ) : (
+                                            paginatedFiles.map((file) => (
+                                                <motion.div
+                                                    key={file.id}
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="bg-[var(--card-bg)] rounded-lg overflow-hidden flex flex-col cursor-pointer hover:shadow-md hover:bg-[var(--hover-bg)] transition-all duration-200"
+                                                >
+                                                    <div className="aspect-video bg-[var(--icon-bg)] flex items-center justify-center relative">
+                                                        {file.type === "docx" && <FiFile size={40} className="text-white" />}
+                                                        {file.type === "pdf" && <FiFile size={40} className="text-white" />}
+                                                        {file.type === "xls" && <RiFileExcelLine size={40} className="text-white" />}
+                                                        {file.type === "jpg" && (
+                                                            <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                                                                <FiImage size={40} className="text-white opacity-70" />
+                                                            </div>
+                                                        )}
+                                                        <div className="absolute top-2 right-2">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    toggleSelection(file.id);
+                                                                }}
+                                                                className="w-6 h-6 rounded-full bg-black/30 hover:bg-black/50 flex items-center justify-center transition-colors duration-200"
+                                                            >
+                                                                {selectedItems.includes(file.id) ? (
+                                                                    <FiCheckSquare size={14} className="text-white" />
+                                                                ) : (
+                                                                    <FiMoreVertical size={14} className="text-white" />
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="p-3">
+                                                        <div className="mb-1 text-sm font-medium text-[var(--page-text-primary)] line-clamp-1">
+                                                            {file.name}
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="text-xs text-[var(--text-secondary)]">
+                                                                {file.size} • {file.type}
+                                                            </div>
+                                                            <div className="flex items-center">
+                                                                <div className="w-5 h-5 rounded-full bg-[var(--avatar-bg)] flex items-center justify-center">
+                                                                    <span className="text-xs font-medium text-[var(--page-text-primary)]">
+                                                                        {file.uploadedBy.charAt(0)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+
+                                {viewMode === "list" && (
+                                    <div className="hidden md:flex justify-between items-center mb-2 px-4 py-2 text-sm text-[var(--text-secondary)]">
+                                        <div className="w-8">
+                                            <input
+                                                type="checkbox"
+                                                checked={areAllFilesSelected}
+                                                onChange={toggleAllSelection}
+                                                className="cursor-pointer"
+                                            />
+                                        </div>
+                                        <div className="flex-1">File name</div>
+                                        <div className="w-1/4 text-right">Uploaded by</div>
+                                        <div className="w-24 text-right">Actions</div>
+                                    </div>
+                                )}
+
+                                {viewMode === "list" && (
+                                    <div className="space-y-2">
+                                        {paginatedFiles.length === 0 ? (
+                                            <div className="py-8 text-center text-[var(--text-secondary)]">
+                                                <p>No files found matching your criteria</p>
+                                            </div>
+                                        ) : (
+                                            paginatedFiles.map((file) => (
+                                                <motion.div
+                                                    key={file.id}
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="bg-[var(--card-bg)] rounded-lg px-4 py-3 flex items-center cursor-pointer hover:bg-[var(--hover-bg)] transition-colors duration-200"
+                                                >
+                                                    <div className="w-8">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedItems.includes(file.id)}
+                                                            onChange={() => toggleSelection(file.id)}
+                                                            className="cursor-pointer"
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-3 flex-1">
+                                                        <div className="text-[var(--page-text-primary)]">
+                                                            {file.type === "docx" && <FiFile size={20} />}
+                                                            {file.type === "pdf" && <FiFile size={20} />}
+                                                            {file.type === "xls" && <RiFileExcelLine size={20} />}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-medium text-[var(--page-text-primary)]">{file.name}</div>
+                                                            <div className="text-sm text-[var(--text-secondary)]">
+                                                                {file.size} • {file.type}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="hidden md:flex items-center gap-2 w-1/4 justify-end">
+                                                        <div className="w-8 h-8 rounded-full bg-[var(--avatar-bg)] flex items-center justify-center">
+                                                            <span className="text-xs font-medium text-[var(--page-text-primary)]">
+                                                                {file.uploadedBy.charAt(0)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-sm text-[var(--page-text-primary)]">{file.uploadedBy}</div>
+                                                    </div>
+                                                    <div className="ml-4 flex items-center gap-1">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openFilePreview(file);
+                                                            }}
+                                                            className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--page-text-primary)] cursor-pointer transition-colors duration-200 rounded-full hover:bg-[var(--hover-bg)]"
+                                                        >
+                                                            <FiEye size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openSharingModal([file.id]);
+                                                            }}
+                                                            className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--page-text-primary)] cursor-pointer transition-colors duration-200 rounded-full hover:bg-[var(--hover-bg)]"
+                                                        >
+                                                            <FiShare2 size={16} />
+                                                        </button>
+                                                        <div className="relative">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setActiveDropdown(activeDropdown === file.id ? null : file.id);
+                                                                }}
+                                                                className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--page-text-primary)] cursor-pointer transition-colors duration-200 rounded-full hover:bg-[var(--hover-bg)]"
+                                                            >
+                                                                <FiMoreVertical size={16} />
+                                                            </button>
+
+                                                            {activeDropdown === file.id && (
+                                                                <div className="absolute right-0 mt-1 w-48 bg-[var(--card-bg-alt)] border border-[var(--border-color)] rounded-md shadow-lg z-10">
+                                                                    <ul className="py-1">
+                                                                        <li>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    openFilePreview(file);
+                                                                                    setActiveDropdown(null);
+                                                                                }}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-200"
+                                                                            >
+                                                                                View
+                                                                            </button>
+                                                                        </li>
+                                                                        <li>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+
+                                                                                    setActiveDropdown(null);
+                                                                                }}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-200"
+                                                                            >
+                                                                                Download
+                                                                            </button>
+                                                                        </li>
+                                                                        <li>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    openSharingModal([file.id]);
+                                                                                    setActiveDropdown(null);
+                                                                                }}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-200"
+                                                                            >
+                                                                                Share
+                                                                            </button>
+                                                                        </li>
+                                                                        <li className="border-t border-[var(--border-color)]">
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    openDeleteModal([file.id]);
+                                                                                    setActiveDropdown(null);
+                                                                                }}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-[var(--hover-bg)] transition-colors duration-200"
+                                                                            >
+                                                                                Delete
+                                                                            </button>
+                                                                        </li>
+                                                                    </ul>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Pagination */}
+                                {filteredFiles.length > 0 && (
+                                    <div className="flex justify-center items-center mt-6">
+                                        <div className="flex items-center space-x-1">
+                                            <button
+                                                onClick={() => changePage(currentPage - 1)}
+                                                disabled={currentPage === 1}
+                                                className={`px-2 py-1 rounded-md cursor-pointer transition-colors duration-200 ${
+                                                    currentPage === 1
+                                                        ? "text-[var(--text-secondary)] opacity-50 cursor-not-allowed"
+                                                        : "text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)]"
+                                                }`}
+                                            >
+                                                Previous
+                                            </button>
+
+                                            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                                let pageNum = 0;
+                                                if (totalPages <= 5) {
+                                                    pageNum = i + 1;
+                                                } else if (currentPage <= 3) {
+                                                    pageNum = i + 1;
+                                                } else if (currentPage >= totalPages - 2) {
+                                                    pageNum = totalPages - 4 + i;
+                                                } else {
+                                                    pageNum = currentPage - 2 + i;
+                                                }
+
+                                                return (
+                                                    <button
+                                                        key={pageNum}
+                                                        onClick={() => changePage(pageNum)}
+                                                        className={`w-8 h-8 flex items-center justify-center rounded-md cursor-pointer transition-colors duration-200 ${
+                                                            currentPage === pageNum
+                                                                ? "bg-[var(--selected-item-bg)] text-[var(--page-text-primary)]"
+                                                                : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]"
+                                                        }`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                );
+                                            })}
+
+                                            <button
+                                                onClick={() => changePage(currentPage + 1)}
+                                                disabled={currentPage === totalPages}
+                                                className={`px-2 py-1 rounded-md cursor-pointer transition-colors duration-200 ${
+                                                    currentPage === totalPages
+                                                        ? "text-[var(--text-secondary)] opacity-50 cursor-not-allowed"
+                                                        : "text-[var(--page-text-primary)] hover:bg-[var(--hover-bg)]"
+                                                }`}
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <footer className="py-4 px-6 border-t border-[var(--border-color)] mt-auto">
+                            <div className="max-w-7xl mx-auto flex justify-between items-center">
+                                <div className="text-sm text-[var(--text-secondary)]">© 2024 FileFlow. All rights reserved.</div>
+                                <div className="flex items-center gap-4">
+                                    <a href="#" className="text-sm text-[var(--text-secondary)] hover:text-[var(--page-text-primary)]">
+                                        Terms
+                                    </a>
+                                    <a href="#" className="text-sm text-[var(--text-secondary)] hover:text-[var(--page-text-primary)]">
+                                        Privacy
+                                    </a>
+                                    <a href="#" className="text-sm text-[var(--text-secondary)] hover:text-[var(--page-text-primary)]">
+                                        Help
+                                    </a>
+                                </div>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            </div>
+
+            {showFolderModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-[var(--card-bg-alt)] rounded-lg w-full max-w-md p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-medium text-[var(--page-text-primary)]">Create New Folder</h3>
+                            <button
+                                onClick={() => setShowFolderModal(false)}
+                                className="text-[var(--text-secondary)] hover:text-[var(--page-text-primary)] cursor-pointer"
+                            >
+                                <FiX />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label htmlFor="folderName" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                    Folder Name
+                                </label>
+                                <input
+                                    id="folderName"
+                                    type="text"
+                                    value={newFolderName}
+                                    onChange={(e) => setNewFolderName(e.target.value)}
+                                    placeholder="Enter folder name"
+                                    className="w-full px-3 py-2 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md text-[var(--page-text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="folderPath" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                    Location
+                                </label>
+                                <select
+                                    id="folderPath"
+                                    value={folderPath}
+                                    onChange={(e) => setFolderPath(e.target.value)}
+                                    className="w-full px-3 py-2 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md text-[var(--page-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                                >
+                                    {availablePaths.map((path) => (
+                                        <option key={path.id} value={path.path}>
+                                            {path.path}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex justify-end gap-2 mt-6">
+                                <button
+                                    onClick={() => setShowFolderModal(false)}
+                                    className="px-4 py-2 border border-[var(--border-color)] rounded-md text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] cursor-pointer transition-colors duration-200"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={createNewFolder}
+                                    className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded-md hover:opacity-90 cursor-pointer transition-opacity duration-200"
+                                >
+                                    Create
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* File Preview Modal */}
+            {showPreviewModal && previewFile && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-[var(--card-bg-alt)] rounded-lg w-full max-w-4xl h-[80vh] p-6 flex flex-col">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-medium text-[var(--page-text-primary)]">{previewFile.name}</h3>
+                            <button
+                                onClick={() => setShowPreviewModal(false)}
+                                className="text-[var(--text-secondary)] hover:text-[var(--page-text-primary)] cursor-pointer transition-colors duration-200"
+                            >
+                                <FiX size={24} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-auto bg-[var(--card-bg)] rounded-md">
+                            {previewFile.type === "pdf" && (
+                                <div className="flex flex-col items-center justify-center h-full">
+                                    <div className="text-[var(--text-secondary)] mb-4">
+                                        <FiFile size={64} />
+                                    </div>
+                                    <p className="text-[var(--page-text-primary)] text-lg font-medium mb-2">PDF Preview</p>
+                                    <p className="text-[var(--text-secondary)] text-sm mb-4">
+                                        Viewing: {previewFile.name} ({previewFile.size})
+                                    </p>
+                                    <div className="w-full max-w-2xl h-[400px] bg-white rounded-md p-4 overflow-y-auto">
+                                        <div className="space-y-4">
+                                            <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-full"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-full"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+                                            <div className="h-8 bg-gray-200 rounded w-full mt-6"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-full"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-full"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {(previewFile.type === "docx" || previewFile.type === "txt") && (
+                                <div className="flex flex-col items-center justify-center h-full">
+                                    <div className="text-[var(--text-secondary)] mb-4">
+                                        <FiFile size={64} />
+                                    </div>
+                                    <p className="text-[var(--page-text-primary)] text-lg font-medium mb-2">Document Preview</p>
+                                    <p className="text-[var(--text-secondary)] text-sm mb-4">
+                                        Viewing: {previewFile.name} ({previewFile.size})
+                                    </p>
+                                    <div className="w-full max-w-2xl h-[400px] bg-white rounded-md p-4 overflow-y-auto">
+                                        <div className="space-y-4 text-gray-800">
+                                            <h1 className="text-xl font-bold">Document Title</h1>
+                                            <p>
+                                                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam auctor, nisl eget ultricies
+                                                tincidunt, nisl nisl aliquam nisl, eget ultricies nisl nisl eget nisl.
+                                            </p>
+                                            <p>
+                                                Suspendisse potenti. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl,
+                                                eget ultricies nisl nisl eget nisl.
+                                            </p>
+                                            <h2 className="text-lg font-semibold mt-4">Section 1</h2>
+                                            <p>
+                                                Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget ultricies nisl
+                                                nisl eget nisl.
+                                            </p>
+                                            <p>
+                                                Suspendisse potenti. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl,
+                                                eget ultricies nisl nisl eget nisl.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {previewFile.type === "xls" && (
+                                <div className="flex flex-col items-center justify-center h-full">
+                                    <div className="text-[var(--text-secondary)] mb-4">
+                                        <RiFileExcelLine size={64} />
+                                    </div>
+                                    <p className="text-[var(--page-text-primary)] text-lg font-medium mb-2">Spreadsheet Preview</p>
+                                    <p className="text-[var(--text-secondary)] text-sm mb-4">
+                                        Viewing: {previewFile.name} ({previewFile.size})
+                                    </p>
+                                    <div className="w-full max-w-2xl h-[400px] bg-white rounded-md overflow-y-auto">
+                                        <table className="min-w-full border-collapse">
+                                            <thead>
+                                                <tr className="bg-gray-100">
+                                                    <th className="border border-gray-300 px-4 py-2">#</th>
+                                                    <th className="border border-gray-300 px-4 py-2">Column A</th>
+                                                    <th className="border border-gray-300 px-4 py-2">Column B</th>
+                                                    <th className="border border-gray-300 px-4 py-2">Column C</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {[...Array(15)].map((_, index) => (
+                                                    <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : ""}>
+                                                        <td className="border border-gray-300 px-4 py-2 text-gray-800">{index + 1}</td>
+                                                        <td className="border border-gray-300 px-4 py-2 text-gray-800">
+                                                            Data {index + 1}A
+                                                        </td>
+                                                        <td className="border border-gray-300 px-4 py-2 text-gray-800">
+                                                            Data {index + 1}B
+                                                        </td>
+                                                        <td className="border border-gray-300 px-4 py-2 text-gray-800">
+                                                            Data {index + 1}C
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {previewFile.type === "tsx" && (
+                                <div className="flex flex-col items-center justify-center h-full">
+                                    <div className="text-[var(--text-secondary)] mb-4">
+                                        <FiCode size={64} />
+                                    </div>
+                                    <p className="text-[var(--page-text-primary)] text-lg font-medium mb-2">Code Preview</p>
+                                    <p className="text-[var(--text-secondary)] text-sm mb-4">
+                                        Viewing: {previewFile.name} ({previewFile.size})
+                                    </p>
+                                    <div className="w-full max-w-2xl h-[400px] bg-[#1e1e1e] rounded-md p-4 overflow-y-auto font-mono text-sm">
+                                        <pre className="text-gray-300">
+                                            <code>
+                                                {`import React, { useState, useEffect } from 'react';
+import { ThemeProvider } from 'next-themes';
+
+interface Props {
+  children: React.ReactNode;
+}
+
+const Layout: React.FC<Props> = ({ children }) => {
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  if (!mounted) {
+    return null;
+  }
+  
+  return (
+    <div className="min-h-screen bg-white dark:bg-gray-900">
+      <header className="border-b border-gray-200 dark:border-gray-700">
+        {/* Header content */}
+      </header>
+      <main>{children}</main>
+      <footer className="border-t border-gray-200 dark:border-gray-700">
+        {/* Footer content */}
+      </footer>
+    </div>
+  );
+};
+
+export default Layout;`}
+                                            </code>
+                                        </pre>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-between mt-4">
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-[var(--text-secondary)]">Uploaded by {previewFile.uploadedBy}</span>
+                                <span className="text-sm text-[var(--text-secondary)]">•</span>
+                                <span className="text-sm text-[var(--text-secondary)]">{previewFile.dateModified}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => {
+                                        setShowPreviewModal(false);
+                                        openSharingModal([previewFile.id]);
+                                    }}
+                                    className="px-3 py-1.5 rounded-md text-sm flex items-center gap-2 cursor-pointer transition-colors duration-200 bg-[var(--accent-primary)] text-white hover:opacity-90"
+                                >
+                                    <FiShare2 size={16} />
+                                    <span>Share</span>
+                                </button>
+                                <button
+                                    onClick={() => setShowPreviewModal(false)}
+                                    className="px-3 py-1.5 border border-[var(--border-color)] rounded-md text-sm text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] cursor-pointer transition-colors duration-200"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Sharing Modal */}
+            {showSharingModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-[var(--card-bg-alt)] rounded-lg w-full max-w-md p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-medium text-[var(--page-text-primary)]">
+                                Share {filesToShare.length > 1 ? `${filesToShare.length} files` : "file"}
+                            </h3>
+                            <button
+                                onClick={() => setShowSharingModal(false)}
+                                className="text-[var(--text-secondary)] hover:text-[var(--page-text-primary)] cursor-pointer transition-colors duration-200"
+                            >
+                                <FiX />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label htmlFor="emails" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                    Email addresses
+                                </label>
+                                <textarea
+                                    id="emails"
+                                    value={sharingEmails}
+                                    onChange={(e) => setSharingEmails(e.target.value)}
+                                    placeholder="Enter email addresses (comma separated)"
+                                    rows={3}
+                                    className="w-full px-3 py-2 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md text-[var(--page-text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent transition-all duration-200"
+                                />
+                                <p className="text-xs text-[var(--text-secondary)] mt-1">
+                                    Recipients will receive an email with a link to access these files
+                                </p>
+                            </div>
+
+                            <div>
+                                <label htmlFor="message" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                                    Message (optional)
+                                </label>
+                                <textarea
+                                    id="message"
+                                    placeholder="Add a message"
+                                    rows={3}
+                                    className="w-full px-3 py-2 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md text-[var(--page-text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent transition-all duration-200"
+                                />
+                            </div>
+
+                            <div className="flex items-center">
+                                <input id="notify" type="checkbox" className="h-4 w-4 cursor-pointer" />
+                                <label htmlFor="notify" className="ml-2 text-sm text-[var(--text-secondary)] cursor-pointer">
+                                    Notify me when files are viewed
+                                </label>
+                            </div>
+
+                            <div className="flex justify-end gap-2 mt-6">
+                                <button
+                                    onClick={() => setShowSharingModal(false)}
+                                    className="px-4 py-2 border border-[var(--border-color)] rounded-md text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] cursor-pointer transition-colors duration-200"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleShareFiles}
+                                    className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded-md hover:opacity-90 cursor-pointer transition-opacity duration-200"
+                                >
+                                    Share
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-[var(--card-bg-alt)] rounded-lg w-full max-w-md p-6">
+                        <div className="flex items-center mb-4 text-red-500">
+                            <FiAlertTriangle size={24} className="mr-3" />
+                            <h3 className="text-lg font-medium text-[var(--page-text-primary)]">
+                                Delete {filesToDelete.length > 1 ? `${filesToDelete.length} files` : "file"}?
+                            </h3>
+                        </div>
+
+                        <p className="text-[var(--text-secondary)] mb-6">
+                            {filesToDelete.length > 1
+                                ? `Are you sure you want to delete these ${filesToDelete.length} files? This action cannot be undone.`
+                                : "Are you sure you want to delete this file? This action cannot be undone."}
+                        </p>
+
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="px-4 py-2 border border-[var(--border-color)] rounded-md text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] cursor-pointer transition-colors duration-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleBulkDelete}
+                                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 cursor-pointer transition-colors duration-200"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+};
 
 const GlobalThemeStyles = () => (
     <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&display=swap');
-        
         :root {
-            --page-bg: #fbf6ed;
-            --page-text-primary: #18181b;
-            --page-text-secondary: #52525b;
-            --navbar-bg: rgba(40, 40, 45, 0.5);
+            /* Light Theme Variables */
+            --page-bg: #ffffff;
+            --sidebar-bg: #f9fafb;
             --card-bg: #f4f4f5;
-            --card-hover: #e4e4e7;
-            --accent-primary: #a36524;
-            --accent-secondary: #8b5cf6;
-            --button-bg: #f43f5e;
-            --button-text: #ffffff;
-            --button-hover: #e11d48;
-            --input-bg: #f4f4f5;
-            --input-border: #d4d4d8;
+            --card-bg-alt: #ffffff;
+            --selected-item-bg: #f4f4f5;
+            --hover-bg: #e4e4e7;
+            --icon-bg: #27272a;
+            --input-bg: #ffffff;
+            --button-bg: #ffffff;
+            --progress-bg: #e4e4e7;
             --border-color: #e4e4e7;
+            --page-text-primary: #18181b;
+            --text-secondary: #71717a;
+            --sidebar-text: #52525b;
+            --accent-primary: #1e1e1e;
+            --avatar-bg: #e4e4e7;
             --font-heading: "Oswald", sans-serif;
             --font-body: "Open Sans", sans-serif;
-            --scrollbar-thumb: #cbd5e1;
-            --scrollbar-track: #f1f5f9;
-            --card-shadow: rgba(0, 0, 0, 0.1);
+            --scrollbar-thumb: #d4d4d8;
+            --scrollbar-track: #f4f4f5;
         }
 
         html.dark {
-            --page-bg: #121212;
+            /* Dark Theme Variable Overrides */
+            --page-bg: #18181b;
+            --sidebar-bg: #27272a;
+            --card-bg: #27272a;
+            --card-bg-alt: #2d2d2d;
+            --selected-item-bg: #3f3f46;
+            --hover-bg: #3f3f46;
+            --icon-bg: #52525b;
+            --input-bg: #27272a;
+            --button-bg: #27272a;
+            --progress-bg: #3f3f46;
+            --border-color: #3f3f46;
             --page-text-primary: #f4f4f5;
-            --page-text-secondary: #a1a1aa;
-            --navbar-bg: rgba(40, 40, 45, 0.5);
-            --card-bg: #1e1e1e;
-            --card-hover: #2a2a2a;
-            --accent-primary: #a36524;
-            --accent-secondary: #8b5cf6;
-            --button-bg: #f43f5e;
-            --button-text: #ffffff;
-            --button-hover: #e11d48;
-            --input-bg: #1e1e1e;
-            --input-border: #3f3f46;
-            --border-color: #27272a;
-            --scrollbar-thumb: #4b5563;
-            --scrollbar-track: #1f2937;
-            --card-shadow: rgba(0, 0, 0, 0.3);
+            --text-secondary: #a1a1aa;
+            --sidebar-text: #d4d4d8;
+            --accent-primary: #1e1e1e;
+            --avatar-bg: #52525b;
+            --scrollbar-thumb: #52525b;
+            --scrollbar-track: #27272a;
         }
 
         body {
             background-color: var(--page-bg);
             color: var(--page-text-primary);
             font-family: var(--font-body);
-            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         h1,
@@ -70,8 +1958,10 @@ const GlobalThemeStyles = () => (
             font-family: var(--font-heading);
         }
 
+        /* Custom Scrollbar */
         ::-webkit-scrollbar {
-            width: 10px;
+            width: 8px;
+            height: 8px;
         }
 
         ::-webkit-scrollbar-track {
@@ -79,1404 +1969,25 @@ const GlobalThemeStyles = () => (
         }
 
         ::-webkit-scrollbar-thumb {
-            background: var(--scrollbar-thumb);
-            border-radius: 10px;
+            background-color: var(--scrollbar-thumb);
+            border-radius: 4px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: var(--accent-primary);
+            background-color: var(--text-secondary);
         }
+
+        /* Import fonts */
+        @import url("https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&display=swap");
     `}</style>
 );
 
-const ThemeToggle = dynamic(
-    () =>
-        Promise.resolve(({ className = "" }: { className?: string }) => {
-            const { theme, setTheme } = useTheme();
-            const isDarkTheme = theme === "dark";
-
-            const toggleTheme = () => {
-                setTheme(theme === "dark" ? "light" : "dark");
-            };
-
-            return (
-                <button
-                    onClick={toggleTheme}
-                    className={`p-2 rounded-full bg-[var(--card-bg)] text-[var(--page-text-primary)] cursor-pointer ${className}`}
-                >
-                    {isDarkTheme ? <FiSun size={20} /> : <FiMoon size={20} />}
-                </button>
-            );
-        }),
-    { ssr: false }
-);
-
-const RollButton = dynamic(
-    () =>
-        Promise.resolve(
-            ({ children, className = "", onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => {
-                const [isHovered, setIsHovered] = useState(false);
-                const { theme } = useTheme();
-                const isDarkTheme = theme === "dark";
-
-                return (
-                    <button
-                        className={`px-12 py-3 rounded-full font-medium cursor-pointer ${className}`}
-                        onMouseEnter={() => setIsHovered(true)}
-                        onMouseLeave={() => setIsHovered(false)}
-                        onClick={onClick}
-                        style={{
-                            backgroundColor: isDarkTheme ? "white" : "#051d0d",
-                            color: isDarkTheme ? "#051d0d" : "white",
-                        }}
-                    >
-                        <div className="relative">
-                            <AnimatePresence mode="wait">
-                                <motion.span
-                                    key={isHovered ? "hovered" : "default"}
-                                    className="block"
-                                    initial={{ y: isHovered ? 20 : 10, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    exit={{ y: -20, opacity: 0 }}
-                                    transition={{ duration: 0.15 }}
-                                >
-                                    {children}
-                                </motion.span>
-                            </AnimatePresence>
-                        </div>
-                    </button>
-                );
-            }
-        ),
-    { ssr: false }
-);
-
-const Navbar = () => {
-    const scrollToSection = (id: string) => {
-        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    return (
-        <nav
-            className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-8 py-3 backdrop-blur-md rounded-full w-auto shadow-lg"
-            style={{
-                backgroundColor: "var(--navbar-bg)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                maxWidth: "90%",
-            }}
-        >
-            <div className="flex items-center justify-between space-x-8">
-                <div className="text-xl font-semibold text-white">ArteFACT</div>
-
-                <div className="hidden md:flex items-center space-x-6">
-                    <a onClick={() => scrollToSection("hero")} className="text-white hover:text-[#a36524] transition-colors cursor-pointer">
-                        Home
-                    </a>
-                    <a
-                        onClick={() => scrollToSection("artists")}
-                        className="text-white hover:text-[#a36524] transition-colors cursor-pointer"
-                    >
-                        Artists
-                    </a>
-                    <a
-                        onClick={() => scrollToSection("artworks")}
-                        className="text-white hover:text-[#a36524] transition-colors cursor-pointer"
-                    >
-                        Artworks
-                    </a>
-                </div>
-
-                <div className="flex items-center">
-                    <ThemeToggle />
-                </div>
-            </div>
-        </nav>
-    );
-};
-
-interface Position {
-    x: number;
-    y: number;
-}
-
-interface Size {
-    width: number;
-    height: number;
-}
-
-interface ArtworkItem {
-    position: Position;
-    size: Size;
-    imageUrl: string;
-}
-
-interface Artist {
-    name: string;
-    specialty: string;
-    imageUrl: string;
-}
-
-interface Artwork {
-    title: string;
-    description: string;
-    artist: string;
-    price: string;
-    imageUrl: string;
-}
-
-const FloatingArtwork = ({ index, position, imageUrl, size }: { index: number; position: Position; imageUrl: string; size: Size }) => {
-    const mouseRef = useRef({ x: 0, y: 0 });
-    const positionRef = useRef({ x: position.x, y: position.y });
-    const animationRef = useRef<HTMLDivElement | null>(null);
-
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            const { clientX, clientY } = e;
-            mouseRef.current = {
-                x: (clientX / window.innerWidth) * 2 - 1,
-                y: (clientY / window.innerHeight) * 2 - 1,
-            };
-        };
-
-        window.addEventListener("mousemove", handleMouseMove);
-
-        const animate = () => {
-            const factorX = index % 2 === 0 ? 0.01 : 0.015;
-            const factorY = index % 3 === 0 ? 0.01 : 0.02;
-
-            positionRef.current.x += mouseRef.current.x * factorX;
-            positionRef.current.y += mouseRef.current.y * factorY;
-
-            positionRef.current.x += Math.sin(Date.now() * 0.001 + index) * 0.002;
-            positionRef.current.y += Math.cos(Date.now() * 0.001 + index) * 0.002;
-
-            positionRef.current.x *= 0.98;
-            positionRef.current.y *= 0.98;
-
-            if (animationRef.current) {
-                animationRef.current.style.transform = `translate(${positionRef.current.x * 100}px, ${positionRef.current.y * 100}px)`;
-            }
-
-            requestAnimationFrame(animate);
-        };
-
-        const animationFrame = requestAnimationFrame(animate);
-
-        return () => {
-            window.removeEventListener("mousemove", handleMouseMove);
-            cancelAnimationFrame(animationFrame);
-        };
-    }, [index]);
-
-    return (
-        <div
-            ref={animationRef}
-            className="absolute rounded-lg overflow-hidden shadow-lg transition-transform"
-            style={{
-                left: `${position.x * 100}%`,
-                top: `${position.y * 100}%`,
-                width: `${size.width}px`,
-                height: `${size.height}px`,
-                zIndex: index % 2 === 0 ? 10 : 5,
-            }}
-        >
-            <Image src={imageUrl} alt="Artwork" fill style={{ objectFit: "cover" }} priority={index < 3} />
-        </div>
-    );
-};
-
-const artworkData: ArtworkItem[] = [
-    {
-        position: { x: 0.05, y: 0.15 },
-        size: { width: 200, height: 240 },
-        imageUrl:
-            "https://images.unsplash.com/photo-1634986666676-ec8fd927c23d?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        position: { x: 0.9, y: 0.25 },
-        size: { width: 180, height: 250 },
-        imageUrl:
-            "https://images.unsplash.com/photo-1642427749670-f20e2e76ed8c?q=80&w=2980&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        position: { x: 0.15, y: 0.8 },
-        size: { width: 220, height: 200 },
-        imageUrl:
-            "https://images.unsplash.com/photo-1641391503184-a2131018701b?q=80&w=2980&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        position: { x: 0.85, y: 0.75 },
-        size: { width: 180, height: 180 },
-        imageUrl:
-            "https://images.unsplash.com/photo-1674214857700-b5a833693513?q=80&w=2980&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        position: { x: 0.02, y: 0.45 },
-        size: { width: 150, height: 200 },
-        imageUrl:
-            "https://images.unsplash.com/photo-1728922236580-e242f44ed978?q=80&w=3198&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        position: { x: 0.92, y: 0.5 },
-        size: { width: 220, height: 160 },
-        imageUrl:
-            "https://images.unsplash.com/flagged/photo-1572392640988-ba48d1a74457?q=80&w=2160&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        position: { x: 0.25, y: 0.05 },
-        size: { width: 190, height: 220 },
-        imageUrl:
-            "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        position: { x: 0.75, y: 0.05 },
-        size: { width: 170, height: 190 },
-        imageUrl:
-            "https://images.unsplash.com/photo-1570158268183-d296b2892211?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        position: { x: 0.3, y: 0.85 },
-        size: { width: 200, height: 150 },
-        imageUrl:
-            "https://images.unsplash.com/photo-1539614474468-f423a2d2270c?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        position: { x: 0.65, y: 0.9 },
-        size: { width: 180, height: 210 },
-        imageUrl:
-            "https://images.unsplash.com/photo-1632765854612-9b02b6ec2b15?q=80&w=2586&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        position: { x: 0.45, y: 0.08 },
-        size: { width: 160, height: 200 },
-        imageUrl:
-            "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=3145&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        position: { x: 0.12, y: 0.3 },
-        size: { width: 170, height: 220 },
-        imageUrl:
-            "https://images.unsplash.com/photo-1579541814924-49fef17c5be5?q=80&w=2549&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-];
-
-const HeroSection = () => {
-    const scrollToArtists = () => {
-        document.getElementById("artists")?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    return (
-        <motion.section
-            id="hero"
-            className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8 }}
-        >
-            <div className="absolute inset-0 -z-10">
-                {artworkData.map((artwork, i) => (
-                    <FloatingArtwork key={i} index={i} position={artwork.position} size={artwork.size} imageUrl={artwork.imageUrl} />
-                ))}
-            </div>
-
-            <div className="max-w-4xl text-center z-10 bg-[var(--page-bg)]/40 backdrop-blur-sm p-10 rounded-xl">
-                <motion.h1
-                    className="text-5xl md:text-7xl font-bold mb-6 leading-tight"
-                    initial={{ y: 50, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.8 }}
-                >
-                    A New Dimension of
-                    <br />
-                    Art and Expression
-                </motion.h1>
-                <motion.p
-                    className="text-xl text-[var(--page-text-secondary)] mb-8 max-w-2xl mx-auto"
-                    initial={{ y: 30, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.4, duration: 0.8 }}
-                >
-                    Discover unique pieces from talented artists around the world
-                </motion.p>
-                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.6, duration: 0.8 }}>
-                    <RollButton className="text-white text-lg" onClick={scrollToArtists}>
-                        Explore
-                    </RollButton>
-                </motion.div>
-            </div>
-        </motion.section>
-    );
-};
-
-const AboutUsSection = () => {
-    return (
-        <section id="about" className="relative py-24 overflow-hidden" style={{ backgroundColor: "#4b2d14" }}>
-            <motion.div
-                className="absolute inset-0 z-0 opacity-30"
-                style={{
-                    background: "radial-gradient(circle at 30% 50%, rgba(163, 101, 36, 0.7) 0%, transparent 60%)",
-                }}
-                animate={{
-                    scale: [1, 1.1, 1],
-                    opacity: [0.3, 0.5, 0.3],
-                }}
-                transition={{
-                    duration: 8,
-                    repeat: Infinity,
-                    repeatType: "reverse",
-                }}
-            />
-
-            <motion.div
-                className="absolute inset-0 z-0 opacity-20"
-                style={{
-                    background: "radial-gradient(circle at 70% 30%, rgba(228, 216, 196, 0.6) 0%, transparent 60%)",
-                }}
-                animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.2, 0.4, 0.2],
-                }}
-                transition={{
-                    duration: 10,
-                    repeat: Infinity,
-                    repeatType: "reverse",
-                    delay: 2,
-                }}
-            />
-
-            <div className="absolute bottom-0 left-0 w-full h-40 overflow-hidden z-0">
-                <motion.svg
-                    width="100%"
-                    height="100%"
-                    viewBox="0 0 1000 150"
-                    preserveAspectRatio="none"
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 2, ease: "easeInOut" }}
-                >
-                    <motion.path
-                        d="M 0 100 Q 250 50 500 100 Q 750 150 1000 100 L 1000 150 L 0 150 Z"
-                        fill="none"
-                        stroke="rgba(228, 216, 196, 0.3)"
-                        strokeWidth="2"
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: 1 }}
-                        transition={{ duration: 3, ease: "easeInOut" }}
-                    />
-                </motion.svg>
-            </div>
-
-            <div className="absolute bottom-1/3 right-1/2 transform translate-x-1/2 translate-y-1/2 z-0">
-                <motion.svg
-                    width="80"
-                    height="80"
-                    viewBox="0 0 100 100"
-                    initial={{ rotate: 0, opacity: 0 }}
-                    animate={{ rotate: 360, opacity: 0.7 }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                >
-                    <g fill="#a36524">
-                        {[0, 60, 120, 180, 240, 300].map((angle, i) => (
-                            <motion.path
-                                key={i}
-                                d="M50 50 L50 10 A20 20 0 0 1 70 30 Z"
-                                transform={`rotate(${angle} 50 50)`}
-                                initial={{ scale: 0.8 }}
-                                animate={{ scale: [0.8, 1, 0.8] }}
-                                transition={{ duration: 3, repeat: Infinity, delay: i * 0.5 }}
-                            />
-                        ))}
-                    </g>
-                </motion.svg>
-            </div>
-
-            <FloatingParticles />
-
-            <div className="absolute top-0 left-0 w-full h-10 overflow-hidden">
-                <motion.svg
-                    width="100%"
-                    height="100%"
-                    viewBox="0 0 1000 50"
-                    preserveAspectRatio="none"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    whileInView={{ pathLength: 1, opacity: 0.5 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 1.5, ease: "easeInOut" }}
-                >
-                    <motion.path d="M 0 25 Q 250 50 500 25 Q 750 0 1000 25" fill="none" stroke="#e4d8c4" strokeWidth="3" />
-                </motion.svg>
-            </div>
-
-            <div className="absolute bottom-0 left-0 w-full h-10 overflow-hidden">
-                <motion.svg
-                    width="100%"
-                    height="100%"
-                    viewBox="0 0 1000 50"
-                    preserveAspectRatio="none"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    whileInView={{ pathLength: 1, opacity: 0.5 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 1.5, ease: "easeInOut", delay: 0.3 }}
-                >
-                    <motion.path d="M 0 25 Q 250 0 500 25 Q 750 50 1000 25" fill="none" stroke="#e4d8c4" strokeWidth="3" />
-                </motion.svg>
-            </div>
-
-            <div className="container mx-auto px-6 relative z-10">
-                <div className="text-xs uppercase tracking-widest text-[#e4d8c4]/80 mb-4">ABOUT US</div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                    <div className="text-[#e4d8c4]">
-                        <motion.h2
-                            className="text-4xl md:text-5xl font-bold mb-8 leading-tight"
-                            initial={{ opacity: 0, y: 30 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.6 }}
-                        >
-                            Empowering the Next
-                            <br />
-                            Generation of Visionary Creators
-                        </motion.h2>
-
-                        <motion.div
-                            className="space-y-4 text-[#e4d8c4]/80"
-                            initial={{ opacity: 0, y: 30 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.6, delay: 0.2 }}
-                        >
-                            <p>
-                                We curate and showcase exceptional photographic art from emerging talents across the globe—each piece a
-                                testament to originality and creative vision.
-                            </p>
-                            <p>
-                                If you're a photographer looking to share your work or explore collaboration opportunities, we'd love to
-                                hear from you. Reach out through our contact page and join our growing community of forward-thinking
-                                artists.
-                            </p>
-                        </motion.div>
-                    </div>
-
-                    <div>
-                        <motion.div
-                            className="relative rounded-lg overflow-hidden shadow-xl aspect-[3/4]"
-                            initial={{ opacity: 0, x: 30 }}
-                            whileInView={{ opacity: 1, x: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.6 }}
-                        >
-                            <Image
-                                src="https://images.unsplash.com/photo-1607158809228-22f2d5fef693?q=80&w=2923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                                alt="Artist portrait"
-                                fill
-                                style={{ objectFit: "cover" }}
-                            />
-                        </motion.div>
-
-                        <motion.div
-                            className="mt-8 border-l-2 border-[#a36524] pl-4"
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.6, delay: 0.4 }}
-                        >
-                            <blockquote className="text-[#e4d8c4]/90 italic">
-                                <span className="text-2xl">
-                                    "Photography is the language of emotion. This platform gave{" "}
-                                    <em className="not-italic font-medium text-[#a36524]">my voice</em> a space."
-                                </span>
-                            </blockquote>
-                            <p className="text-[#e4d8c4]/60 mt-2">— Ana Ruiz</p>
-                        </motion.div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    );
-};
-
-const TreasureTroveSection = () => {
-    const [inView, setInView] = useState(false);
-    const sectionRef = useRef<HTMLElement>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    const images = [
-        "https://images.unsplash.com/photo-1736789087466-e67dd9d77ec3?q=80&w=3135&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        "https://images.unsplash.com/photo-1737551828838-f9a67900eab4?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        "https://images.unsplash.com/photo-1737509212751-826ac7e82858?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        "https://images.unsplash.com/photo-1737619043903-0668dc6d5b19?q=80&w=2617&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        "https://images.unsplash.com/photo-1737559217439-a5703e9b65cb?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        "https://images.unsplash.com/photo-1735999925427-d04865a57628?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        "https://images.unsplash.com/photo-1736457908762-d6ae9e5fb593?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        "https://images.unsplash.com/photo-1736771932149-26287a969645?q=80&w=3100&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    ];
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setInView(true);
-                }
-            },
-            { threshold: 0.3 }
-        );
-
-        if (sectionRef.current) {
-            observer.observe(sectionRef.current);
-        }
-
-        return () => {
-            if (sectionRef.current) {
-                observer.unobserve(sectionRef.current);
-            }
-        };
-    }, []);
-
-    return (
-        <section ref={sectionRef} className="py-24 px-6 bg-[var(--page-bg)]">
-            <div className="max-w-6xl mx-auto">
-                <div className="relative h-[700px] flex items-center justify-center overflow-hidden" ref={containerRef}>
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 w-[300px] text-center">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={inView ? { opacity: 1 } : {}}
-                            transition={{ delay: 1, duration: 0.5 }}
-                        >
-                            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-                                explore a treasure trove
-                                <br />
-                                of emerging art.
-                            </h2>
-                            <RollButton
-                                className="text-white text-lg mx-auto"
-                                onClick={() => document.getElementById("artworks")?.scrollIntoView({ behavior: "smooth" })}
-                            >
-                                Explore Artworks
-                            </RollButton>
-                        </motion.div>
-                    </div>
-
-                    <div className="w-full h-full relative">
-                        <motion.div
-                            className="absolute top-1/2 left-1/2 w-[600px] h-[600px] transform -translate-x-1/2 -translate-y-1/2"
-                            animate={
-                                inView
-                                    ? {
-                                          rotate: [0, 360],
-                                          transition: {
-                                              rotate: {
-                                                  repeat: Infinity,
-                                                  duration: 30,
-                                                  ease: "linear",
-                                                  delay: 1.2,
-                                              },
-                                          },
-                                      }
-                                    : {}
-                            }
-                        >
-                            {images.map((img, index) => {
-                                const numImages = images.length;
-                                const angle = (index / numImages) * 2 * Math.PI;
-                                const x = Math.cos(angle) * 250;
-                                const y = Math.sin(angle) * 250;
-
-                                return (
-                                    <motion.div
-                                        key={index}
-                                        className="absolute rounded-2xl overflow-hidden shadow-lg"
-                                        style={{
-                                            width: index % 2 === 0 ? "120px" : "140px",
-                                            height: index % 2 === 0 ? "160px" : "180px",
-                                            top: "50%",
-                                            left: "50%",
-                                            margin: "-80px 0 0 -60px",
-                                        }}
-                                        initial={{
-                                            x: 0,
-                                            y: 50,
-                                        }}
-                                        animate={
-                                            inView
-                                                ? {
-                                                      x,
-                                                      y,
-                                                      transition: {
-                                                          type: "spring",
-                                                          stiffness: 70,
-                                                          damping: 10,
-                                                          duration: 1,
-                                                      },
-                                                  }
-                                                : {}
-                                        }
-                                    >
-                                        <Image src={img} alt="Gallery image" fill style={{ objectFit: "cover" }} />
-                                    </motion.div>
-                                );
-                            })}
-                        </motion.div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    );
-};
-
-const FloatingParticles = dynamic(
-    () =>
-        Promise.resolve(() => {
-            return (
-                <div className="absolute inset-0 overflow-hidden">
-                    {[...Array(20)].map((_, i) => (
-                        <motion.div
-                            key={i}
-                            className="absolute rounded-full bg-[#e4d8c4]"
-                            style={{
-                                width: Math.random() * 8 + 2,
-                                height: Math.random() * 8 + 2,
-                                top: `${Math.random() * 100}%`,
-                                left: `${Math.random() * 100}%`,
-                                opacity: Math.random() * 0.3 + 0.1,
-                            }}
-                            animate={{
-                                y: [0, -30, 0],
-                                x: [0, Math.random() * 20 - 10, 0],
-                                opacity: [0.1, 0.3, 0.1],
-                            }}
-                            transition={{
-                                duration: Math.random() * 10 + 10,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                            }}
-                        />
-                    ))}
-                </div>
-            );
-        }),
-    { ssr: false }
-);
-
-const FeaturesSection = () => {
-    return (
-        <section className="py-24 px-6 bg-[var(--page-bg)]">
-            <div className="container mx-auto mb-16">
-                <motion.h2
-                    className="text-4xl md:text-5xl lg:text-6xl font-bold text-center leading-tight mb-20"
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.8 }}
-                >
-                    We are all about making original
-                    <br />
-                    art attainable for everyone
-                </motion.h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <FeatureCard
-                        image="https://images.unsplash.com/photo-1591035897819-f4bdf739f446?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                        title="Explore Artists"
-                        description="Discover diverse artistic talent."
-                    />
-                    <FeatureCard
-                        image="https://images.unsplash.com/photo-1630327064614-4e74d61f2a24?q=80&w=3125&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                        title="Become a Collector"
-                        description="Start building your personal art collection."
-                    />
-                    <FeatureCard
-                        image="https://images.unsplash.com/photo-1627236418876-ef8689d94241?q=80&w=2832&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                        title="Discover Artworks"
-                        description="Explore captivating creations."
-                    />
-                </div>
-            </div>
-        </section>
-    );
-};
-
-const FeatureCard = ({ image, title, description }: { image: string; title: string; description: string }) => {
-    const [isHovered, setIsHovered] = useState(false);
-
-    return (
-        <motion.div
-            className="relative h-[400px] rounded-lg overflow-hidden group cursor-pointer"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-        >
-            <div className="absolute inset-0">
-                <Image src={image} alt={title} fill style={{ objectFit: "cover" }} />
-            </div>
-
-            <div className="absolute bottom-0 left-0 right-0 p-6">
-                <div className="absolute inset-0 backdrop-blur-sm bg-gradient-to-t from-white/20 via-white/10 to-transparent rounded-lg"></div>
-                <div className="relative z-10">
-                    <div className="h-9 overflow-hidden">
-                        <AnimatePresence mode="wait">
-                            <motion.h3
-                                key={isHovered ? "hovered" : "default"}
-                                className="text-2xl font-semibold text-white"
-                                initial={{ y: isHovered ? 25 : 0, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                exit={{ y: -25, opacity: 0 }}
-                                transition={{ duration: 0.15 }}
-                            >
-                                {title}
-                            </motion.h3>
-                        </AnimatePresence>
-                    </div>
-                    <p className="text-white/90 mt-1">{description}</p>
-                </div>
-            </div>
-        </motion.div>
-    );
-};
-
-const ArtistCard = ({ artist, index }: { artist: Artist; index: number }) => {
-    const [isHovered, setIsHovered] = useState(false);
-
-    return (
-        <motion.div
-            className="group cursor-pointer"
-            initial={{ y: 50, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 * index, duration: 0.7 }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-        >
-            <div className="relative overflow-hidden rounded-xl h-80 md:h-96">
-                <div className="absolute inset-0">
-                    <Image
-                        src={artist.imageUrl}
-                        alt={artist.name}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                </div>
-
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <div className="absolute inset-0 backdrop-blur-sm bg-gradient-to-t from-black/30 via-black/20 to-transparent rounded-lg"></div>
-                    <div className="relative z-10">
-                        <div className="h-9 overflow-hidden">
-                            <AnimatePresence mode="wait">
-                                <motion.h3
-                                    key={isHovered ? "hovered" : "default"}
-                                    className="text-2xl font-semibold text-white"
-                                    initial={{ y: isHovered ? 25 : 0, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    exit={{ y: -25, opacity: 0 }}
-                                    transition={{ duration: 0.15 }}
-                                >
-                                    {artist.name}
-                                </motion.h3>
-                            </AnimatePresence>
-                        </div>
-                        <p className="text-white/90 mt-1">{artist.specialty}</p>
-                    </div>
-                </div>
-            </div>
-        </motion.div>
-    );
-};
-
-const artists: Artist[] = [
-    {
-        name: "Elena Morozova",
-        specialty: "Surrealism",
-        imageUrl:
-            "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=3145&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        name: "Marcus Chen",
-        specialty: "Digital Art",
-        imageUrl:
-            "https://images.unsplash.com/photo-1579541814924-49fef17c5be5?q=80&w=2549&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        name: "Sofia Pérez",
-        specialty: "Abstract",
-        imageUrl:
-            "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        name: "David Kim",
-        specialty: "Sculpture",
-        imageUrl:
-            "https://images.unsplash.com/photo-1632765854612-9b02b6ec2b15?q=80&w=2586&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-];
-
-const FloatingDecorations = dynamic(
-    () =>
-        Promise.resolve(() => {
-            return (
-                <div className="absolute inset-0 overflow-hidden">
-                    {[...Array(20)].map((_, i) => (
-                        <motion.div
-                            key={i}
-                            className="absolute rounded-full bg-[#e4d8c4]"
-                            style={{
-                                width: Math.random() * 8 + 2,
-                                height: Math.random() * 8 + 2,
-                                top: `${Math.random() * 100}%`,
-                                left: `${Math.random() * 100}%`,
-                                opacity: Math.random() * 0.3 + 0.1,
-                            }}
-                            animate={{
-                                y: [0, -30, 0],
-                                x: [0, Math.random() * 20 - 10, 0],
-                                opacity: [0.1, 0.3, 0.1],
-                            }}
-                            transition={{
-                                duration: Math.random() * 10 + 10,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                            }}
-                        />
-                    ))}
-                </div>
-            );
-        }),
-    { ssr: false }
-);
-
-const ArtistsSection = () => {
-    const { scrollYProgress } = useScroll();
-    const backgroundY = useTransform(scrollYProgress, [0, 1], [0, 100]);
-    const rotate = useTransform(scrollYProgress, [0, 1], [0, 10]);
-    const scale = useTransform(scrollYProgress, [0, 0.5], [1, 1.1]);
-
-    return (
-        <section
-            id="artists"
-            className="py-24 relative overflow-hidden"
-            style={{
-                background: `linear-gradient(135deg, #a36524 0%, #4b2d14 100%)`,
-            }}
-        >
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 z-0"></div>
-
-            <motion.div
-                className="absolute inset-0 -z-10 opacity-20"
-                style={{
-                    backgroundImage: `url("https://images.unsplash.com/photo-1570158268183-d296b2892211?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")`,
-                    backgroundSize: "cover",
-                    y: backgroundY,
-                }}
-            />
-
-            <motion.div className="absolute -top-20 -left-20 w-96 h-96 rounded-full bg-[#e4d8c4]/30 blur-3xl" style={{ scale, rotate }} />
-
-            <motion.div
-                className="absolute top-40 right-10 w-60 h-60 rounded-full bg-[#a36524]/30 blur-2xl"
-                style={{
-                    scale: useTransform(scrollYProgress, [0, 0.5], [1, 1.2]),
-                    rotate: useTransform(scrollYProgress, [0, 1], [0, -15]),
-                    opacity: useTransform(scrollYProgress, [0, 0.5], [0.4, 0.7]),
-                }}
-            />
-
-            <motion.div
-                className="absolute bottom-20 -left-10 w-80 h-80 rounded-full bg-[#784916]/40 blur-3xl"
-                style={{
-                    scale: useTransform(scrollYProgress, [0, 0.5], [0.8, 1.1]),
-                    rotate: useTransform(scrollYProgress, [0, 1], [0, 20]),
-                }}
-            />
-
-            <motion.div
-                className="absolute -bottom-40 right-0 w-[600px] h-[600px] rounded-full bg-[#e4d8c4]/20 blur-[100px]"
-                style={{
-                    scale: useTransform(scrollYProgress, [0, 0.5], [0.9, 1.1]),
-                    rotate: useTransform(scrollYProgress, [0, 1], [10, -5]),
-                }}
-            />
-
-            <FloatingDecorations />
-
-            <div className="absolute top-0 left-0 w-full h-10 overflow-hidden">
-                <motion.svg
-                    width="100%"
-                    height="100%"
-                    viewBox="0 0 1000 50"
-                    preserveAspectRatio="none"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    whileInView={{ pathLength: 1, opacity: 0.5 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 1.5, ease: "easeInOut" }}
-                >
-                    <motion.path d="M 0 25 Q 250 50 500 25 Q 750 0 1000 25" fill="none" stroke="#e4d8c4" strokeWidth="3" />
-                </motion.svg>
-            </div>
-
-            <div className="absolute bottom-0 left-0 w-full h-10 overflow-hidden">
-                <motion.svg
-                    width="100%"
-                    height="100%"
-                    viewBox="0 0 1000 50"
-                    preserveAspectRatio="none"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    whileInView={{ pathLength: 1, opacity: 0.5 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 1.5, ease: "easeInOut", delay: 0.3 }}
-                >
-                    <motion.path d="M 0 25 Q 250 0 500 25 Q 750 50 1000 25" fill="none" stroke="#e4d8c4" strokeWidth="3" />
-                </motion.svg>
-            </div>
-
-            <div className="container mx-auto px-6 relative z-10">
-                <motion.div
-                    className="text-center mb-16"
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
-                >
-                    <span className="inline-block px-4 py-1 rounded-full bg-[#a36524] text-[#e4d8c4] text-sm font-medium mb-3">
-                        Extraordinary Talent
-                    </span>
-                    <h2 className="text-4xl md:text-6xl font-bold mb-4 text-[#e4d8c4]">Meet Our Artists</h2>
-                    <p className="text-xl text-[#e4d8c4]/90 max-w-3xl mx-auto">
-                        Talented individuals from around the globe shaping the art world with their unique vision and creativity
-                    </p>
-                </motion.div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {artists.map((artist, i) => (
-                        <ArtistCard key={i} artist={artist} index={i} />
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-};
-
-const ArtworkCard = ({ artwork, index }: { artwork: Artwork; index: number }) => {
-    const cardRef = useRef(null);
-    const { scrollYProgress } = useScroll({
-        target: cardRef,
-        offset: ["start end", "end start"],
-    });
-
-    const scale = useTransform(scrollYProgress, [0, 0.5], [0.95, 1]);
-    const opacity = useTransform(scrollYProgress, [0, 0.3], [0.5, 1]);
-
-    return (
-        <motion.div
-            ref={cardRef}
-            className="group relative"
-            style={{ scale, opacity }}
-            initial={{ y: 40, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 * (index % 3), duration: 0.7 }}
-        >
-            <div className="bg-[var(--card-bg)] rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
-                <div className="relative h-80 overflow-hidden">
-                    <Image
-                        src={artwork.imageUrl}
-                        alt={artwork.title}
-                        fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                        <p className="text-sm font-medium">{artwork.artist}</p>
-                        <p className="text-xs opacity-80">{artwork.price}</p>
-                    </div>
-                </div>
-                <div className="p-4">
-                    <h3 className="text-lg font-semibold mb-2">{artwork.title}</h3>
-                    <p className="text-[var(--page-text-secondary)] text-sm">{artwork.description}</p>
-                </div>
-            </div>
-        </motion.div>
-    );
-};
-
-const artworks: Artwork[] = [
-    {
-        title: "Eternal Bloom",
-        description: "Abstract mixed media on canvas",
-        artist: "Elena Morozova",
-        price: "$2,400",
-        imageUrl:
-            "https://images.unsplash.com/photo-1539614474468-f423a2d2270c?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        title: "Urban Fragments",
-        description: "Digital print, limited edition",
-        artist: "Marcus Chen",
-        price: "$950",
-        imageUrl:
-            "https://images.unsplash.com/photo-1634986666676-ec8fd927c23d?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        title: "Silent Whispers",
-        description: "Oil on canvas",
-        artist: "Sofia Pérez",
-        price: "$3,200",
-        imageUrl:
-            "https://images.unsplash.com/photo-1641391503184-a2131018701b?q=80&w=2980&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        title: "Echoes of Time",
-        description: "Bronze sculpture",
-        artist: "David Kim",
-        price: "$5,800",
-        imageUrl:
-            "https://images.unsplash.com/photo-1674214857700-b5a833693513?q=80&w=2980&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        title: "Dreamer's Landscape",
-        description: "Watercolor on paper",
-        artist: "Elena Morozova",
-        price: "$1,750",
-        imageUrl:
-            "https://images.unsplash.com/photo-1728922236580-e242f44ed978?q=80&w=3198&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-        title: "Digital Dimensions",
-        description: "AI-generated digital art",
-        artist: "Marcus Chen",
-        price: "$850",
-        imageUrl:
-            "https://images.unsplash.com/flagged/photo-1572392640988-ba48d1a74457?q=80&w=2160&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-];
-
-const ArtworksSection = () => {
-    return (
-        <section
-            id="artworks"
-            className="py-24 px-6 relative"
-            style={{
-                background: `linear-gradient(135deg, var(--accent-secondary)10, var(--page-bg))`,
-            }}
-        >
-            <div className="max-w-7xl mx-auto">
-                <motion.div
-                    className="text-center mb-16"
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
-                >
-                    <h2 className="text-4xl md:text-5xl font-bold mb-4">Featured Artworks</h2>
-                    <p className="text-xl text-[var(--page-text-secondary)] max-w-3xl mx-auto">
-                        Discover unique pieces that speak to your soul, from emerging and established artists
-                    </p>
-                </motion.div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {artworks.map((artwork, i) => (
-                        <ArtworkCard key={i} artwork={artwork} index={i} />
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-};
-
-const Newsletter = () => {
-    const [email, setEmail] = useState("");
-    const [showNotification, setShowNotification] = useState(false);
-
-    const updateForm = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setEmail(e.target.value);
-    };
-
-    const subscribeNow = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (email) {
-            console.log("Subscribed:", email);
-            setEmail("");
-            setShowNotification(true);
-            setTimeout(() => setShowNotification(false), 3000);
-        }
-    };
-
-    return (
-        <section className="py-24 px-6 bg-[var(--page-bg)]">
-            <div className="max-w-4xl mx-auto relative">
-                <div className="absolute inset-0 overflow-hidden rounded-2xl">
-                    <Image
-                        src="https://images.unsplash.com/photo-1737490419228-0ba705903a23?q=80&w=2760&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                        alt="Newsletter background"
-                        fill
-                        priority
-                        style={{ objectFit: "cover" }}
-                    />
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-                </div>
-
-                <motion.div
-                    className="relative z-10 rounded-2xl p-8 md:p-12 shadow-lg text-center"
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
-                >
-                    <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">Stay Updated with ArteFACT</h2>
-                    <p className="text-white/80 mb-8 max-w-2xl mx-auto">
-                        Be the first to know about new artists, exhibitions, and exclusive offers
-                    </p>
-
-                    <form onSubmit={subscribeNow} className="max-w-md mx-auto">
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <div className="flex-grow relative">
-                                <FiMail
-                                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--page-text-secondary)]"
-                                    size={20}
-                                />
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={updateForm}
-                                    placeholder="Your email address"
-                                    className="w-full pl-10 pr-4 py-3 rounded-full bg-white/20 border border-white/30 focus:ring-2 focus:ring-[#a36524] focus:border-transparent outline-none text-white placeholder-white/60"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <RollButton className="text-white text-base whitespace-nowrap" onClick={() => {}}>
-                                    Subscribe
-                                </RollButton>
-                            </div>
-                        </div>
-                    </form>
-                </motion.div>
-            </div>
-
-            <motion.div
-                className="fixed bottom-5 right-5 p-4 bg-[#a36524] text-white rounded-lg shadow-lg z-50"
-                initial={{ opacity: 0, y: 50 }}
-                animate={{
-                    opacity: showNotification ? 1 : 0,
-                    y: showNotification ? 0 : 50,
-                }}
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            >
-                <div className="flex items-center gap-3">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    >
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                    </svg>
-                    <span>Thank you for subscribing!</span>
-                </div>
-            </motion.div>
-        </section>
-    );
-};
-
-const Footer = () => {
-    return (
-        <footer className="bg-[var(--card-bg)] py-12 px-6">
-            <div className="max-w-7xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
-                    <div>
-                        <h3 className="text-xl font-semibold mb-4">ArteFACT</h3>
-                        <p className="text-[var(--page-text-secondary)] max-w-xs">
-                            Connecting artists and collectors in a vibrant community of creativity and expression.
-                        </p>
-                    </div>
-
-                    <div>
-                        <h3 className="text-xl font-semibold mb-4">Quick Links</h3>
-                        <ul className="space-y-2">
-                            <li>
-                                <a href="#" className="text-[var(--page-text-secondary)] hover:text-[#a36524] transition-colors">
-                                    About Us
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" className="text-[var(--page-text-secondary)] hover:text-[#a36524] transition-colors">
-                                    FAQs
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" className="text-[var(--page-text-secondary)] hover:text-[#a36524] transition-colors">
-                                    Privacy Policy
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" className="text-[var(--page-text-secondary)] hover:text-[#a36524] transition-colors">
-                                    Terms of Service
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h3 className="text-xl font-semibold mb-4">Contact</h3>
-                        <ul className="space-y-2">
-                            <li className="text-[var(--page-text-secondary)]">1234 Art Square, Creativity Ave</li>
-                            <li>
-                                <a
-                                    href="mailto:contact@artefact.com"
-                                    className="text-[var(--page-text-secondary)] hover:text-[#a36524] transition-colors inline-flex items-center group"
-                                >
-                                    <span className="relative">
-                                        contact@artefact.com
-                                        <span className="absolute left-0 right-0 bottom-0 h-0.5 bg-[#a36524] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300"></span>
-                                    </span>
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="h-4 w-4 ml-1 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                        />
-                                    </svg>
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="tel:+15551234567"
-                                    className="text-[var(--page-text-secondary)] hover:text-[#a36524] transition-colors inline-flex items-center group"
-                                >
-                                    <span className="relative">
-                                        +1 (555) 123-4567
-                                        <span className="absolute left-0 right-0 bottom-0 h-0.5 bg-[#a36524] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300"></span>
-                                    </span>
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="h-4 w-4 ml-1 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                                        />
-                                    </svg>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div className="border-t border-[var(--border-color)] pt-8">
-                    <p className="text-center text-[var(--page-text-secondary)]">
-                        © {new Date().getFullYear()} ArteFACT. All rights reserved.
-                    </p>
-                </div>
-            </div>
-        </footer>
-    );
-};
-
-const BackToTopButton = dynamic(
-    () =>
-        Promise.resolve(() => {
-            const scrollToTop = () => {
-                window.scrollTo({
-                    top: 0,
-                    behavior: "smooth",
-                });
-            };
-
-            const [isVisible, setIsVisible] = useState(false);
-
-            useEffect(() => {
-                const handleScroll = () => {
-                    const heroSection = document.getElementById("hero");
-                    const heroHeight = heroSection?.offsetHeight || 800;
-
-                    if (window.scrollY > heroHeight) {
-                        setIsVisible(true);
-                    } else {
-                        setIsVisible(false);
-                    }
-                };
-
-                window.addEventListener("scroll", handleScroll);
-
-                handleScroll();
-
-                return () => {
-                    window.removeEventListener("scroll", handleScroll);
-                };
-            }, []);
-
-            return (
-                <AnimatePresence>
-                    {isVisible && (
-                        <motion.button
-                            onClick={scrollToTop}
-                            className="fixed bottom-5 right-5 z-50 p-3 rounded-full cursor-pointer backdrop-blur-md shadow-lg hover:scale-110 transition-transform duration-300"
-                            style={{
-                                backgroundColor: "var(--navbar-bg)",
-                                border: "1px solid rgba(255, 255, 255, 0.1)",
-                            }}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 20 }}
-                            transition={{ duration: 0.3, ease: "easeOut" }}
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="20"
-                                height="20"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="white"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <path d="M12 19V5" />
-                                <path d="M5 12l7-7 7 7" />
-                            </svg>
-                        </motion.button>
-                    )}
-                </AnimatePresence>
-            );
-        }),
-    { ssr: false }
-);
-
-export default function Home() {
+const Page = () => {
     return (
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-            <GlobalThemeStyles />
-            <main>
-                <Navbar />
-                <BackToTopButton />
-                <HeroSection />
-                <AboutUsSection />
-                <FeaturesSection />
-                <TreasureTroveSection />
-                <ArtistsSection />
-                <ArtworksSection />
-                <Newsletter />
-                <Footer />
-            </main>
+            <DocumentDashboard />
         </ThemeProvider>
     );
-}
+};
+
+export default Page;
