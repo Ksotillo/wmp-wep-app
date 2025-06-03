@@ -1,1782 +1,1114 @@
 "use client";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { ThemeProvider, useTheme } from "next-themes";
-import { motion, AnimatePresence } from "framer-motion";
+const fontStyle = `
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap");
+body {
+  font-family: 'Outfit', sans-serif;
+}
+`;
 import {
-    FaPlay,
-    FaPause,
-    FaMicrophone,
-    FaMicrophoneSlash,
-    FaCog,
-    FaMobile,
-    FaLightbulb,
-    FaEnvelope,
-    FaVolumeUp,
-    FaVolumeMute,
-    FaCircle,
-    FaHandHoldingHeart,
-} from "react-icons/fa";
+    ChevronDown,
+    ChevronRight,
+    Shield,
+    Zap,
+    Globe,
+    Award,
+    Users,
+    Database,
+    Lock,
+    Eye,
+    CheckCircle,
+    Star,
+    ArrowRight,
+    Sparkles,
+    Github,
+    Twitter,
+    Linkedin,
+    Facebook,
+    Instagram,
+} from "lucide-react";
 
-interface TouchPoint {
+interface Notification {
     id: number;
-    x: number;
-    y: number;
-    startTime: number;
-    previousX?: number;
-    previousY?: number;
-    isInZone?: boolean;
-    zoneId?: string;
+    message: string;
+    type: string;
 }
 
-interface TouchZone {
+interface QuizAnswer {
+    value: string;
+    label: string;
+    weight: {
+        starter: number;
+        professional: number;
+        enterprise: number;
+    };
+}
+
+interface CommitmentOption {
     id: string;
-    x: number;
-    y: number;
-    radius: number;
-    isActive: boolean;
-    holdDuration: number;
-    lastTouchTime: number;
+    label: string;
+    months: number;
+    discount: number;
+    savings: string;
 }
 
-interface Particle {
-    id: string;
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    life: number;
-    maxLife: number;
-    size: number;
-    color: string;
-    alpha: number;
-    trail?: boolean;
-}
+const ClientOnlyAnimatedDots = () => {
+    const [dots, setDots] = useState<
+        Array<{
+            id: number;
+            left: string;
+            top: string;
+            animationDelay: string;
+            animationDuration: string;
+        }>
+    >([]);
 
-interface ParticleSystemProps {
-    touchPoints: TouchPoint[];
-    touchZones: TouchZone[];
-    breathingPhase: string;
-    audioLevel: number;
-    isActive: boolean;
-    phaseDuration: number;
-    phaseIndex: number;
-    getPhaseColorWithDuration: (phase: string, duration: number, maxDuration: number) => string;
-    phaseDurations: number[];
-}
-
-const GlobalThemeStyles = () => (
-    <style jsx global>{`
-        @import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Open+Sans:wght@300;400;500;600&display=swap");
-
-        :root {
-            --page-bg: #f8fafc;
-            --page-text-primary: #1e293b;
-            --page-text-secondary: #64748b;
-            --card-bg: #ffffff;
-            --card-border: #e2e8f0;
-            --accent-primary: #f97316;
-            --accent-secondary: #84cc16;
-            --accent-tertiary: #06b6d4;
-            --button-bg: #f1f5f9;
-            --button-hover: #e2e8f0;
-            --success-color: #22c55e;
-            --warning-color: #f59e0b;
-            --error-color: #ef4444;
-            --font-heading: "Lora", serif;
-            --font-body: "Open Sans", sans-serif;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-        }
-
-        html.dark {
-            --page-bg: #0f172a;
-            --page-text-primary: #f1f5f9;
-            --page-text-secondary: #94a3b8;
-            --card-bg: #1e293b;
-            --card-border: #334155;
-            --accent-primary: #fb923c;
-            --accent-secondary: #a3e635;
-            --accent-tertiary: #22d3ee;
-            --button-bg: #334155;
-            --button-hover: #475569;
-            --success-color: #4ade80;
-            --warning-color: #fbbf24;
-            --error-color: #f87171;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3);
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--page-bg);
-            color: var(--page-text-primary);
-            font-family: var(--font-body);
-            font-weight: 400;
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            overflow-x: hidden;
-        }
-
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6 {
-            font-family: var(--font-heading);
-            font-weight: 600;
-            line-height: 1.3;
-        }
-
-        /* Accessibility: Reduced motion support */
-        @media (prefers-reduced-motion: reduce) {
-            *,
-            *::before,
-            *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-
-            .particle-canvas {
-                display: none !important;
-            }
-
-            .breathing-indicator * {
-                transform: none !important;
-            }
-        }
-
-        /* Enhanced focus indicators for accessibility */
-        button:focus-visible,
-        [tabindex]:focus-visible {
-            outline: 3px solid var(--accent-primary);
-            outline-offset: 2px;
-            border-radius: 4px;
-        }
-
-        /* High contrast mode support */
-        @media (prefers-contrast: high) {
-            :root {
-                --page-text-primary: #000000;
-                --page-text-secondary: #333333;
-                --accent-primary: #0066cc;
-                --card-border: #333333;
-            }
-
-            html.dark {
-                --page-text-primary: #ffffff;
-                --page-text-secondary: #cccccc;
-                --accent-primary: #66b3ff;
-                --card-border: #cccccc;
-            }
-        }
-
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--card-bg);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--page-text-secondary);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--page-text-primary);
-        }
-
-        .particle-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            zindex: 1;
-        }
-
-        .touch-zone {
-            position: absolute;
-            border-radius: 50%;
-            border: 2px solid var(--accent-primary);
-            opacity: 0.6;
-            pointer-events: all;
-            touch-action: none;
-            user-select: none;
-            transition: all 0.3s ease;
-            zindex: 2;
-        }
-
-        .touch-zone:active,
-        .touch-zone:focus {
-            transform: scale(1.1);
-            opacity: 0.8;
-            outline: 3px solid var(--accent-primary);
-            outline-offset: 4px;
-        }
-
-        .breathing-indicator {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            zindex: 3;
-        }
-
-        /* Screen reader only text */
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
-
-        @media (max-width: 768px) {
-            .touch-zone {
-                min-width: 44px;
-                min-height: 44px;
-            }
-        }
-    `}</style>
-);
-
-const ParticleSystem = ({ touchPoints, touchZones, breathingPhase, audioLevel, isActive, phaseDuration, phaseIndex, getPhaseColorWithDuration, phaseDurations }: ParticleSystemProps) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const particlesRef = useRef<Particle[]>([]);
-    const animationFrameRef = useRef<number | null>(null);
-
-    const createParticle = useCallback((x: number, y: number, phase: string, isTrail = false, customColor?: string): Particle => {
-        let particleColor: string;
-        if (customColor) {
-            particleColor = customColor;
-        } else {
-            const maxDuration = phaseDurations[phaseIndex];
-            particleColor = getPhaseColorWithDuration(phase, phaseDuration, maxDuration);
-        }
-
-        const angle = Math.random() * Math.PI * 2;
-        const speed = isTrail ? 1 + Math.random() * 2 : 2 + Math.random() * 3;
-
-        return {
-            id: Math.random().toString(36),
-            x,
-            y,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: isTrail ? 0.8 : 1.0,
-            maxLife: isTrail ? 0.8 : 1.0,
-            size: isTrail ? 3 + Math.random() * 6 : 4 + Math.random() * 12,
-            color: particleColor,
-            alpha: 1.0,
-            trail: isTrail
-        };
-    }, [phaseIndex, phaseDuration, getPhaseColorWithDuration, phaseDurations]);
-
-    const createTrailParticles = useCallback((fromX: number, fromY: number, toX: number, toY: number, phase: string) => {
-        const distance = Math.sqrt((toX - fromX) ** 2 + (toY - fromY) ** 2);
-        const steps = Math.min(Math.floor(distance / 8), 10);
-        
-        for (let i = 0; i <= steps; i++) {
-            const t = i / steps;
-            const x = fromX + (toX - fromX) * t;
-            const y = fromY + (toY - fromY) * t;
-            
-            const offsetX = (Math.random() - 0.5) * 10;
-            const offsetY = (Math.random() - 0.5) * 10;
-            
-            particlesRef.current.push(createParticle(x + offsetX, y + offsetY, phase, true));
-        }
-    }, [createParticle]);
-
-    const updateParticles = useCallback(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-
-        particlesRef.current = particlesRef.current.filter(particle => {
-            particle.life -= particle.trail ? 0.015 : 0.008;
-            particle.alpha = particle.life;
-
-            if (audioLevel > 0.1) {
-                const vibrationStrength = audioLevel * 5;
-                const time = Date.now() * 0.01;
-                const vibrationX = Math.sin(time + particle.x * 0.01) * vibrationStrength;
-                const vibrationY = Math.cos(time + particle.y * 0.01) * vibrationStrength;
-                particle.vx += vibrationX * 0.1;
-                particle.vy += vibrationY * 0.1;
-                
-                particle.size = (particle.trail ? 3 + Math.random() * 6 : 4 + Math.random() * 12) * (1 + audioLevel * 0.5);
-            }
-
-            if (breathingPhase === 'inhale') {
-                const dx = centerX - particle.x;
-                const dy = centerY - particle.y;
-                particle.vx += dx * 0.0005;
-                particle.vy += dy * 0.0005;
-            } else if (breathingPhase === 'exhale') {
-                const dx = particle.x - centerX;
-                const dy = particle.y - centerY;
-                particle.vx += dx * 0.0008;
-                particle.vy += dy * 0.0008;
-            } else if (breathingPhase === 'hold') {
-                const dx = particle.x - centerX;
-                const dy = particle.y - centerY;
-                const angle = Math.atan2(dy, dx);
-                particle.vx += Math.cos(angle + Math.PI / 2) * 0.3;
-                particle.vy += Math.sin(angle + Math.PI / 2) * 0.3;
-            }
-
-            particle.vx *= 0.995;
-            particle.vy *= 0.995;
-
-            particle.x += particle.vx;
-            particle.y += particle.vy;
-
-            return particle.life > 0;
-        });
-
-        touchPoints.forEach(touch => {
-            if (touch.isInZone) {
-                const activeZone = touchZones.find(zone => zone.id === touch.zoneId && zone.isActive);
-                if (activeZone && Math.random() < 0.6) {
-                    const intensity = Math.min(activeZone.holdDuration / 1000, 2);
-                    const particleCount = Math.floor(1 + intensity * 2);
-                    
-                    for (let i = 0; i < particleCount; i++) {
-                        const offsetX = (Math.random() - 0.5) * 30;
-                        const offsetY = (Math.random() - 0.5) * 30;
-                        particlesRef.current.push(createParticle(
-                            touch.x + offsetX, 
-                            touch.y + offsetY, 
-                            breathingPhase
-                        ));
-                    }
-                }
-                
-                if (touch.previousX !== undefined && touch.previousY !== undefined) {
-                    const distance = Math.sqrt((touch.x - touch.previousX) ** 2 + (touch.y - touch.previousY) ** 2);
-                    if (distance > 5) {
-                        createTrailParticles(touch.previousX, touch.previousY, touch.x, touch.y, breathingPhase);
-                    }
-                }
-            }
-        });
-
-        if (audioLevel > 0.1) {
-            const intensity = Math.min(audioLevel * 12, 8);
-            for (let i = 0; i < intensity; i++) {
-                const angle = (Math.PI * 2 * i) / intensity + Date.now() * 0.003;
-                const radius = 50 + audioLevel * 150 + Math.sin(Date.now() * 0.005) * 30;
-                const x = centerX + Math.cos(angle) * radius;
-                const y = centerY + Math.sin(angle) * radius;
-                const particle = createParticle(x, y, 'hold');
-                particle.vx *= 1.5;
-                particle.vy *= 1.5;
-                particlesRef.current.push(particle);
-            }
-        }
-
-        if (isActive && Math.random() < 0.2) {
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 100 + Math.random() * 200;
-            const x = centerX + Math.cos(angle) * radius;
-            const y = centerY + Math.sin(angle) * radius;
-            particlesRef.current.push(createParticle(x, y, breathingPhase));
-        }
-
-        if (particlesRef.current.length > 200) {
-            particlesRef.current = particlesRef.current.slice(-200);
-        }
-    }, [touchPoints, touchZones, breathingPhase, audioLevel, isActive, createParticle, createTrailParticles]);
-
-    const renderParticles = useCallback(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.save();
-        
-        particlesRef.current.forEach(particle => {
-            if (particle.alpha < 0.1) return;
-            
-            ctx.save();
-            ctx.globalAlpha = particle.alpha;
-            ctx.fillStyle = particle.color;
-            
-            if (particle.trail) {
-                ctx.shadowColor = particle.color;
-                ctx.shadowBlur = 5;
-            } else {
-                ctx.shadowColor = particle.color;
-                ctx.shadowBlur = 12;
-            }
-            
-            ctx.beginPath();
-            ctx.arc(particle.x, particle.y, particle.size * particle.alpha, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        });
-        
-        ctx.restore();
+    useEffect(() => {
+        const newDots = Array.from({ length: 20 }).map((_, i) => ({
+            id: i,
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            animationDelay: `${Math.random() * 3}s`,
+            animationDuration: `${3 + Math.random() * 4}s`,
+        }));
+        setDots(newDots);
     }, []);
-
-    const animate = useCallback(() => {
-        if (!isActive) return;
-        
-        updateParticles();
-        renderParticles();
-        animationFrameRef.current = requestAnimationFrame(animate);
-    }, [isActive, updateParticles, renderParticles]);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const resizeCanvas = () => {
-            const pixelRatio = Math.min(window.devicePixelRatio, 2);
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            
-            canvas.width = width * pixelRatio;
-            canvas.height = height * pixelRatio;
-            canvas.style.width = width + 'px';
-            canvas.style.height = height + 'px';
-            
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.scale(pixelRatio, pixelRatio);
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-            }
-        };
-
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        if (isActive) {
-            animate();
-        }
-
-        return () => {
-            window.removeEventListener('resize', resizeCanvas);
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
-        };
-    }, [isActive, animate]);
-
-    return <canvas ref={canvasRef} className="particle-canvas" />;
-};
-
-const BreathingSession = () => {
-    const [sessionState, setSessionState] = useState("setup");
-    const [sessionDuration, setSessionDuration] = useState(10);
-    const [timeRemaining, setTimeRemaining] = useState(0);
-    const [breathingPhase, setBreathingPhase] = useState<"inhale" | "hold" | "exhale">("inhale");
-    const [phaseTimer, setPhaseTimer] = useState(4);
-    const [phaseStartTime, setPhaseStartTime] = useState<number>(Date.now());
-    const [phaseDuration, setPhaseDuration] = useState<number>(0);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [touchPoints, setTouchPoints] = useState<TouchPoint[]>([]);
-    const [touchZones, setTouchZones] = useState<TouchZone[]>([]);
-    const [isListening, setIsListening] = useState(false);
-    const [audioLevel, setAudioLevel] = useState(0);
-    const [showSettings, setShowSettings] = useState(false);
-    const [phaseIndex, setPhaseIndex] = useState(0);
-    const [announcements, setAnnouncements] = useState<string>("");
-    const [lastAnnouncedPhase, setLastAnnouncedPhase] = useState<string>("");
-
-    const audioContextRef = useRef<AudioContext | null>(null);
-    const analyserRef = useRef<AnalyserNode | null>(null);
-    const micStreamRef = useRef<MediaStream | null>(null);
-    const settingsRef = useRef<HTMLDivElement>(null);
-    const skipLinkRef = useRef<HTMLAnchorElement>(null);
-    const mainContentRef = useRef<HTMLElement>(null);
-
-    const { theme, setTheme } = useTheme();
-
-    const breathingPhases: ("inhale" | "hold" | "exhale" | "hold")[] = ["inhale", "hold", "exhale", "hold"];
-    const phaseDurations = [4, 2, 4, 2];
-
-    const announceToScreenReader = useCallback((message: string, priority: "polite" | "assertive" = "polite") => {
-        setAnnouncements(message);
-
-        setTimeout(() => setAnnouncements(""), 2000);
-
-        console.log(`Accessibility: ${message}`);
-    }, []);
-
-    useEffect(() => {
-        if (sessionState === "active" && breathingPhase !== lastAnnouncedPhase) {
-            const phaseMessages = {
-                inhale: `Begin inhaling. Breathe in slowly for ${phaseDurations[phaseIndex]} seconds.`,
-                exhale: `Begin exhaling. Breathe out slowly for ${phaseDurations[phaseIndex]} seconds.`,
-                hold: `Hold your breath for ${phaseDurations[phaseIndex]} seconds.`,
-            };
-
-            announceToScreenReader(phaseMessages[breathingPhase] || `${breathingPhase} phase started`, "assertive");
-            setLastAnnouncedPhase(breathingPhase);
-        }
-    }, [breathingPhase, sessionState, phaseIndex, phaseDurations, lastAnnouncedPhase, announceToScreenReader]);
-
-    useEffect(() => {
-        if (sessionState === "active") {
-            const minutes = Math.floor(timeRemaining / 60);
-            const seconds = timeRemaining % 60;
-
-            if (seconds === 0 && minutes > 0) {
-                announceToScreenReader(`${minutes} minute${minutes !== 1 ? "s" : ""} remaining`);
-            } else if (timeRemaining === 30) {
-                announceToScreenReader("30 seconds remaining");
-            } else if (timeRemaining === 10) {
-                announceToScreenReader("10 seconds remaining");
-            }
-        }
-    }, [timeRemaining, sessionState, announceToScreenReader]);
-
-    const skipToMain = useCallback(() => {
-        mainContentRef.current?.focus();
-        announceToScreenReader("Skipped to main content");
-    }, [announceToScreenReader]);
-
-    const toggleMicrophone = useCallback(async () => {
-        if (!isListening) {
-            try {
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    console.warn("Microphone API not available in this browser");
-                    return;
-                }
-
-                console.log("🎤 Requesting microphone access...");
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        echoCancellation: false,
-                        noiseSuppression: false,
-                        autoGainControl: false,
-                        sampleRate: 44100,
-                    },
-                });
-
-                console.log("✅ Microphone access granted");
-                const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-                if (!AudioContextClass) {
-                    console.warn("Web Audio API not available");
-                    stream.getTracks().forEach((track) => track.stop());
-                    return;
-                }
-
-                const audioContext = new AudioContextClass();
-
-                if (audioContext.state === "suspended") {
-                    await audioContext.resume();
-                    console.log("🔊 AudioContext resumed");
-                }
-
-                const analyser = audioContext.createAnalyser();
-                const microphone = audioContext.createMediaStreamSource(stream);
-
-                analyser.fftSize = 1024;
-                analyser.smoothingTimeConstant = 0.2;
-                analyser.minDecibels = -90;
-                analyser.maxDecibels = -10;
-
-                microphone.connect(analyser);
-
-                audioContextRef.current = audioContext;
-                analyserRef.current = analyser;
-                micStreamRef.current = stream;
-
-                setIsListening(true);
-                announceToScreenReader("Microphone activated for focus mode");
-                console.log("🎵 Microphone monitoring started");
-
-                const updateAudioLevel = () => {
-                    if (!analyserRef.current) return;
-
-                    try {
-                        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                        analyser.getByteFrequencyData(dataArray);
-
-                        let sum = 0;
-                        for (let i = 0; i < dataArray.length; i++) {
-                            sum += dataArray[i] * dataArray[i];
-                        }
-                        const rms = Math.sqrt(sum / dataArray.length);
-                        const normalizedLevel = Math.min(rms / 128, 1);
-
-                        setAudioLevel(normalizedLevel);
-
-                        if (normalizedLevel > 0.1) {
-                            console.log("🎤 Audio detected:", normalizedLevel.toFixed(3));
-                        }
-
-                        requestAnimationFrame(updateAudioLevel);
-                    } catch (error) {
-                        console.error("Audio analysis error:", error);
-                        requestAnimationFrame(updateAudioLevel);
-                    }
-                };
-
-                updateAudioLevel();
-            } catch (error) {
-                console.error("❌ Microphone access error:", error);
-
-                if (error instanceof Error) {
-                    if (error.name === "NotFoundError") {
-                        console.warn("No microphone found");
-                    } else if (error.name === "NotAllowedError") {
-                        console.warn("Microphone permission denied");
-                    } else if (error.name === "NotReadableError") {
-                        console.warn("Microphone in use by another app");
-                    }
-                }
-
-                setIsListening(false);
-                setAudioLevel(0);
-            }
-        } else {
-            console.log("🔇 Stopping microphone...");
-            try {
-                if (micStreamRef.current) {
-                    micStreamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-                    micStreamRef.current = null;
-                }
-                if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-                    await audioContextRef.current.close();
-                    audioContextRef.current = null;
-                }
-                analyserRef.current = null;
-                announceToScreenReader("Microphone deactivated");
-                console.log("✅ Microphone stopped");
-            } catch (error) {
-                console.error("Error stopping microphone:", error);
-            }
-
-            setIsListening(false);
-            setAudioLevel(0);
-        }
-    }, [isListening, announceToScreenReader]);
-
-    const togglePlayPause = useCallback(() => {
-        setIsPlaying((prev) => !prev);
-    }, []);
-
-    const handleKeyDown = useCallback(
-        (e: KeyboardEvent) => {
-            if (sessionState === "active") {
-                switch (e.key) {
-                    case " ":
-                    case "Spacebar":
-                        e.preventDefault();
-                        togglePlayPause();
-                        announceToScreenReader(isPlaying ? "Session paused" : "Session resumed");
-                        break;
-                    case "Escape":
-                        if (showSettings) {
-                            setShowSettings(false);
-                            announceToScreenReader("Settings closed");
-                        }
-                        break;
-                    case "m":
-                    case "M":
-                        e.preventDefault();
-                        toggleMicrophone();
-                        break;
-                    case "s":
-                    case "S":
-                        e.preventDefault();
-                        setShowSettings(!showSettings);
-                        announceToScreenReader(showSettings ? "Settings closed" : "Settings opened");
-                        break;
-                }
-            }
-        },
-        [sessionState, isPlaying, showSettings, togglePlayPause, toggleMicrophone, announceToScreenReader]
-    );
-
-    useEffect(() => {
-        document.addEventListener("keydown", handleKeyDown);
-        return () => document.removeEventListener("keydown", handleKeyDown);
-    }, [handleKeyDown]);
-
-    useEffect(() => {
-        if (showSettings && settingsRef.current) {
-            const firstFocusable = settingsRef.current.querySelector("button") as HTMLElement;
-            firstFocusable?.focus();
-        }
-    }, [showSettings]);
-
-    useEffect(() => {
-        const initializeZones = () => {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-
-            const zones: TouchZone[] = [
-                {
-                    id: "zone-1",
-                    x: width * 0.25,
-                    y: height * 0.3,
-                    radius: 80,
-                    isActive: false,
-                    holdDuration: 0,
-                    lastTouchTime: 0,
-                },
-                {
-                    id: "zone-2",
-                    x: width * 0.75,
-                    y: height * 0.3,
-                    radius: 80,
-                    isActive: false,
-                    holdDuration: 0,
-                    lastTouchTime: 0,
-                },
-                {
-                    id: "zone-3",
-                    x: width * 0.5,
-                    y: height * 0.7,
-                    radius: 80,
-                    isActive: false,
-                    holdDuration: 0,
-                    lastTouchTime: 0,
-                },
-            ];
-
-            setTouchZones(zones);
-        };
-
-        initializeZones();
-        window.addEventListener("resize", initializeZones);
-        return () => window.removeEventListener("resize", initializeZones);
-    }, []);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setTouchZones((prevZones) =>
-                prevZones.map((zone) => {
-                    if (zone.isActive) {
-                        return {
-                            ...zone,
-                            holdDuration: Date.now() - zone.lastTouchTime,
-                        };
-                    }
-                    return zone;
-                })
-            );
-        }, 50);
-
-        return () => clearInterval(interval);
-    }, []);
-
-    const isPointInZone = useCallback((x: number, y: number, zone: TouchZone): boolean => {
-        const distance = Math.sqrt((x - zone.x) ** 2 + (y - zone.y) ** 2);
-        return distance <= zone.radius;
-    }, []);
-
-    const startSession = useCallback(() => {
-        setSessionState("active");
-        setTimeRemaining(sessionDuration * 60);
-        setIsPlaying(true);
-        setPhaseIndex(0);
-        setBreathingPhase("inhale");
-        setPhaseTimer(4);
-        setPhaseStartTime(Date.now());
-        setPhaseDuration(0);
-    }, [sessionDuration]);
-
-    const triggerHapticFeedback = useCallback(() => {
-        if ("vibrate" in navigator) {
-            navigator.vibrate([100, 50, 100]);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!isPlaying || sessionState !== "active") return;
-
-        const timer = setInterval(() => {
-            setTimeRemaining((prev) => {
-                if (prev <= 1) {
-                    setSessionState("complete");
-                    setIsPlaying(false);
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [isPlaying, sessionState]);
-
-    useEffect(() => {
-        if (!isPlaying || sessionState !== "active") return;
-
-        const phaseInterval = setInterval(() => {
-            setPhaseTimer((prev) => {
-                if (prev <= 1) {
-                    let newPhaseDuration = 4;
-
-                    setPhaseIndex((currentIndex) => {
-                        const nextIndex = (currentIndex + 1) % breathingPhases.length;
-                        const nextPhase = breathingPhases[nextIndex];
-
-                        setBreathingPhase(nextPhase);
-                        setPhaseStartTime(Date.now());
-                        setPhaseDuration(0);
-
-                        newPhaseDuration = phaseDurations[nextIndex];
-
-                        if (nextPhase === "exhale") {
-                            triggerHapticFeedback();
-                        }
-
-                        return nextIndex;
-                    });
-
-                    return newPhaseDuration;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => clearInterval(phaseInterval);
-    }, [isPlaying, sessionState, triggerHapticFeedback]);
-
-    useEffect(() => {
-        if (!isPlaying || sessionState !== "active") return;
-
-        const interval = setInterval(() => {
-            setPhaseDuration(Date.now() - phaseStartTime);
-        }, 100);
-
-        return () => clearInterval(interval);
-    }, [isPlaying, sessionState, phaseStartTime]);
-
-    const handleTouchStart = useCallback(
-        (e: React.TouchEvent) => {
-            const target = e.target as HTMLElement;
-            if (target.closest("button") || target.classList.contains("z-10") || target.closest(".z-10")) {
-                return;
-            }
-
-            e.preventDefault();
-            const currentTime = Date.now();
-
-            const touches = Array.from(e.touches).map((touch) => {
-                const touchPoint: TouchPoint = {
-                    id: touch.identifier,
-                    x: touch.clientX,
-                    y: touch.clientY,
-                    startTime: currentTime,
-                    isInZone: false,
-                };
-
-                const touchedZone = touchZones.find((zone) => isPointInZone(touch.clientX, touch.clientY, zone));
-                if (touchedZone) {
-                    touchPoint.isInZone = true;
-                    touchPoint.zoneId = touchedZone.id;
-
-                    setTouchZones((prevZones) =>
-                        prevZones.map((zone) =>
-                            zone.id === touchedZone.id ? { ...zone, isActive: true, lastTouchTime: currentTime, holdDuration: 0 } : zone
-                        )
-                    );
-                }
-
-                return touchPoint;
-            });
-
-            setTouchPoints((prev) => [...prev, ...touches]);
-        },
-        [touchZones, isPointInZone]
-    );
-
-    const handleTouchMove = useCallback(
-        (e: React.TouchEvent) => {
-            const target = e.target as HTMLElement;
-            if (target.closest("button") || target.classList.contains("z-10") || target.closest(".z-10")) {
-                return;
-            }
-
-            e.preventDefault();
-
-            const updatedTouches = Array.from(e.touches).map((touch) => {
-                const existingTouch = touchPoints.find((t) => t.id === touch.identifier);
-
-                const touchPoint: TouchPoint = {
-                    id: touch.identifier,
-                    x: touch.clientX,
-                    y: touch.clientY,
-                    startTime: existingTouch?.startTime || Date.now(),
-                    previousX: existingTouch?.x,
-                    previousY: existingTouch?.y,
-                    isInZone: false,
-                };
-
-                const touchedZone = touchZones.find((zone) => isPointInZone(touch.clientX, touch.clientY, zone));
-                if (touchedZone) {
-                    touchPoint.isInZone = true;
-                    touchPoint.zoneId = touchedZone.id;
-                } else {
-                    if (existingTouch?.zoneId) {
-                        setTouchZones((prevZones) =>
-                            prevZones.map((zone) =>
-                                zone.id === existingTouch.zoneId ? { ...zone, isActive: false, holdDuration: 0 } : zone
-                            )
-                        );
-                    }
-                }
-
-                return touchPoint;
-            });
-
-            setTouchPoints(updatedTouches);
-        },
-        [touchPoints, touchZones, isPointInZone]
-    );
-
-    const handleTouchEnd = useCallback(
-        (e: React.TouchEvent) => {
-            const target = e.target as HTMLElement;
-            if (target.closest("button") || target.classList.contains("z-10") || target.closest(".z-10")) {
-                return;
-            }
-
-            e.preventDefault();
-
-            const remainingTouchIds = Array.from(e.touches).map((touch) => touch.identifier);
-            const endedTouches = touchPoints.filter((touch) => !remainingTouchIds.includes(touch.id));
-
-            endedTouches.forEach((endedTouch) => {
-                if (endedTouch.zoneId) {
-                    setTouchZones((prevZones) =>
-                        prevZones.map((zone) => (zone.id === endedTouch.zoneId ? { ...zone, isActive: false, holdDuration: 0 } : zone))
-                    );
-                }
-            });
-
-            const remainingTouches = Array.from(e.touches).map((touch) => {
-                const existingTouch = touchPoints.find((t) => t.id === touch.identifier);
-                return {
-                    id: touch.identifier,
-                    x: touch.clientX,
-                    y: touch.clientY,
-                    startTime: existingTouch?.startTime || Date.now(),
-                    previousX: existingTouch?.x,
-                    previousY: existingTouch?.y,
-                    isInZone: existingTouch?.isInZone || false,
-                    zoneId: existingTouch?.zoneId,
-                };
-            });
-
-            setTouchPoints(remainingTouches);
-        },
-        [touchPoints]
-    );
-
-    const formatTime = useCallback((seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-    }, []);
-
-    const getPhaseColorWithDuration = useCallback((basePhase: string, duration: number, maxDuration: number) => {
-        const progress = Math.min(duration / (maxDuration * 1000), 1);
-
-        const colorMaps = {
-            inhale: {
-                start: { r: 132, g: 204, b: 22 },
-                end: { r: 34, g: 197, b: 94 },
-            },
-            exhale: {
-                start: { r: 249, g: 115, b: 22 },
-                end: { r: 239, g: 68, b: 68 },
-            },
-            hold: {
-                start: { r: 6, g: 182, b: 212 },
-                end: { r: 147, g: 51, b: 234 },
-            },
-        };
-
-        const colorMap = colorMaps[basePhase as keyof typeof colorMaps] || colorMaps["hold"];
-
-        const r = Math.round(colorMap.start.r + (colorMap.end.r - colorMap.start.r) * progress);
-        const g = Math.round(colorMap.start.g + (colorMap.end.g - colorMap.start.g) * progress);
-        const b = Math.round(colorMap.start.b + (colorMap.end.b - colorMap.start.b) * progress);
-
-        return `rgb(${r}, ${g}, ${b})`;
-    }, []);
-
-    const getCurrentPhaseColor = useCallback(() => {
-        const maxDuration = phaseDurations[phaseIndex];
-        return getPhaseColorWithDuration(breathingPhase, phaseDuration, maxDuration);
-    }, [breathingPhase, phaseDuration, phaseIndex, getPhaseColorWithDuration]);
-
-    const getPhaseColorCSS = useCallback(() => {
-        const currentColor = getCurrentPhaseColor();
-        const match = currentColor.match(/rgb\((\d+), (\d+), (\d+)\)/);
-        if (match) {
-            const [, r, g, b] = match;
-            const hex = `#${parseInt(r).toString(16).padStart(2, "0")}${parseInt(g).toString(16).padStart(2, "0")}${parseInt(b)
-                .toString(16)
-                .padStart(2, "0")}`;
-            return hex;
-        }
-        return "var(--accent-primary)";
-    }, [getCurrentPhaseColor]);
-
-    const getPhaseColor = useCallback(() => {
-        return getPhaseColorCSS();
-    }, [getPhaseColorCSS]);
-
-    const getPhaseText = useCallback(() => {
-        switch (breathingPhase) {
-            case "inhale":
-                return "Breathe In...";
-            case "exhale":
-                return "Breathe Out...";
-            case "hold":
-                return "Hold...";
-            default:
-                return "Focus...";
-        }
-    }, [breathingPhase]);
-
-    if (sessionState === "setup") {
-        return (
-            <div className="min-h-screen flex items-center justify-center p-4">
-                <a
-                    ref={skipLinkRef}
-                    href="#main-content"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        skipToMain();
-                    }}
-                    className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[var(--accent-primary)] focus:text-white focus:rounded"
-                >
-                    Skip to main content
-                </a>
-
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-[var(--card-bg)] rounded-3xl p-8 shadow-[var(--shadow-lg)] border border-[var(--card-border)] max-w-md w-full text-center"
-                    role="main"
-                    aria-labelledby="setup-title"
-                    aria-describedby="setup-description"
-                >
-                    <h1 id="setup-title" className="text-3xl font-[var(--font-heading)] mb-2">
-                        New Mindfulness Minute
-                    </h1>
-
-                    <div
-                        className="text-8xl font-bold mb-4"
-                        style={{ color: getCurrentPhaseColor() }}
-                        role="img"
-                        aria-label={`${sessionDuration} minutes selected for meditation session`}
-                    >
-                        {sessionDuration}
-                    </div>
-
-                    <p id="setup-description" className="text-[var(--page-text-secondary)] mb-6">
-                        I will meditate for {sessionDuration} minutes
-                    </p>
-
-                    <div
-                        className="text-sm text-[var(--page-text-secondary)] mb-8 p-4 bg-[var(--button-bg)] rounded-xl flex items-start gap-3"
-                        role="note"
-                        aria-labelledby="instructions-title"
-                    >
-                        <FaLightbulb className="text-[var(--accent-primary)] mt-0.5 flex-shrink-0" aria-hidden="true" />
-                        <div className="text-left">
-                            <strong id="instructions-title">Touch Zones:</strong> Hold circular zones to generate flowing particle patterns.
-                            Move your finger to create particle trails!
-                        </div>
-                    </div>
-
-                    <fieldset className="mb-8">
-                        <legend className="sr-only">Select session duration</legend>
-                        <div className="flex justify-center gap-2" role="radiogroup" aria-labelledby="duration-label" aria-required="true">
-                            <span id="duration-label" className="sr-only">
-                                Session duration options
-                            </span>
-                            {[5, 10, 15, 20].map((duration) => (
-                                <button
-                                    key={duration}
-                                    onClick={() => {
-                                        setSessionDuration(duration);
-                                        announceToScreenReader(`${duration} minute session selected`);
-                                    }}
-                                    className={`cursor-pointer px-4 py-2 rounded-full transition-all ${
-                                        sessionDuration === duration
-                                            ? "bg-[var(--accent-primary)] text-white"
-                                            : "bg-[var(--button-bg)] hover:bg-[var(--button-hover)]"
-                                    }`}
-                                    role="radio"
-                                    aria-checked={sessionDuration === duration}
-                                    aria-label={`${duration} minute session`}
-                                    tabIndex={sessionDuration === duration ? 0 : -1}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-                                            e.preventDefault();
-                                            const currentIndex = [5, 10, 15, 20].indexOf(duration);
-                                            const newIndex = currentIndex > 0 ? currentIndex - 1 : 3;
-                                            const newDuration = [5, 10, 15, 20][newIndex];
-                                            setSessionDuration(newDuration);
-                                            announceToScreenReader(`${newDuration} minute session selected`);
-                                        } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-                                            e.preventDefault();
-                                            const currentIndex = [5, 10, 15, 20].indexOf(duration);
-                                            const newIndex = currentIndex < 3 ? currentIndex + 1 : 0;
-                                            const newDuration = [5, 10, 15, 20][newIndex];
-                                            setSessionDuration(newDuration);
-                                            announceToScreenReader(`${newDuration} minute session selected`);
-                                        }
-                                    }}
-                                >
-                                    {duration}m
-                                </button>
-                            ))}
-                        </div>
-                    </fieldset>
-
-                    <button
-                        onClick={() => {
-                            startSession();
-                            announceToScreenReader(`Starting ${sessionDuration} minute meditation session`);
-                        }}
-                        className="cursor-pointer w-full bg-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/90 text-white py-4 rounded-2xl font-semibold text-lg transition-colors"
-                        aria-describedby="session-info"
-                    >
-                        Continue →
-                    </button>
-
-                    <p id="session-info" className="text-xs text-[var(--page-text-secondary)] mt-4">
-                        Timer finishes at{" "}
-                        {new Date(Date.now() + sessionDuration * 60000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-
-                    <div className="sr-only">
-                        <h2>Keyboard Navigation Instructions</h2>
-                        <ul>
-                            <li>Use arrow keys to select session duration</li>
-                            <li>Press Enter or Space to start session</li>
-                            <li>During session: Spacebar to pause, M for microphone, S for settings</li>
-                        </ul>
-                    </div>
-                </motion.div>
-            </div>
-        );
-    }
-
-    if (sessionState === "complete") {
-        return (
-            <div className="min-h-screen flex items-center justify-center p-4">
-                <a
-                    ref={skipLinkRef}
-                    href="#completion-content"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        skipToMain();
-                    }}
-                    className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[var(--accent-primary)] focus:text-white focus:rounded"
-                >
-                    Skip to main content
-                </a>
-
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="bg-[var(--card-bg)] rounded-3xl p-8 shadow-[var(--shadow-lg)] border border-[var(--card-border)] max-w-md w-full text-center"
-                    role="main"
-                    id="completion-content"
-                    aria-labelledby="completion-title"
-                    aria-describedby="completion-description"
-                >
-                    <div role="status" aria-live="polite" className="sr-only">
-                        Meditation session completed successfully. You meditated for {sessionDuration} minutes.
-                    </div>
-
-                    <div
-                        className="text-6xl mb-4 flex justify-center"
-                        role="img"
-                        aria-label="Heart icon representing completed meditation session"
-                    >
-                        <FaHandHoldingHeart className="text-[var(--accent-primary)]" aria-hidden="true" />
-                    </div>
-
-                    <h2 id="completion-title" className="text-2xl font-[var(--font-heading)] mb-4">
-                        Session Complete!
-                    </h2>
-
-                    <p id="completion-description" className="text-[var(--page-text-secondary)] mb-8">
-                        You meditated for {sessionDuration} minutes. Well done!
-                    </p>
-
-                    <button
-                        onClick={() => {
-                            setSessionState("setup");
-                            setTimeRemaining(0);
-                            setPhaseTimer(4);
-                            setBreathingPhase("inhale");
-                            setPhaseIndex(0);
-                            announceToScreenReader("Starting new meditation session setup");
-                        }}
-                        className="cursor-pointer w-full bg-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/90 text-white py-4 rounded-2xl font-semibold text-lg transition-colors"
-                        aria-label="Start a new meditation session"
-                        autoFocus
-                    >
-                        Start New Session
-                    </button>
-
-                    <div className="sr-only">
-                        <h3>Session Statistics</h3>
-                        <p>Congratulations on completing your {sessionDuration}-minute meditation session.</p>
-                        <p>Regular meditation practice can help reduce stress and improve focus.</p>
-                    </div>
-                </motion.div>
-            </div>
-        );
-    }
 
     return (
-        <div
-            className="min-h-screen relative overflow-hidden select-none"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            style={{ backgroundColor: "var(--page-bg)" }}
-        >
-            <a
-                ref={skipLinkRef}
-                href="#main-session-content"
-                onClick={(e) => {
-                    e.preventDefault();
-                    skipToMain();
-                }}
-                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[var(--accent-primary)] focus:text-white focus:rounded"
-            >
-                Skip to main meditation session
-            </a>
-
-            <div role="status" aria-live="polite" aria-atomic="true" className="sr-only" id="session-announcements">
-                {announcements}
-            </div>
-
-            <div
-                role="timer"
-                aria-live="polite"
-                aria-atomic="false"
-                className="sr-only"
-                aria-label={`Session timer: ${formatTime(timeRemaining)} remaining`}
-            >
-                {Math.floor(timeRemaining / 60) === 0 && timeRemaining <= 60 && timeRemaining > 0 && `${timeRemaining} seconds remaining`}
-            </div>
-
-            <header className="sr-only">
-                <h1>Mindfulness Meditation Session</h1>
-                <p>
-                    Current phase: {getPhaseText()}. Time remaining: {formatTime(timeRemaining)}. Session status:{" "}
-                    {isPlaying ? "Active" : "Paused"}.
-                </p>
-            </header>
-
-            <ParticleSystem
-                touchPoints={touchPoints}
-                touchZones={touchZones}
-                breathingPhase={breathingPhase}
-                audioLevel={audioLevel}
-                isActive={sessionState === "active"}
-                phaseDuration={phaseDuration}
-                phaseIndex={phaseIndex}
-                getPhaseColorWithDuration={getPhaseColorWithDuration}
-                phaseDurations={phaseDurations}
-            />
-
-            <main
-                id="main-session-content"
-                ref={mainContentRef}
-                className="breathing-indicator"
-                tabIndex={-1}
-                role="main"
-                aria-labelledby="breathing-phase"
-                aria-describedby="session-timer phase-timer"
-            >
-                <motion.div
-                    animate={{
-                        scale: breathingPhase === "inhale" ? 1.2 : breathingPhase === "exhale" ? 0.8 : 1,
-                        color: getPhaseColor(),
-                    }}
-                    transition={{ duration: 0.5, ease: "easeInOut" }}
-                    className="text-center"
-                >
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute inset-0">
+                {dots.map((dot) => (
                     <div
-                        id="breathing-phase"
-                        className="text-4xl md:text-6xl font-[var(--font-heading)] mb-4"
-                        role="heading"
-                        aria-level={2}
-                        aria-live="assertive"
-                    >
-                        {getPhaseText()}
-                    </div>
-
-                    <div
-                        id="session-timer"
-                        className="text-8xl md:text-9xl font-bold mb-2"
-                        role="timer"
-                        aria-label={`Session time remaining: ${formatTime(timeRemaining)}`}
-                        aria-atomic="true"
-                    >
-                        {formatTime(timeRemaining)}
-                    </div>
-
-                    <div
-                        id="phase-timer"
-                        className="text-xl text-[var(--page-text-secondary)]"
-                        role="timer"
-                        aria-label={`Current phase time: ${phaseTimer} seconds`}
-                        aria-atomic="true"
-                    >
-                        {phaseTimer}s
-                    </div>
-
-                    {isListening && (
-                        <motion.div
-                            animate={{
-                                scale: [1, 1 + audioLevel * 0.5, 1],
-                                opacity: [0.7, 1, 0.7],
-                            }}
-                            transition={{ duration: 0.5, repeat: Infinity }}
-                            className="mt-4 p-3 rounded-2xl"
-                            style={{
-                                backgroundColor: `${getPhaseColor()}20`,
-                                border: `2px solid ${getPhaseColor()}`,
-                            }}
-                            role="status"
-                            aria-labelledby="focus-mode-title"
-                            aria-describedby="audio-level-description"
-                        >
-                            <div id="focus-mode-title" className="text-lg font-semibold mb-2 flex items-center justify-center gap-2">
-                                <FaMicrophone aria-hidden="true" /> Focus Mode Active
-                            </div>
-
-                            <div id="audio-level-description" className="text-sm" aria-live="polite">
-                                Audio Level: {(audioLevel * 100).toFixed(0)}%
-                            </div>
-
-                            <div
-                                className="w-32 h-2 bg-black/20 rounded-full mx-auto mt-2 overflow-hidden"
-                                role="progressbar"
-                                aria-valuenow={Math.round(audioLevel * 100)}
-                                aria-valuemin={0}
-                                aria-valuemax={100}
-                                aria-label={`Audio input level: ${Math.round(audioLevel * 100)} percent`}
-                            >
-                                <motion.div
-                                    className="h-full rounded-full"
-                                    style={{ backgroundColor: getPhaseColor() }}
-                                    animate={{ width: `${audioLevel * 100}%` }}
-                                    transition={{ duration: 0.1 }}
-                                />
-                            </div>
-                        </motion.div>
-                    )}
-                </motion.div>
-            </main>
-
-            <section aria-labelledby="touch-zones-title" className="absolute inset-0">
-                <h2 id="touch-zones-title" className="sr-only">
-                    Interactive Touch Zones for Particle Generation
-                </h2>
-                <p className="sr-only">
-                    Three circular zones are available for interaction. Touch and hold or press Enter/Space while focused to generate
-                    particle effects. Move your finger while touching to create particle trails.
-                </p>
-
-                {touchZones.map((zone, index) => (
-                    <div
-                        key={zone.id}
-                        tabIndex={0}
-                        role="button"
-                        className="absolute rounded-full border-2 transition-all duration-300 pointer-events-auto cursor-pointer"
+                        key={dot.id}
+                        className="absolute w-1 h-1 bg-cyan-400 rounded-full opacity-60 animate-pulse"
                         style={{
-                            left: zone.x - zone.radius,
-                            top: zone.y - zone.radius,
-                            width: zone.radius * 2,
-                            height: zone.radius * 2,
-                            borderColor: zone.isActive ? getPhaseColor() : "rgba(255,255,255,0.3)",
-                            backgroundColor: zone.isActive ? `${getPhaseColor()}20` : "rgba(255,255,255,0.05)",
-                            transform: zone.isActive ? "scale(1.1)" : "scale(1)",
-                            boxShadow: zone.isActive ? `0 0 20px ${getPhaseColor()}40` : "0 0 10px rgba(255,255,255,0.1)",
-                            zIndex: 1,
+                            left: dot.left,
+                            top: dot.top,
+                            animationDelay: dot.animationDelay,
+                            animationDuration: dot.animationDuration,
                         }}
-                        aria-label={`Touch zone ${index + 1} of 3 - ${zone.isActive ? "Active" : "Inactive"}`}
-                        aria-describedby={`zone-${index + 1}-description`}
-                        aria-pressed={zone.isActive}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                announceToScreenReader(`Touch zone ${index + 1} activated - generating particles`);
-                            }
-                        }}
-                        onFocus={() => {
-                            announceToScreenReader(`Focused on touch zone ${index + 1}. Press Enter or Space to activate`);
-                        }}
-                    >
-                        <div id={`zone-${index + 1}-description`} className="sr-only">
-                            Touch zone {index + 1}. Press Enter or Space to activate particle generation.
-                            {zone.isActive && ` Currently active for ${Math.floor(zone.holdDuration / 100) / 10} seconds.`}
-                        </div>
-
-                        {zone.isActive && (
-                            <div className="absolute inset-0 flex items-center justify-center" aria-live="polite">
-                                <div className="text-center">
-                                    <div
-                                        className="text-white text-sm font-semibold"
-                                        aria-label={`Hold duration: ${Math.floor(zone.holdDuration / 100) / 10} seconds`}
-                                    >
-                                        {Math.floor(zone.holdDuration / 100) / 10}s
-                                    </div>
-                                    <div className="text-xs text-white/80 mt-1">Hold to intensify</div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    />
                 ))}
-            </section>
-
-            <nav className="absolute top-6 left-6 right-6 flex justify-between items-center z-20" aria-label="Session controls">
-                <button
-                    onClick={() => {
-                        setShowSettings(!showSettings);
-                        announceToScreenReader(showSettings ? "Settings panel closed" : "Settings panel opened");
-                    }}
-                    tabIndex={0}
-                    className="cursor-pointer p-3 bg-[var(--card-bg)]/80 backdrop-blur-sm rounded-full shadow-[var(--shadow-md)] border border-[var(--card-border)] pointer-events-auto hover:bg-[var(--card-bg)] transition-colors"
-                    aria-label="Open settings menu"
-                    aria-expanded={showSettings}
-                    aria-controls="settings-panel"
-                    aria-describedby="settings-description"
-                >
-                    <FaCog size={18} aria-hidden="true" />
-                </button>
-                <div id="settings-description" className="sr-only">
-                    Settings menu. Contains theme options, audio controls, and session information.
-                </div>
-
-                <div className="text-center pointer-events-none" role="status" aria-live="polite" aria-atomic="true">
-                    <div className="text-sm text-[var(--page-text-secondary)]" aria-label={`Current breathing phase: ${breathingPhase}`}>
-                        {breathingPhase.charAt(0).toUpperCase() + breathingPhase.slice(1)}
-                    </div>
-                    {isListening && (
-                        <div
-                            className="text-xs text-[var(--accent-primary)] mt-1 flex items-center gap-1 justify-center"
-                            aria-label="Audio mode active - particles responding to sound"
-                        >
-                            <FaMicrophone size={10} aria-hidden="true" />
-                            Audio Mode - Particles Dancing!
-                        </div>
-                    )}
-                </div>
-
-                <button
-                    onClick={() => {
-                        toggleMicrophone();
-                        announceToScreenReader(
-                            isListening ? "Microphone disabled - focus mode deactivated" : "Microphone enabled - focus mode activated"
-                        );
-                    }}
-                    tabIndex={0}
-                    className={`cursor-pointer p-3 backdrop-blur-sm rounded-full shadow-[var(--shadow-md)] border border-[var(--card-border)] pointer-events-auto transition-all hover:scale-105 ${
-                        isListening ? "bg-[var(--accent-primary)] text-white" : "bg-[var(--card-bg)]/80 hover:bg-[var(--card-bg)]"
-                    }`}
-                    aria-label={isListening ? "Disable microphone and focus mode" : "Enable microphone for focus mode"}
-                    aria-pressed={isListening}
-                    aria-describedby="microphone-description"
-                >
-                    {isListening ? <FaMicrophone size={18} aria-hidden="true" /> : <FaMicrophoneSlash size={18} aria-hidden="true" />}
-                </button>
-                <div id="microphone-description" className="sr-only">
-                    {isListening
-                        ? "Microphone is currently active. Particles will respond to your voice and sounds. Press M or click to disable."
-                        : "Microphone is currently disabled. Press M or click to enable focus mode where particles respond to sound."}
-                </div>
-            </nav>
-
-            <div className="absolute bottom-6 left-6 right-6 flex justify-center z-20" role="group" aria-labelledby="session-control-title">
-                <h2 id="session-control-title" className="sr-only">
-                    Session Control
-                </h2>
-                <button
-                    onClick={() => {
-                        togglePlayPause();
-                        announceToScreenReader(
-                            isPlaying
-                                ? "Session paused. Press spacebar or this button to resume."
-                                : "Session resumed. Meditation continues."
-                        );
-                    }}
-                    tabIndex={0}
-                    className="cursor-pointer p-6 bg-[var(--card-bg)]/90 backdrop-blur-sm rounded-full shadow-[var(--shadow-lg)] border border-[var(--card-border)] hover:scale-105 transition-transform pointer-events-auto focus:scale-105"
-                    aria-label={isPlaying ? "Pause meditation session (Spacebar)" : "Resume meditation session (Spacebar)"}
-                    aria-pressed={isPlaying}
-                    aria-describedby="session-control-description"
-                >
-                    {isPlaying ? <FaPause size={24} aria-hidden="true" /> : <FaPlay size={24} aria-hidden="true" />}
-                </button>
-                <div id="session-control-description" className="sr-only">
-                    Main session control. Use spacebar as a keyboard shortcut to toggle play/pause. Current state:{" "}
-                    {isPlaying ? "Session is active" : "Session is paused"}.
-                </div>
             </div>
-
-            <AnimatePresence>
-                {showSettings && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="absolute top-20 left-6 right-6 bg-[var(--card-bg)]/95 backdrop-blur-sm rounded-2xl p-6 shadow-[var(--shadow-lg)] border border-[var(--card-border)] z-20"
-                        ref={settingsRef}
-                        role="dialog"
-                        id="settings-panel"
-                        aria-labelledby="settings-title"
-                        aria-describedby="settings-description"
-                        aria-modal="true"
-                    >
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 id="settings-title" className="font-[var(--font-heading)] text-lg">
-                                Settings
-                            </h3>
-                            <button
-                                onClick={() => {
-                                    setShowSettings(false);
-                                    announceToScreenReader("Settings panel closed");
-                                }}
-                                className="cursor-pointer text-[var(--page-text-secondary)] hover:text-[var(--page-text-primary)] p-1 rounded focus:outline-none"
-                                aria-label="Close settings panel"
-                                onKeyDown={(e) => {
-                                    if (e.key === "Escape") {
-                                        setShowSettings(false);
-                                        announceToScreenReader("Settings panel closed");
-                                    }
-                                }}
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div id="settings-description" className="sr-only">
-                            Settings panel for meditation session. Contains theme selection, audio controls, and session information. Use
-                            Tab to navigate between options, Escape to close.
-                        </div>
-
-                        <div className="space-y-4">
-                            <fieldset>
-                                <legend className="block text-sm mb-2 font-medium">Theme</legend>
-                                <div className="flex gap-2" role="radiogroup" aria-labelledby="theme-legend" aria-required="false">
-                                    <button
-                                        onClick={() => {
-                                            setTheme("light");
-                                            announceToScreenReader("Light theme selected");
-                                        }}
-                                        className={`cursor-pointer px-3 py-2 rounded-lg transition-colors ${
-                                            theme === "light"
-                                                ? "bg-[var(--accent-primary)] text-white"
-                                                : "bg-[var(--button-bg)] hover:bg-[var(--button-hover)]"
-                                        }`}
-                                        role="radio"
-                                        aria-checked={theme === "light"}
-                                        aria-label="Light theme"
-                                        tabIndex={theme === "light" ? 0 : -1}
-                                    >
-                                        Light
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setTheme("dark");
-                                            announceToScreenReader("Dark theme selected");
-                                        }}
-                                        className={`cursor-pointer px-3 py-2 rounded-lg transition-colors ${
-                                            theme === "dark"
-                                                ? "bg-[var(--accent-primary)] text-white"
-                                                : "bg-[var(--button-bg)] hover:bg-[var(--button-hover)]"
-                                        }`}
-                                        role="radio"
-                                        aria-checked={theme === "dark"}
-                                        aria-label="Dark theme"
-                                        tabIndex={theme === "dark" ? 0 : -1}
-                                    >
-                                        Dark
-                                    </button>
-                                </div>
-                            </fieldset>
-
-                            <div>
-                                <label className="block text-sm mb-2 font-medium">Audio Level</label>
-                                <div
-                                    className="h-2 bg-[var(--button-bg)] rounded-full overflow-hidden"
-                                    role="progressbar"
-                                    aria-valuenow={Math.round(audioLevel * 100)}
-                                    aria-valuemin={0}
-                                    aria-valuemax={100}
-                                    aria-label={`Current audio input level: ${Math.round(audioLevel * 100)} percent`}
-                                >
-                                    <div
-                                        className="h-full bg-[var(--accent-primary)] transition-all duration-100"
-                                        style={{ width: `${audioLevel * 100}%` }}
-                                    />
-                                </div>
-                                <div className="text-xs text-[var(--page-text-secondary)] mt-1">
-                                    Current level: {Math.round(audioLevel * 100)}%{!isListening && " (Microphone disabled)"}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm mb-2 font-medium">Active Touch Zones</label>
-                                <div
-                                    className="text-sm text-[var(--page-text-secondary)] flex items-center gap-2"
-                                    role="status"
-                                    aria-live="polite"
-                                >
-                                    <FaCircle size={8} className="text-[var(--accent-primary)]" aria-hidden="true" />
-                                    <span
-                                        aria-label={`${touchZones.filter((zone) => zone.isActive).length} of ${
-                                            touchZones.length
-                                        } touch zones currently active`}
-                                    >
-                                        {touchZones.filter((zone) => zone.isActive).length} of {touchZones.length} zones active
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm mb-2 font-medium">Current Phase</label>
-                                <div
-                                    className="text-lg font-semibold"
-                                    style={{ color: getPhaseColor() }}
-                                    aria-live="polite"
-                                    aria-atomic="true"
-                                >
-                                    <span
-                                        aria-label={`Current breathing phase: ${getPhaseText()}, ${phaseTimer} seconds remaining in this phase`}
-                                    >
-                                        {getPhaseText()} ({phaseTimer}s remaining)
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm mb-2 font-medium">Phase Progress</label>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span>{getPhaseText()}</span>
-                                        <span
-                                            aria-label={`${Math.floor(phaseDuration / 1000)} seconds elapsed of ${
-                                                phaseDurations[phaseIndex]
-                                            } total seconds`}
-                                        >
-                                            {Math.floor(phaseDuration / 1000)}s / {phaseDurations[phaseIndex]}s
-                                        </span>
-                                    </div>
-                                    <div
-                                        className="h-2 bg-[var(--button-bg)] rounded-full overflow-hidden"
-                                        role="progressbar"
-                                        aria-valuenow={Math.min((phaseDuration / 1000 / phaseDurations[phaseIndex]) * 100, 100)}
-                                        aria-valuemin={0}
-                                        aria-valuemax={100}
-                                        aria-label={`Phase progress: ${Math.round(
-                                            Math.min((phaseDuration / 1000 / phaseDurations[phaseIndex]) * 100, 100)
-                                        )} percent complete`}
-                                    >
-                                        <div
-                                            className="h-full transition-all duration-100 rounded-full"
-                                            style={{
-                                                width: `${Math.min((phaseDuration / 1000 / phaseDurations[phaseIndex]) * 100, 100)}%`,
-                                                backgroundColor: getPhaseColor(),
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="text-xs text-[var(--page-text-secondary)]">
-                                        Color transitions based on breath duration
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm mb-2 font-medium flex items-center gap-2">
-                                    Audio Level
-                                    {isListening ? (
-                                        <FaVolumeUp size={12} aria-label="Microphone active" />
-                                    ) : (
-                                        <FaVolumeMute size={12} aria-label="Microphone disabled" />
-                                    )}
-                                </label>
-                                <div
-                                    className="h-2 bg-[var(--button-bg)] rounded-full overflow-hidden"
-                                    role="progressbar"
-                                    aria-valuenow={Math.round(audioLevel * 100)}
-                                    aria-valuemin={0}
-                                    aria-valuemax={100}
-                                    aria-label={`Audio input level: ${Math.round(audioLevel * 100)} percent`}
-                                >
-                                    <div
-                                        className="h-full transition-all duration-100 rounded-full"
-                                        style={{
-                                            width: `${audioLevel * 100}%`,
-                                            backgroundColor: isListening ? getPhaseColor() : "var(--page-text-secondary)",
-                                        }}
-                                    />
-                                </div>
-                                <div className="text-xs text-[var(--page-text-secondary)] mt-1">
-                                    Level: {(audioLevel * 100).toFixed(1)}%{isListening && audioLevel > 0.1 && " - Particles dancing!"}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="sr-only">
-                            <h4>Settings Navigation</h4>
-                            <ul>
-                                <li>Tab: Move between controls</li>
-                                <li>Spacebar/Enter: Activate buttons</li>
-                                <li>Arrow keys: Navigate radio groups</li>
-                                <li>Escape: Close settings panel</li>
-                            </ul>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 };
 
-export default function MeditationApp() {
+const CybersecurityPricingUI = () => {
+    const [selectedFeatures, setSelectedFeatures] = useState(new Set(["threat-detection", "endpoint-protection"]));
+    const [commitmentPeriod, setCommitmentPeriod] = useState<string>("monthly");
+    const [compareSlider, setCompareSlider] = useState(50);
+    const [expandedSections, setExpandedSections] = useState(new Set<string>());
+    const [quizStep, setQuizStep] = useState(0);
+    const [quizAnswers, setQuizAnswers] = useState<Record<number, QuizAnswer>>({});
+    const [showQuiz, setShowQuiz] = useState(false);
+    const [recommendedPlan, setRecommendedPlan] = useState<string | null>(null);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+    const [demoScheduled, setDemoScheduled] = useState(false);
+    const sliderRef = useRef<HTMLDivElement>(null);
+
+    const commitmentOptions: CommitmentOption[] = [
+        { id: "monthly", label: "Monthly", months: 1, discount: 0, savings: "No commitment" },
+        { id: "yearly", label: "1 Year", months: 12, discount: 0.2, savings: "Save 20%" },
+        { id: "biennial", label: "2 Years", months: 24, discount: 0.3, savings: "Save 30%" },
+        { id: "triennial", label: "3 Years", months: 36, discount: 0.4, savings: "Save 40%" },
+    ];
+
+    const features = [
+        {
+            id: "threat-detection",
+            name: "Advanced Threat Detection",
+            icon: Eye,
+            price: 15,
+            description: "Real-time threat monitoring with AI-powered analytics",
+        },
+        {
+            id: "endpoint-protection",
+            name: "Endpoint Protection",
+            icon: Shield,
+            price: 12,
+            description: "Comprehensive device security and management",
+        },
+        {
+            id: "network-security",
+            name: "Network Security",
+            icon: Globe,
+            price: 20,
+            description: "Firewall, VPN, and network monitoring solutions",
+        },
+        {
+            id: "identity-management",
+            name: "Identity & Access Management",
+            icon: Users,
+            price: 18,
+            description: "Single sign-on and user authentication controls",
+        },
+        {
+            id: "data-protection",
+            name: "Data Loss Prevention",
+            icon: Database,
+            price: 22,
+            description: "Sensitive data classification and protection",
+        },
+        {
+            id: "compliance",
+            name: "Compliance Management",
+            icon: Award,
+            price: 25,
+            description: "Automated compliance reporting and monitoring",
+        },
+        {
+            id: "incident-response",
+            name: "Incident Response",
+            icon: Zap,
+            price: 30,
+            description: "24/7 security operations center support",
+        },
+        {
+            id: "encryption",
+            name: "Advanced Encryption",
+            icon: Lock,
+            price: 16,
+            description: "End-to-end encryption for all communications",
+        },
+    ];
+
+    const plans = [
+        {
+            name: "Starter",
+            price: 99,
+            features: ["threat-detection", "endpoint-protection"],
+            color: "from-blue-500 to-cyan-500",
+            popular: false,
+        },
+        {
+            name: "Professional",
+            price: 199,
+            features: ["threat-detection", "endpoint-protection", "network-security", "identity-management"],
+            color: "from-purple-500 to-pink-500",
+            popular: true,
+        },
+        {
+            name: "Enterprise",
+            price: 399,
+            features: [
+                "threat-detection",
+                "endpoint-protection",
+                "network-security",
+                "identity-management",
+                "data-protection",
+                "compliance",
+            ],
+            color: "from-orange-500 to-red-500",
+            popular: false,
+        },
+    ];
+
+    const getCompetitorPricing = () => {
+        const baseCompetitors = [
+            { name: "CrowdStrike", basePrice: 450 },
+            { name: "SentinelOne", basePrice: 380 },
+            { name: "Palo Alto", basePrice: 520 },
+            { name: "Our Solution", basePrice: 299 },
+        ];
+
+        return baseCompetitors.map((comp) => ({
+            ...comp,
+            price:
+                comp.name === "Our Solution"
+                    ? Math.round(199 + (compareSlider / 100) * 200)
+                    : Math.round(comp.basePrice + (compareSlider / 100) * comp.basePrice * 0.3),
+        }));
+    };
+
+    const complianceRegions = [
+        {
+            id: "gdpr",
+            name: "GDPR (European Union)",
+            requirements: [
+                "Data encryption at rest and in transit",
+                "Right to be forgotten implementation",
+                "Privacy impact assessments",
+                "Data protection officer designation",
+            ],
+            status: "Fully Compliant",
+        },
+        {
+            id: "ccpa",
+            name: "CCPA (California)",
+            requirements: ["Consumer data rights management", "Opt-out mechanisms", "Data inventory and mapping", "Privacy policy updates"],
+            status: "Fully Compliant",
+        },
+        {
+            id: "hipaa",
+            name: "HIPAA (Healthcare)",
+            requirements: [
+                "PHI encryption standards",
+                "Access control implementation",
+                "Audit trail maintenance",
+                "Business associate agreements",
+            ],
+            status: "Certified",
+        },
+        {
+            id: "sox",
+            name: "SOX (Financial)",
+            requirements: [
+                "Financial data protection",
+                "Internal control documentation",
+                "Change management processes",
+                "Audit trail integrity",
+            ],
+            status: "Compliant",
+        },
+    ];
+
+    const quizQuestions = [
+        {
+            question: "What's your organization size?",
+            options: [
+                { value: "small", label: "1-50 employees", weight: { starter: 3, professional: 1, enterprise: 0 } },
+                { value: "medium", label: "51-500 employees", weight: { starter: 1, professional: 3, enterprise: 1 } },
+                { value: "large", label: "500+ employees", weight: { starter: 0, professional: 1, enterprise: 3 } },
+            ],
+        },
+        {
+            question: "What's your primary industry?",
+            options: [
+                { value: "finance", label: "Financial Services", weight: { starter: 0, professional: 1, enterprise: 3 } },
+                { value: "healthcare", label: "Healthcare", weight: { starter: 0, professional: 2, enterprise: 3 } },
+                { value: "retail", label: "Retail/E-commerce", weight: { starter: 2, professional: 3, enterprise: 1 } },
+                { value: "tech", label: "Technology", weight: { starter: 1, professional: 3, enterprise: 2 } },
+                { value: "other", label: "Other", weight: { starter: 2, professional: 2, enterprise: 1 } },
+            ],
+        },
+        {
+            question: "What's your biggest security concern?",
+            options: [
+                { value: "threats", label: "Advanced Persistent Threats", weight: { starter: 0, professional: 2, enterprise: 3 } },
+                { value: "compliance", label: "Regulatory Compliance", weight: { starter: 0, professional: 1, enterprise: 3 } },
+                { value: "endpoints", label: "Endpoint Security", weight: { starter: 3, professional: 2, enterprise: 1 } },
+                { value: "data", label: "Data Protection", weight: { starter: 1, professional: 2, enterprise: 3 } },
+            ],
+        },
+    ];
+
+    const showNotification = (message: string, type: string = "success") => {
+        const id = Date.now();
+        setNotifications((prev) => [...prev, { id, message, type }]);
+        setTimeout(() => {
+            setNotifications((prev) => prev.filter((n) => n.id !== id));
+        }, 3000);
+    };
+
+    const calculateCustomPrice = () => {
+        return Array.from(selectedFeatures).reduce((total, featureId) => {
+            const feature = features.find((f) => f.id === featureId);
+            return total + (feature ? feature.price : 0);
+        }, 0);
+    };
+
+    const getCurrentCommitment = () => {
+        return commitmentOptions.find(option => option.id === commitmentPeriod) || commitmentOptions[0];
+    };
+
+    const calculateSavings = (price: number) => {
+        const commitment = getCurrentCommitment();
+        return Math.round(price * (1 - commitment.discount));
+    };
+
+    const handleFeatureToggle = (featureId: string) => {
+        const newSelected = new Set(selectedFeatures);
+        if (newSelected.has(featureId)) {
+            newSelected.delete(featureId);
+        } else {
+            newSelected.add(featureId);
+        }
+        setSelectedFeatures(newSelected);
+    };
+
+    const toggleSection = (sectionId: string) => {
+        const newExpanded = new Set(expandedSections);
+        if (newExpanded.has(sectionId)) {
+            newExpanded.delete(sectionId);
+        } else {
+            newExpanded.add(sectionId);
+        }
+        setExpandedSections(newExpanded);
+    };
+
+    const handleQuizAnswer = (questionIndex: number, answer: QuizAnswer) => {
+        const newAnswers = { ...quizAnswers, [questionIndex]: answer };
+        setQuizAnswers(newAnswers);
+
+        if (questionIndex < quizQuestions.length - 1) {
+            setQuizStep(questionIndex + 1);
+        } else {
+            const scores: Record<string, number> = { starter: 0, professional: 0, enterprise: 0 };
+            Object.values(newAnswers).forEach((answer) => {
+                Object.entries(answer.weight).forEach(([plan, weight]) => {
+                    scores[plan] += weight;
+                });
+            });
+
+            const recommended = Object.entries(scores).reduce((a, b) => (scores[a[0]] > scores[b[0]] ? a : b))[0];
+            setRecommendedPlan(recommended);
+            setQuizStep(quizQuestions.length);
+        }
+    };
+
+    const resetQuiz = () => {
+        setQuizStep(0);
+        setQuizAnswers({});
+        setRecommendedPlan(null);
+        setShowQuiz(false);
+    };
+
+    const handleSliderInteraction = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+        if (!sliderRef.current) return;
+        const rect = sliderRef.current.getBoundingClientRect();
+        const clientX = 'clientX' in e ? e.clientX : e.touches?.[0]?.clientX;
+        if (!clientX) return;
+        const x = clientX - rect.left;
+        const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+        setCompareSlider(percentage);
+    }, []);
+
+    const [isDragging, setIsDragging] = useState(false);
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDragging || !sliderRef.current) return;
+            const rect = sliderRef.current.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+            setCompareSlider(percentage);
+        };
+
+        const handleMouseUp = () => {
+            setIsDragging(false);
+        };
+
+        if (isDragging) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "ArrowLeft" && compareSlider > 0) {
+                setCompareSlider(Math.max(0, compareSlider - 5));
+            } else if (e.key === "ArrowRight" && compareSlider < 100) {
+                setCompareSlider(Math.min(100, compareSlider + 5));
+            }
+        };
+
+        document.addEventListener("keydown", handleKeyDown);
+        return () => document.removeEventListener("keydown", handleKeyDown);
+    }, [compareSlider]);
+
+    const onAIRecommendationClick = () => {
+        setShowQuiz(true);
+    };
+
+    const scrollToTop = () => {
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+        });
+    };
+
     return (
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-            <GlobalThemeStyles />
-            <BreathingSession />
-        </ThemeProvider>
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+            <style dangerouslySetInnerHTML={{ __html: fontStyle }} />
+            <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-900/80 border-b border-cyan-500/20">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-16">
+                        <div className="flex items-center cursor-pointer">
+                            <div className="p-2 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-lg mr-3">
+                                <Shield className="w-5 h-5 text-white" />
+                            </div>
+                            <span className="text-xl font-bold text-white bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                                SecureGuard Enterprise
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <ClientOnlyAnimatedDots />
+
+            {notifications.length > 0 && (
+                <div className="fixed top-4 right-4 z-50 space-y-2">
+                    {notifications.map((notification) => (
+                        <div
+                            key={notification.id}
+                            className="bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg animate-pulse flex items-center space-x-2"
+                        >
+                            <CheckCircle className="w-5 h-5" />
+                            <span>{notification.message}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <div className="relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10" />
+                <div className="relative px-4 py-8 sm:px-6 lg:px-8">
+                    <div className="text-center">
+                        <div className="flex justify-center mb-4 cursor-pointer">
+                            <div className="p-3 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-2xl">
+                                <Shield className="w-8 h-8 text-white" />
+                            </div>
+                        </div>
+                        <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                            <span className="inline-block animate-pulse">SecureGuard</span>{" "}
+                            <span className="inline-block" style={{ animation: "fadeInUp 1s ease-out 0.5s both" }}>
+                                Enterprise
+                            </span>
+                        </h1>
+                        <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
+                            Next-generation cybersecurity platform with AI-powered threat detection and comprehensive protection suite
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="px-4 sm:px-6 lg:px-8 pb-12">
+                <div className="max-w-7xl mx-auto">
+                    {showQuiz && (
+                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-slate-800 rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                                <div className="flex justify-between items-center mb-6">
+                                    <div className="flex items-center space-x-3">
+                                        <Sparkles className="w-6 h-6 text-purple-400" />
+                                        <h3 className="text-2xl font-bold text-white">AI Plan Recommender</h3>
+                                    </div>
+                                    <button onClick={resetQuiz} className="text-gray-400 hover:text-white transition-colors cursor-pointer">
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <div className="mb-8">
+                                    <div className="flex justify-between text-sm text-gray-400 mb-2">
+                                        <span>Progress</span>
+                                        <span>{Math.round(((quizStep + 1) / (quizQuestions.length + 1)) * 100)}%</span>
+                                    </div>
+                                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 transition-all duration-500 ease-out"
+                                            style={{ width: `${((quizStep + 1) / (quizQuestions.length + 1)) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {quizStep < quizQuestions.length ? (
+                                    <div className="space-y-6">
+                                        <h4 className="text-xl font-semibold text-white mb-6">{quizQuestions[quizStep].question}</h4>
+                                        <div className="space-y-3">
+                                            {quizQuestions[quizStep].options.map((option, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => handleQuizAnswer(quizStep, option)}
+                                                    className="w-full p-4 text-left bg-slate-700 hover:bg-slate-600 rounded-xl transition-all duration-200 hover:scale-[1.02] text-white cursor-pointer"
+                                                >
+                                                    {option.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center space-y-6">
+                                        <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto">
+                                            <CheckCircle className="w-8 h-8 text-white" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-2xl font-bold text-white mb-2">Perfect Match Found!</h4>
+                                            <p className="text-gray-300 mb-6">Based on your answers, we recommend the</p>
+                                            <div className="inline-block p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl">
+                                                <span className="text-xl font-bold text-white capitalize">{recommendedPlan} Plan</span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                resetQuiz();
+                                                const planElement = document.querySelector(`[data-plan="${recommendedPlan}"]`);
+                                                if (planElement) {
+                                                    planElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                                                    planElement.classList.add("ring-4", "ring-yellow-400", "ring-opacity-75");
+                                                    setTimeout(() => {
+                                                        planElement.classList.remove("ring-4", "ring-yellow-400", "ring-opacity-75");
+                                                    }, 3000);
+                                                }
+                                            }}
+                                            className="bg-gradient-to-r from-cyan-500 to-purple-500 text-white px-8 py-3 rounded-xl font-semibold hover:from-cyan-600 hover:to-purple-600 transition-all duration-200 cursor-pointer"
+                                        >
+                                            View Recommended Plan
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid lg:grid-cols-2 gap-8 mb-12">
+                        <div className="space-y-6">
+                            <div className="bg-slate-800/50 backdrop-blur-xl rounded-3xl p-6 border border-cyan-500/20">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold text-white">Customize Your Protection</h2>
+                                    <button
+                                        onClick={onAIRecommendationClick}
+                                        className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 cursor-pointer"
+                                    >
+                                        <Sparkles className="w-4 h-4" />
+                                        <span>AI Recommend</span>
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4 cursor-pointer">
+                                    {features.map((feature) => {
+                                        const Icon = feature.icon;
+                                        const isSelected = selectedFeatures.has(feature.id);
+
+                                        return (
+                                            <div
+                                                key={feature.id}
+                                                className={`p-4 rounded-xl border transition-all duration-300 cursor-pointer hover:shadow-lg ${
+                                                    isSelected
+                                                        ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border-cyan-500/50"
+                                                        : "bg-slate-700/50 border-slate-600/50 hover:border-cyan-500/30"
+                                                }`}
+                                                onClick={() => handleFeatureToggle(feature.id)}
+                                                role="button"
+                                                tabIndex={0}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter" || e.key === " ") {
+                                                        e.preventDefault();
+                                                        handleFeatureToggle(feature.id);
+                                                    }
+                                                }}
+                                            >
+                                                <div className="flex items-center space-x-4">
+                                                    <div
+                                                        className={`p-2 rounded-lg transition-colors ${
+                                                            isSelected ? "bg-cyan-500" : "bg-slate-600"
+                                                        }`}
+                                                    >
+                                                        <Icon className="w-5 h-5 text-white" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center space-x-3">
+                                                            <h3 className="font-semibold text-white">{feature.name}</h3>
+                                                            <span className="text-sm text-cyan-400 font-medium">${feature.price}/mo</span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-400 mt-1">{feature?.description}</p>
+                                                    </div>
+                                                    <div
+                                                        className={`w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center ${
+                                                            isSelected ? "bg-cyan-500 border-cyan-500" : "border-gray-400"
+                                                        }`}
+                                                    >
+                                                        {isSelected && (
+                                                            <span
+                                                                className="text-white text-sm leading-none flex items-center justify-center"
+                                                                style={{ marginTop: "3px" }}
+                                                            >
+                                                                ✓
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="mt-8 p-4 bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-xl border border-emerald-500/20">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <h4 className="font-semibold text-white mb-2">Commitment Period</h4>
+                                            <p className="text-sm text-gray-400 mb-4">Choose your commitment period for additional savings</p>
+                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                            {commitmentOptions.map((option) => (
+                                                <button
+                                                    key={option.id}
+                                                    onClick={() => setCommitmentPeriod(option.id)}
+                                                    className={`p-3 rounded-xl text-center transition-all duration-200 cursor-pointer ${
+                                                        commitmentPeriod === option.id
+                                                            ? "bg-gradient-to-r from-emerald-500 to-green-500 text-white transform scale-105"
+                                                            : "bg-slate-700/50 text-gray-300 hover:bg-slate-600/50"
+                                                    }`}
+                                                >
+                                                    <div className="font-semibold text-sm">{option.label}</div>
+                                                    <div className="text-xs mt-1">
+                                                        {option.discount > 0 ? option.savings : option.savings}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {getCurrentCommitment().discount > 0 && (
+                                            <div className="text-center">
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-500/20 text-emerald-400">
+                                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                                    You're saving {Math.round(getCurrentCommitment().discount * 100)}% with {getCurrentCommitment().label} commitment!
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-800/50 backdrop-blur-xl rounded-3xl p-6 border border-purple-500/20">
+                                <h2 className="text-2xl font-bold text-white mb-6">Regional Compliance</h2>
+                                <div className="space-y-4 cursor-pointer">
+                                    {complianceRegions.map((region) => (
+                                        <div key={region.id} className="border border-slate-600/50 rounded-xl overflow-hidden">
+                                            <button
+                                                onClick={() => toggleSection(region.id)}
+                                                className="w-full p-4 bg-slate-700/50 hover:bg-slate-700 transition-colors text-left flex items-center justify-between cursor-pointer"
+                                            >
+                                                <div className="flex items-center mb-2 cursor-pointer">
+                                                    <Award className="w-4 h-4 text-yellow-400 mr-2" />
+                                                    <span className="text-yellow-400 text-xs uppercase tracking-wider font-semibold">
+                                                        Enterprise Benefit
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center space-x-3">
+                                                    <Globe className="w-5 h-5 text-purple-400" />
+                                                    <span className="font-semibold text-white">{region.name}</span>
+                                                    <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">
+                                                        {region.status}
+                                                    </span>
+                                                </div>
+                                                {expandedSections.has(region.id) ? (
+                                                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                                                ) : (
+                                                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                                                )}
+                                            </button>
+                                            {expandedSections.has(region.id) && (
+                                                <div className="p-4 bg-slate-800/50 border-t border-slate-600/50">
+                                                    <h4 className="font-semibold text-white mb-3">Requirements:</h4>
+                                                    <ul className="space-y-2">
+                                                        {region.requirements.map((req, idx) => (
+                                                            <li
+                                                                key={idx}
+                                                                className="flex items-center space-x-2 text-sm text-gray-300 cursor-pointer"
+                                                            >
+                                                                <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                                                                <span>{req}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="bg-slate-800/50 backdrop-blur-xl rounded-3xl p-6 border border-cyan-500/20">
+                                <h2 className="text-2xl font-bold text-white mb-6">Your Custom Plan</h2>
+                                <div className="text-center mb-6">
+                                    <div className="text-4xl font-bold text-white">
+                                        ${calculateSavings(calculateCustomPrice())}
+                                        <span className="text-lg text-gray-400">/month</span>
+                                    </div>
+                                    {commitmentPeriod !== "monthly" && (
+                                        <div className="text-sm text-emerald-400 mt-2">
+                                            <span className="line-through text-gray-500 mr-2">${calculateCustomPrice()}/month</span>
+                                            {getCurrentCommitment().savings}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="space-y-3">
+                                    <h4 className="font-semibold text-white">Selected Features:</h4>
+                                    {Array.from(selectedFeatures).map((featureId) => {
+                                        const feature = features.find((f) => f.id === featureId);
+                                        if (!feature) return null;
+                                        const Icon = feature.icon;
+                                        return (
+                                            <div
+                                                key={featureId}
+                                                className="flex items-center space-x-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer"
+                                            >
+                                                <Icon className="w-4 h-4 text-cyan-400" />
+                                                <span className="text-white flex-1">{feature.name}</span>
+                                                <span className="text-cyan-400 font-medium">${feature.price}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <button
+                                    onClick={() => showNotification("Our team will contact you soon!")}
+                                    className="w-full mt-6 bg-gradient-to-r from-cyan-500 to-purple-500 text-white py-3 rounded-xl font-semibold hover:from-cyan-600 hover:to-purple-600 transition-all duration-200 transform hover:scale-[1.02] cursor-pointer"
+                                >
+                                    Connect to Us
+                                </button>
+                            </div>
+
+                            <div className="space-y-4 cursor-pointer">
+                                {plans.map((plan, idx) => (
+                                    <div
+                                        key={plan.name}
+                                        data-plan={plan.name.toLowerCase()}
+                                        className={`relative bg-slate-800/50 backdrop-blur-xl rounded-3xl p-6 border transition-all duration-300 hover:shadow-xl hover:scale-[1.02] ${
+                                            plan.popular ? "border-purple-500/50 ring-2 ring-purple-500/20" : "border-slate-600/50"
+                                        }`}
+                                    >
+                                        {plan.popular && (
+                                            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                                                <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center space-x-1 cursor-pointer">
+                                                    <Star className="w-4 h-4" />
+                                                    <span>Most Popular</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-start mb-4 cursor-pointer">
+                                            <div>
+                                                <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                                                <div className="text-3xl font-bold text-white mt-2">
+                                                    ${calculateSavings(plan.price)}
+                                                    <span className="text-lg text-gray-400">/month</span>
+                                                </div>
+                                                {commitmentPeriod !== "monthly" && (
+                                                    <div className="text-sm text-emerald-400 mt-1">
+                                                        Save ${plan.price - calculateSavings(plan.price)}/month
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-r ${plan.color} p-0.5`}>
+                                                <div className="w-full h-full bg-slate-800 rounded-2xl flex items-center justify-center">
+                                                    <Shield className="w-8 h-8 text-white" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2 mb-6">
+                                            {plan.features.map((featureId) => {
+                                                const feature = features.find((f) => f.id === featureId);
+                                                return (
+                                                    <div
+                                                        key={featureId}
+                                                        className="flex items-center space-x-2 text-sm text-gray-300 cursor-pointer"
+                                                    >
+                                                        <CheckCircle className="w-4 h-4 text-green-400" />
+                                                        <span>{feature?.name || "Feature"}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedPlan(plan.name.toLowerCase());
+                                                showNotification("Our team will connect to you soon!");
+                                            }}
+                                            className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 cursor-pointer ${
+                                                selectedPlan === plan.name.toLowerCase()
+                                                    ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white"
+                                                    : plan.popular
+                                                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600"
+                                                    : "bg-slate-700 text-white hover:bg-slate-600"
+                                            }`}
+                                        >
+                                            {selectedPlan === plan.name.toLowerCase() ? "✓ Selected" : `Choose ${plan.name}`}
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-800/50 backdrop-blur-xl rounded-3xl p-8 border border-orange-500/20 mb-12">
+                        <h2 className="text-2xl font-bold text-white mb-2 text-center">See How We Compare</h2>
+                        <p className="text-gray-400 text-center mb-8">Drag the slider to compare our pricing with leading competitors</p>
+
+                        <div className="relative">
+                            <div
+                                ref={sliderRef}
+                                className="relative h-16 bg-slate-700 rounded-2xl overflow-hidden cursor-pointer"
+                                onMouseDown={(e) => {
+                                    handleSliderInteraction(e);
+                                    setIsDragging(true);
+                                }}
+                                onTouchStart={handleSliderInteraction}
+                                onTouchMove={handleSliderInteraction}
+                                role="slider"
+                                tabIndex={0}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                                aria-valuenow={compareSlider}
+                            >
+                                <div
+                                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-500 to-purple-500"
+                                    style={{ width: `${compareSlider}%` }}
+                                />
+                                <div
+                                    className="absolute top-1/2 w-6 h-6 bg-white rounded-full shadow-lg transform -translate-y-1/2 -translate-x-3 cursor-grab active:cursor-grabbing"
+                                    style={{ left: `${compareSlider}%` }}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+                                {getCompetitorPricing().map((competitor, idx) => (
+                                    <div
+                                        key={competitor.name}
+                                        className={`p-4 rounded-xl transition-all duration-300 ${
+                                            competitor.name === "Our Solution"
+                                                ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/50"
+                                                : "bg-slate-700/50 border border-slate-600/50"
+                                        }`}
+                                    >
+                                        <div className="text-center">
+                                            <h4 className="font-semibold text-white mb-2">{competitor.name}</h4>
+                                            <div className="text-2xl font-bold text-white">
+                                                ${competitor.price}
+                                                <span className="text-sm text-gray-400">/mo</span>
+                                            </div>
+                                            {competitor.name === "Our Solution" && (
+                                                <div className="mt-2 text-sm text-emerald-400 font-medium">Best Value</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-800/50 backdrop-blur-xl rounded-3xl p-8 border border-purple-500/20 mb-12">
+                        <div className="text-center mb-12">
+                            <h2 className="text-3xl font-bold text-white mb-4">Enterprise-Grade Security Features</h2>
+                            <p className="text-gray-400 max-w-2xl mx-auto">
+                                Comprehensive protection powered by advanced AI and machine learning algorithms
+                            </p>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {[
+                                {
+                                    icon: Shield,
+                                    title: "Zero-Day Protection",
+                                    description: "Advanced heuristic analysis detects unknown threats before they execute",
+                                    color: "from-blue-500 to-cyan-500",
+                                },
+                                {
+                                    icon: Zap,
+                                    title: "Real-Time Response",
+                                    description: "Automated incident response with sub-second threat neutralization",
+                                    color: "from-yellow-500 to-orange-500",
+                                },
+                                {
+                                    icon: Eye,
+                                    title: "Behavioral Analytics",
+                                    description: "AI-powered user behavior monitoring to detect insider threats",
+                                    color: "from-purple-500 to-pink-500",
+                                },
+                                {
+                                    icon: Database,
+                                    title: "Data Classification",
+                                    description: "Automatic sensitive data discovery and protection policies",
+                                    color: "from-green-500 to-emerald-500",
+                                },
+                                {
+                                    icon: Globe,
+                                    title: "Global Threat Intel",
+                                    description: "Real-time threat intelligence from our worldwide sensor network",
+                                    color: "from-indigo-500 to-purple-500",
+                                },
+                                {
+                                    icon: Lock,
+                                    title: "Quantum-Safe Encryption",
+                                    description: "Future-proof encryption algorithms resistant to quantum attacks",
+                                    color: "from-red-500 to-pink-500",
+                                },
+                            ].map((feature, idx) => {
+                                const Icon = feature.icon;
+                                return (
+                                    <div
+                                        key={idx}
+                                        className="group p-6 bg-slate-700/30 rounded-2xl border border-slate-600/50 hover:border-cyan-500/50 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] cursor-pointer"
+                                    >
+                                        <div
+                                            className={`w-12 h-12 rounded-xl bg-gradient-to-r ${feature.color} p-3 mb-4 group-hover:scale-110 transition-transform duration-300`}
+                                        >
+                                            <Icon className="w-6 h-6 text-white" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
+                                        <p className="text-gray-400 text-sm leading-relaxed">{feature.description}</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-800/50 backdrop-blur-xl rounded-3xl p-8 border border-cyan-500/20 mb-12">
+                        <div className="text-center mb-8">
+                            <h2 className="text-2xl font-bold text-white mb-4">Trusted by Industry Leaders</h2>
+                            <div className="flex justify-center items-center space-x-8 opacity-60">
+                                {["TechCorp", "FinanceMax", "HealthSecure", "RetailGiant", "StartupHub"].map((company, idx) => (
+                                    <div key={idx} className="text-gray-400 font-semibold text-lg cursor-pointer">
+                                        {company}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-3 gap-6">
+                            {[
+                                {
+                                    quote: "SecureGuard reduced our security incidents by 95% in the first quarter. The AI-powered detection is phenomenal.",
+                                    author: "Sarah Chen",
+                                    role: "CISO, TechCorp",
+                                    rating: 5,
+                                },
+                                {
+                                    quote: "Finally, a cybersecurity solution that scales with our rapid growth. The compliance features are a game-changer.",
+                                    author: "Michael Rodriguez",
+                                    role: "IT Director, StartupHub",
+                                    rating: 5,
+                                },
+                                {
+                                    quote: "The ROI was immediate. We've saved millions in potential breach costs while improving our security posture.",
+                                    author: "Lisa Thompson",
+                                    role: "Security Manager, FinanceMax",
+                                    rating: 5,
+                                },
+                            ].map((testimonial, idx) => (
+                                <div key={idx} className="p-6 bg-slate-700/30 rounded-2xl border border-slate-600/50 cursor-pointer">
+                                    <div className="flex space-x-1 mb-4">
+                                        {[...Array(testimonial.rating)].map((_, i) => (
+                                            <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                                        ))}
+                                    </div>
+                                    <p className="text-gray-300 mb-4 italic">"{testimonial.quote}"</p>
+                                    <div>
+                                        <div className="font-semibold text-white">{testimonial.author}</div>
+                                        <div className="text-sm text-gray-400">{testimonial.role}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="text-center bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 rounded-3xl p-12 border border-purple-500/20">
+                        <h2 className="text-3xl font-bold text-white mb-4">Ready to Secure Your Enterprise?</h2>
+                        <p className="text-gray-300 mb-8 max-w-2xl mx-auto">
+                            Join thousands of organizations worldwide who trust SecureGuard to protect their digital assets. Start your free
+                            30-day trial today.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                            <button
+                                onClick={() => showNotification("Trial will start soon!")}
+                                className="bg-gradient-to-r from-cyan-500 to-purple-500 text-white px-8 py-4 rounded-xl font-semibold hover:from-cyan-600 hover:to-purple-600 transition-all duration-200 transform hover:scale-[1.05] flex items-center space-x-2 cursor-pointer"
+                            >
+                                <span>Start Free Trial</span>
+                                <ArrowRight className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setDemoScheduled(true);
+                                    showNotification("Our team will contact you soon!");
+                                }}
+                                className="border border-cyan-500/50 text-cyan-400 px-8 py-4 rounded-xl font-semibold hover:bg-cyan-500/10 transition-all duration-200 cursor-pointer"
+                            >
+                                {demoScheduled ? "Demo Scheduled Soon" : "Schedule Demo"}
+                            </button>
+                        </div>
+                        <div className="mt-6 text-sm text-gray-400">No credit card required • 24/7 expert support • Cancel anytime</div>
+                    </div>
+                </div>
+            </div>
+
+            <footer className="bg-slate-900 border-t border-cyan-500/20 pt-12 pb-8">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                        <div className="space-y-4">
+                            <div className="flex items-center cursor-pointer">
+                                <div className="p-2 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-lg mr-3">
+                                    <Shield className="w-5 h-5 text-white" />
+                                </div>
+                                <span className="text-xl font-bold text-white">SecureGuard</span>
+                            </div>
+                            <p className="text-gray-400 text-sm">
+                                Next-generation cybersecurity platform with AI-powered threat detection and comprehensive protection suite
+                                for enterprises of all sizes.
+                            </p>
+                        </div>
+
+                        <div>
+                            <h3 className="text-white font-semibold mb-4">Quick Links</h3>
+                            <ul className="space-y-2">
+                                {["Features", "Pricing", "Compliance", "Testimonials"].map((item) => (
+                                    <li key={item}>
+                                        <button
+                                            onClick={scrollToTop}
+                                            className="text-gray-400 hover:text-cyan-400 transition-colors text-sm flex items-center cursor-pointer"
+                                        >
+                                            <ChevronRight className="w-4 h-4 mr-1" />
+                                            {item}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 className="text-white font-semibold mb-4">Resources</h3>
+                            <ul className="space-y-2">
+                                {["Documentation", "Support", "Blog", "Partners"].map((item) => (
+                                    <li key={item}>
+                                        <button
+                                            onClick={scrollToTop}
+                                            className="text-gray-400 hover:text-cyan-400 transition-colors text-sm flex items-center cursor-pointer"
+                                        >
+                                            <ChevronRight className="w-4 h-4 mr-1" />
+                                            {item}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 className="text-white font-semibold mb-4">Connect With Us</h3>
+                            <div className="flex space-x-4">
+                                {[
+                                    { Icon: Twitter, url: "https://twitter.com" },
+                                    { Icon: Linkedin, url: "https://linkedin.com" },
+                                    { Icon: Github, url: "https://github.com" },
+                                    { Icon: Facebook, url: "https://facebook.com" },
+                                    { Icon: Instagram, url: "https://instagram.com" },
+                                ].map((social, idx) => {
+                                    const SocialIcon = social.Icon;
+                                    return (
+                                        <a
+                                            key={idx}
+                                            href={social.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-2 bg-slate-800 rounded-full hover:bg-gradient-to-r hover:from-cyan-500 hover:to-purple-500 transition-all duration-300 cursor-pointer"
+                                        >
+                                            <SocialIcon className="w-5 h-5 text-gray-400 hover:text-white transition-colors" />
+                                        </a>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
     );
-}
+};
+
+export default CybersecurityPricingUI;
