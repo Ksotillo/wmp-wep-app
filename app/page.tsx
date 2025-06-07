@@ -1,2067 +1,3387 @@
 "use client";
 
-import type React from "react";
-import { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ShoppingBag, Star, ChevronDown, X, Plus, Minus, Trash2, Check, Clock, Truck, Shield, Zap } from "lucide-react";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { ThemeProvider, useTheme } from "next-themes";
+import {
+    FiSun,
+    FiMoon,
+    FiCreditCard,
+    FiUsers,
+    FiAward,
+    FiDownload,
+    FiPlus,
+    FiMinus,
+    FiHeart,
+    FiStar,
+    FiMapPin,
+    FiCalendar,
+    FiClock,
+    FiEye,
+    FiHome,
+    FiActivity,
+    FiDollarSign,
+    FiCoffee,
+    FiZap,
+    FiImage,
+    FiBook,
+    FiMusic,
+    FiPhone,
+    FiMail,
+    FiBriefcase,
+    FiCamera,
+    FiMessageCircle,
+    FiTrendingUp,
+} from "react-icons/fi";
+import { BsQrCode } from "react-icons/bs";
+import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin } from "react-icons/fa";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-    subsets: ["latin"],
-    display: "swap",
-    variable: "--font-plus-jakarta-sans",
-});
-
-type Size = "UK 6" | "UK 7" | "UK 8" | "UK 9" | "UK 10" | "UK 11";
-
-type Color = "Black" | "White" | "Brown" | "Red" | "Blue" | "Green" | "Grey" | "Chestnut";
-
-type Shoe = {
-    id: number;
+type TicketType = {
+    id: string;
     name: string;
-    brand: string;
     price: number;
-    originalPrice?: number;
-    rating: number;
-    reviews: number;
-    image: string;
-    sizes: Size[];
-    colors: Color[];
-    category: string;
-    isNew?: boolean;
-    isBestSeller?: boolean;
-    discount?: string;
+    description: string;
+    features: string[];
+    maxGuests: number;
+    color: string;
 };
 
-type CartItem = {
-    shoe: Shoe;
-    size: Size;
-    color: Color;
-    quantity: number;
+type Guest = {
+    id: string;
+    name: string;
+    email: string;
+    ticketType: string;
+    hasPlus1: boolean;
+    plus1Name?: string;
+    plus1Email?: string;
 };
 
-type ToastProps = {
-    message: string;
-    onClose: () => void;
+type Sponsor = {
+    id: string;
+    name: string;
+    logo: React.ReactNode;
+    tier: "platinum" | "gold" | "silver";
+    template: string;
 };
 
-const shoes: Shoe[] = [
+type Donation = {
+    id: string;
+    amount: number;
+    description: string;
+    impact: string;
+};
+
+const ticketTypes: TicketType[] = [
     {
-        id: 1,
-        name: "SkyStep Air Flow 270",
-        brand: "SkyStep",
-        price: 129.99,
-        originalPrice: 149.99,
-        rating: 4.5,
-        reviews: 120,
-        image: "https://images.unsplash.com/photo-1560769629-975ec94e6a86?q=80&w=2864&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10"],
-        colors: ["Black", "White", "Red"],
-        category: "Running",
-        isNew: true,
-        discount: "13%",
+        id: "general",
+        name: "General Admission",
+        price: 150,
+        description: "Access to main event and dinner",
+        features: ["Welcome reception", "Three-course dinner", "Entertainment program", "Silent auction access"],
+        maxGuests: 1,
+        color: "from-blue-400 to-blue-500",
     },
     {
-        id: 2,
-        name: "UrbanStride UltraMax Pro",
-        brand: "UrbanStride",
-        price: 149.99,
-        originalPrice: 179.99,
-        rating: 4.7,
-        reviews: 150,
-        image: "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?q=80&w=2798&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1074&q=80",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9"],
-        colors: ["Black", "White", "Blue"],
-        category: "Running",
-        isBestSeller: true,
+        id: "vip",
+        name: "VIP Experience",
+        price: 350,
+        description: "Premium experience with exclusive access",
+        features: ["VIP reception", "Premium seating", "Meet & greet with speakers", "Gift bag", "Valet parking"],
+        maxGuests: 2,
+        color: "from-purple-400 to-purple-500",
     },
     {
-        id: 3,
-        name: "StreetFlow Classic Style",
-        brand: "StreetFlow",
-        price: 69.99,
-        rating: 4.4,
-        reviews: 80,
-        image: "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=698&q=80",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10"],
-        colors: ["Black", "White", "Brown", "Red"],
-        category: "Casual",
-        isNew: true,
-    },
-    {
-        id: 4,
-        name: "ClassicWalk Retro 70",
-        brand: "ClassicWalk",
-        price: 59.99,
-        originalPrice: 69.99,
-        rating: 4.6,
-        reviews: 200,
-        image: "https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?q=80&w=2931&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10"],
-        colors: ["Black", "White", "Red", "Blue"],
-        category: "Casual",
-        isBestSeller: true,
-        discount: "14%",
-    },
-    {
-        id: 5,
-        name: "BalanceCore Classic 574",
-        brand: "BalanceCore",
-        price: 79.99,
-        rating: 4.3,
-        reviews: 50,
-        image: "https://images.unsplash.com/photo-1575537302964-96cd47c06b1b?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10"],
-        colors: ["Black", "White", "Grey", "Blue"],
-        category: "Casual",
-    },
-    {
-        id: 6,
-        name: "ToughTread Outdoor Boots",
-        brand: "ToughTread",
-        price: 129.99,
-        originalPrice: 149.99,
-        rating: 4.5,
-        reviews: 70,
-        image: "https://images.unsplash.com/photo-1562183241-b937e95585b6?q=80&w=3165&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=735&q=80",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10"],
-        colors: ["Black", "Brown", "Chestnut"],
-        category: "Formal",
-        isNew: true,
-        discount: "13%",
-    },
-    {
-        id: 7,
-        name: "DurableStep Classic 1460",
-        brand: "DurableStep",
-        price: 119.99,
-        rating: 4.4,
-        reviews: 60,
-        image: "https://images.unsplash.com/photo-1610398752800-146f269dfcc8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fA%3D%3D&auto=format&fit=crop&w=687&q=80",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10"],
-        colors: ["Black", "Brown", "Red"],
-        category: "Formal",
-    },
-    {
-        id: 8,
-        name: "FlexRun SportMax",
-        brand: "FlexRun",
-        price: 89.99,
-        originalPrice: 109.99,
-        rating: 4.2,
-        reviews: 40,
-        image: "https://images.unsplash.com/photo-1603808033192-082d6919d3e1?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=735&q=80",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9"],
-        colors: ["Black", "White", "Blue", "Green"],
-        category: "Sports",
-        isBestSeller: true,
-        discount: "18%",
-    },
-    {
-        id: 9,
-        name: "SkyStep Air Elite 1",
-        brand: "SkyStep",
-        price: 99.99,
-        rating: 4.8,
-        reviews: 180,
-        image: "https://images.unsplash.com/photo-1518002171953-a080ee817e1f?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10", "UK 11"],
-        colors: ["White", "Black", "Blue", "Red"],
-        category: "Casual",
-        isBestSeller: true,
-    },
-    {
-        id: 10,
-        name: "UrbanStride Motion R1",
-        brand: "UrbanStride",
-        price: 139.99,
-        originalPrice: 159.99,
-        rating: 4.5,
-        reviews: 95,
-        image: "https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?q=80&w=2031&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fA%3D%3D",
-        sizes: ["UK 7", "UK 8", "UK 9", "UK 10"],
-        colors: ["Black", "White", "Grey", "Red"],
-        category: "Running",
-        isNew: true,
-        discount: "12%",
-    },
-    {
-        id: 11,
-        name: "AeroFlex Performance 28",
-        brand: "AeroFlex",
-        price: 159.99,
-        rating: 4.7,
-        reviews: 65,
-        image: "https://images.unsplash.com/photo-1605733160314-4fc7dac4bb16?q=80&w=2980&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10"],
-        colors: ["Blue", "Black", "Grey"],
-        category: "Running",
-        isNew: true,
-    },
-    {
-        id: 12,
-        name: "CloudRunner Spirit 14",
-        brand: "CloudRunner",
-        price: 129.99,
-        originalPrice: 139.99,
-        rating: 4.6,
-        reviews: 110,
-        image: "https://images.unsplash.com/photo-1604671801908-6f0c6a092c05?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        sizes: ["UK 7", "UK 8", "UK 9", "UK 10", "UK 11"],
-        colors: ["Grey", "Blue", "Black"],
-        category: "Running",
-        isBestSeller: true,
-        discount: "7%",
-    },
-    {
-        id: 13,
-        name: "SmoothStride Journey 14",
-        brand: "SmoothStride",
-        price: 119.99,
-        rating: 4.4,
-        reviews: 75,
-        image: "https://images.unsplash.com/photo-1499013819532-e4ff41b00669?q=80&w=2960&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9"],
-        colors: ["Blue", "Grey", "Black"],
-        category: "Running",
-        isNew: true,
-    },
-    {
-        id: 14,
-        name: "PowerStep Elite Pro",
-        brand: "PowerStep",
-        price: 109.99,
-        originalPrice: 129.99,
-        rating: 4.3,
-        reviews: 60,
-        image: "https://images.unsplash.com/photo-1491553895911-0055eca6402d?q=80&w=1780&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        sizes: ["UK 7", "UK 8", "UK 9", "UK 10"],
-        colors: ["Black", "Red", "Grey"],
-        category: "Sports",
-        discount: "15%",
-    },
-    {
-        id: 15,
-        name: "ComfortWalk Desert Boot",
-        brand: "ComfortWalk",
-        price: 119.99,
-        rating: 4.5,
-        reviews: 85,
-        image: "https://images.unsplash.com/photo-1512990414788-d97cb4a25db3?q=80&w=3215&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10"],
-        colors: ["Brown", "Black", "Chestnut"],
-        category: "Formal",
-        isBestSeller: true,
-    },
-    {
-        id: 16,
-        name: "RetroFlex Heritage Leather",
-        brand: "RetroFlex",
-        price: 79.99,
-        originalPrice: 89.99,
-        rating: 4.4,
-        reviews: 70,
-        image: "https://images.unsplash.com/photo-1520256862855-398228c41684?q=80&w=1769&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fA%3D%3D",
-        sizes: ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10"],
-        colors: ["White", "Black", "Grey"],
-        category: "Casual",
-        discount: "11%",
+        id: "table",
+        name: "Table Sponsor",
+        price: 1200,
+        description: "Full table for 8 guests",
+        features: ["Reserved table for 8", "Logo recognition", "Premium bar service", "Dedicated server", "Tax benefits"],
+        maxGuests: 8,
+        color: "from-amber-400 to-amber-500",
     },
 ];
 
-const Toast = ({ message, onClose }: ToastProps) => {
+const donationOptions: Donation[] = [
+    {
+        id: "meals",
+        amount: 25,
+        description: "Provide 10 meals",
+        impact: "Feeds a family for a week",
+    },
+    {
+        id: "education",
+        amount: 50,
+        description: "Education support",
+        impact: "School supplies for one child",
+    },
+    {
+        id: "healthcare",
+        amount: 100,
+        description: "Healthcare assistance",
+        impact: "Medical checkup for one person",
+    },
+    {
+        id: "custom",
+        amount: 0,
+        description: "Custom amount",
+        impact: "Every dollar makes a difference",
+    },
+];
+
+const sponsors: Sponsor[] = [
+    {
+        id: "platinum1",
+        name: "Tech Corp Solutions",
+        logo: <FiBriefcase className="w-8 h-8 text-blue-600" />,
+        tier: "platinum",
+        template: "premium-gradient",
+    },
+    {
+        id: "gold1",
+        name: "Community Bank",
+        logo: <FiDollarSign className="w-8 h-8 text-green-600" />,
+        tier: "gold",
+        template: "elegant-border",
+    },
+    {
+        id: "silver1",
+        name: "Local Restaurant",
+        logo: <FiCoffee className="w-8 h-8 text-amber-600" />,
+        tier: "silver",
+        template: "simple-clean",
+    },
+];
+
+const GlobalThemeStyles = () => (
+    <style jsx global>{`
+        @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue:wght@400;700&family=Roboto:wght@300;400;500;700&display=swap");
+
+        :root {
+            --page-bg: #fefefe;
+            --page-text-primary: #1e293b;
+            --page-text-secondary: #64748b;
+            --card-bg: #ffffff;
+            --card-border: #e2e8f0;
+            --primary-blue: #3b82f6;
+            --primary-purple: #8b5cf6;
+            --accent-lavender: #a855f7;
+            --soft-blue: #dbeafe;
+            --soft-purple: #ede9fe;
+            --success-green: #10b981;
+            --warning-amber: #f59e0b;
+            --danger-red: #ef4444;
+            --gradient-primary: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            --gradient-secondary: linear-gradient(135deg, #dbeafe, #ede9fe);
+            --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-medium: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-large: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --border-radius: 16px;
+            --border-radius-small: 8px;
+            --font-heading: "Bebas Neue", cursive;
+            --font-body: "Roboto", sans-serif;
+            --scrollbar-thumb: #cbd5e1;
+            --scrollbar-track: #f8fafc;
+
+            /* Sponsors Section Variables */
+            --sponsors-bg: linear-gradient(to bottom, rgba(239, 246, 255, 0.5), rgba(245, 243, 255, 0.4));
+            --sponsors-title: #0f172a;
+            --sponsors-subtitle: #374151;
+            --sponsors-card-bg: rgba(255, 255, 255, 0.95);
+            --sponsors-card-border: rgba(226, 232, 240, 0.6);
+            --sponsors-card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --sponsors-card-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --sponsors-badge-bg: rgba(255, 255, 255, 0.9);
+            --sponsors-badge-border: rgba(196, 181, 253, 0.6);
+            --sponsors-badge-text: #1f2937;
+            --sponsors-icon-bg: linear-gradient(to bottom right, #dbeafe, #e0e7ff);
+            --sponsors-icon-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --sponsors-contribution-bg: #dbeafe;
+            --sponsors-contribution-text: #1e40af;
+            --sponsors-dot-purple: #a855f7;
+            --sponsors-dot-blue: #3b82f6;
+            --sponsors-description-bg: rgba(255, 255, 255, 0.95);
+        }
+
+        html.dark {
+            --page-bg: #0f172a;
+            --page-text-primary: #f1f5f9;
+            --page-text-secondary: #94a3b8;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --primary-blue: #60a5fa;
+            --primary-purple: #a78bfa;
+            --accent-lavender: #c084fc;
+            --soft-blue: #1e3a8a;
+            --soft-purple: #581c87;
+            --success-green: #34d399;
+            --warning-amber: #fbbf24;
+            --danger-red: #f87171;
+            --gradient-primary: linear-gradient(135deg, #60a5fa, #a78bfa);
+            --gradient-secondary: linear-gradient(135deg, #1e3a8a, #581c87);
+            --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            --shadow-medium: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+            --shadow-large: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+            --scrollbar-thumb: #475569;
+            --scrollbar-track: #1e293b;
+
+            /* Sponsors Section Dark Theme Overrides */
+            --sponsors-bg: linear-gradient(to bottom, #0f172a, #1e293b);
+            --sponsors-title: #f1f5f9;
+            --sponsors-subtitle: #cbd5e1;
+            --sponsors-card-bg: #1e293b;
+            --sponsors-card-border: #334155;
+            --sponsors-card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+            --sponsors-card-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+            --sponsors-badge-bg: #1e293b;
+            --sponsors-badge-text: #f1f5f9;
+            --sponsors-badge-border: #334155;
+            --sponsors-description-bg: #1e293b;
+        }
+
+        body {
+            background-color: var(--page-bg);
+            color: var(--page-text-primary);
+            font-family: var(--font-body);
+            font-weight: 300;
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--scrollbar-track);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--page-text-secondary);
+        }
+
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .gradient-text {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    `}</style>
+);
+
+const ThemeToggle = () => {
+    const { theme, setTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) return null;
+
+    const toggleTheme = () => {
+        setTheme(theme === "dark" ? "light" : "dark");
+    };
+
+    return (
+        <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={toggleTheme}
+            className="p-3 rounded-full bg-[var(--card-bg)] border border-[var(--card-border)] shadow-[var(--shadow-soft)] cursor-pointer"
+        >
+            {theme === "dark" ? (
+                <FiSun className="w-5 h-5 text-[var(--primary-blue)]" />
+            ) : (
+                <FiMoon className="w-5 h-5 text-[var(--primary-purple)]" />
+            )}
+        </motion.button>
+    );
+};
+
+const TabNavigation = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (tab: string) => void }) => {
+    const tabs = [
+        { id: "tickets", label: "Tickets", icon: FiCreditCard },
+        { id: "guests", label: "Guests", icon: FiUsers },
+        { id: "sponsors", label: "Sponsors", icon: FiAward },
+        { id: "downloads", label: "Downloads", icon: FiDownload },
+    ];
+
+    return (
+        <div className="flex bg-[var(--card-bg)] rounded-[var(--border-radius)] p-2 shadow-[var(--shadow-soft)] border border-[var(--card-border)]">
+            {tabs.map((tab) => {
+                const IconComponent = tab.icon;
+                return (
+                    <motion.button
+                        key={tab.id}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`flex-1 flex flex-col items-center gap-1 p-3 rounded-[var(--border-radius-small)] cursor-pointer transition-all duration-200 ${
+                            activeTab === tab.id
+                                ? "bg-[var(--primary-blue)] text-white shadow-[var(--shadow-medium)]"
+                                : "text-[var(--page-text-secondary)] hover:text-[var(--page-text-primary)] hover:bg-[var(--soft-blue)]"
+                        }`}
+                    >
+                        <IconComponent className="w-5 h-5" />
+                        <span className="text-xs font-medium">{tab.label}</span>
+                    </motion.button>
+                );
+            })}
+        </div>
+    );
+};
+
+const TicketCard = ({ ticket, isSelected, onSelect }: { ticket: TicketType; isSelected: boolean; onSelect: () => void }) => {
     return (
         <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center z-50 max-w-[calc(100%-2rem)]"
+            whileHover={{ scale: 1.02, y: -4 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onSelect}
+            className={`p-6 lg:p-8 rounded-[var(--border-radius)] border-2 cursor-pointer transition-all duration-300 lg:flex lg:items-center lg:justify-between ${
+                isSelected
+                    ? "border-[var(--primary-blue)] bg-[var(--soft-blue)] shadow-[var(--shadow-large)]"
+                    : "border-[var(--card-border)] bg-[var(--card-bg)] shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-medium)]"
+            }`}
         >
-            <Check className="w-5 h-5 mr-2 text-blue-400 flex-shrink-0" />
-            <span className="line-clamp-2">{message}</span>
-            <button
-                onClick={onClose}
-                className="ml-4 text-blue-400 hover:text-white cursor-pointer flex-shrink-0"
-                aria-label="Close notification"
-            >
-                <X className="w-4 h-4" />
-            </button>
+            <div className="lg:flex-1">
+                <div className="flex justify-between items-start mb-4 lg:mb-6">
+                    <div className="lg:flex-1">
+                        <h3 className="text-xl lg:text-2xl font-bold text-[var(--page-text-primary)] mb-1 lg:mb-2">{ticket.name}</h3>
+                        <p className="text-[var(--page-text-secondary)] text-sm lg:text-base lg:leading-relaxed">{ticket.description}</p>
+                    </div>
+                    <div className="text-right lg:hidden">
+                        <div className="text-2xl font-bold text-[var(--primary-blue)]">${ticket.price}</div>
+                        <div className="text-xs text-[var(--page-text-secondary)]">per ticket</div>
+                    </div>
+                </div>
+
+                <div className="space-y-2 lg:space-y-3 mb-4 lg:mb-6">
+                    {ticket.features.map((feature, index) => (
+                        <div key={index} className="flex items-center gap-2 lg:gap-3">
+                            <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-[var(--primary-blue)]"></div>
+                            <span className="text-sm lg:text-base text-[var(--page-text-secondary)]">{feature}</span>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex items-center justify-between lg:justify-start lg:gap-6">
+                    <span className="text-sm lg:text-base text-[var(--page-text-secondary)]">
+                        Up to {ticket.maxGuests} {ticket.maxGuests === 1 ? "guest" : "guests"}
+                    </span>
+                    <motion.div
+                        className={`w-6 h-6 lg:w-7 lg:h-7 rounded-full border-2 flex items-center justify-center lg:hidden ${
+                            isSelected ? "border-[var(--primary-blue)] bg-[var(--primary-blue)]" : "border-[var(--card-border)]"
+                        }`}
+                    >
+                        {isSelected && <div className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full bg-white"></div>}
+                    </motion.div>
+                </div>
+            </div>
+
+            <div className="hidden lg:flex lg:flex-col lg:items-end lg:justify-between lg:ml-8 lg:h-full lg:min-h-[120px]">
+                <div className="text-right mb-6">
+                    <div className="text-4xl font-bold text-[var(--primary-blue)] mb-1">${ticket.price}</div>
+                    <div className="text-sm text-[var(--page-text-secondary)]">per ticket</div>
+                </div>
+
+                <motion.div
+                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+                        isSelected ? "border-[var(--primary-blue)] bg-[var(--primary-blue)]" : "border-[var(--card-border)]"
+                    }`}
+                >
+                    {isSelected && <div className="w-3 h-3 rounded-full bg-white"></div>}
+                </motion.div>
+            </div>
         </motion.div>
     );
 };
 
-type CustomDropdownProps<T extends string> = {
-    options: T[];
-    selectedOption: T | null;
-    onSelectOption: (option: T) => void;
-    placeholder?: string;
-    label: string;
-};
+const DonationCard = ({
+    donation,
+    selectedAmount,
+    onSelect,
+}: {
+    donation: Donation;
+    selectedAmount: number;
+    onSelect: (amount: number) => void;
+}) => {
+    const [customAmount, setCustomAmount] = useState("");
 
-const CustomDropdown = <T extends string>({
-    options,
-    selectedOption,
-    onSelectOption,
-    placeholder = "Select an option",
-    label,
-}: CustomDropdownProps<T>) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const isSelected =
+        donation.id === "custom"
+            ? selectedAmount > 0 && !donationOptions.slice(0, 3).some((d) => d.amount === selectedAmount)
+            : selectedAmount === donation.amount;
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
+    const processSelection = () => {
+        if (donation.id === "custom") {
+            const amount = parseFloat(customAmount);
+            if (amount > 0) {
+                onSelect(amount);
             }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [dropdownRef]);
-
-    const handleSelect = (option: T) => {
-        onSelectOption(option);
-        setIsOpen(false);
+        } else {
+            onSelect(donation.amount);
+        }
     };
 
     return (
-        <div className="relative z-20" ref={dropdownRef}>
-            <label className="block text-sm font-medium text-gray-900 mb-2">{label}</label>
-            <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setIsOpen(!isOpen)}
-                className="relative w-full cursor-pointer rounded-lg border border-gray-300 bg-white py-3 pl-4 pr-10 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-[#1C3738] focus:border-[#1C3738] sm:text-sm"
-                aria-haspopup="listbox"
-                aria-expanded={isOpen}
-            >
-                <span className="block truncate">
-                    {selectedOption ? selectedOption : <span className="text-gray-500">{placeholder}</span>}
+        <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={donation.id !== "custom" ? processSelection : undefined}
+            className={`p-4 lg:p-6 rounded-[var(--border-radius)] border cursor-pointer transition-all duration-200 ${
+                isSelected
+                    ? "border-[var(--success-green)] bg-green-50 dark:bg-green-900/20"
+                    : "border-[var(--card-border)] bg-[var(--card-bg)] hover:border-[var(--success-green)]"
+            }`}
+        >
+            <div className="flex items-center justify-between mb-2 lg:mb-3">
+                <span className="font-medium text-[var(--page-text-primary)] lg:text-lg">
+                    {donation.id === "custom" ? "Custom" : `$${donation.amount}`}
                 </span>
-                <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                    <ChevronDown
-                        className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${isOpen ? "transform rotate-180" : ""}`}
-                        aria-hidden="true"
+                <FiHeart
+                    className={`w-4 h-4 lg:w-5 lg:h-5 ${
+                        isSelected ? "text-[var(--success-green)] fill-current" : "text-[var(--page-text-secondary)]"
+                    }`}
+                />
+            </div>
+
+            {donation.id === "custom" ? (
+                <div className="space-y-2 lg:space-y-3">
+                    <input
+                        type="number"
+                        placeholder="Enter amount"
+                        value={customAmount}
+                        onChange={(e) => setCustomAmount(e.target.value)}
+                        className="w-full p-2 lg:p-3 border border-[var(--card-border)] rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] lg:text-base"
                     />
-                </span>
-            </motion.button>
+                    <button
+                        onClick={processSelection}
+                        disabled={!customAmount || parseFloat(customAmount) <= 0}
+                        className="w-full py-2 lg:py-3 bg-[var(--success-green)] text-white rounded-[var(--border-radius-small)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed lg:text-base lg:font-medium"
+                    >
+                        Add Donation
+                    </button>
+                </div>
+            ) : (
+                <>
+                    <p className="text-sm lg:text-base text-[var(--page-text-secondary)] mb-1 lg:mb-2 lg:leading-relaxed">
+                        {donation.description}
+                    </p>
+                    <p className="text-xs lg:text-sm text-[var(--success-green)] lg:font-medium">{donation.impact}</p>
+                </>
+            )}
+        </motion.div>
+    );
+};
+
+const TicketsTab = ({ onTicketPurchased }: { onTicketPurchased: (ticketData: Guest) => void }) => {
+    const [selectedTicket, setSelectedTicket] = useState<string>("");
+    const [selectedDonation, setSelectedDonation] = useState<number>(0);
+    const [quantity, setQuantity] = useState(1);
+    const [showCheckout, setShowCheckout] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [orderDetails, setOrderDetails] = useState<Partial<OrderDetails>>({});
+
+    const selectedTicketData = ticketTypes.find((t) => t.id === selectedTicket);
+    const totalTicketPrice = selectedTicketData ? selectedTicketData.price * quantity : 0;
+    const totalPrice = totalTicketPrice + selectedDonation;
+
+    const proceedToCheckout = () => {
+        if (!selectedTicketData) return;
+
+        const newOrderDetails: Partial<OrderDetails> = {
+            tickets: [
+                {
+                    type: selectedTicketData.name,
+                    quantity: quantity,
+                    price: selectedTicketData.price,
+                },
+            ],
+            donation: selectedDonation,
+            total: totalPrice,
+            guestInfo: {},
+            paymentInfo: {},
+        };
+
+        setOrderDetails(newOrderDetails);
+        setShowCheckout(true);
+    };
+
+    const updateOrderDetails = (details: Partial<OrderDetails>) => {
+        setOrderDetails(details);
+    };
+
+    const completeOrder = () => {
+        setShowCheckout(false);
+
+        if (orderDetails.guestInfo?.name && orderDetails.guestInfo?.email && selectedTicketData) {
+            const newGuest: Guest = {
+                id: Date.now().toString(),
+                name: orderDetails.guestInfo.name,
+                email: orderDetails.guestInfo.email,
+                ticketType: selectedTicket,
+                hasPlus1: false,
+                plus1Name: undefined,
+                plus1Email: undefined,
+            };
+
+            for (let i = 0; i < quantity; i++) {
+                const ticketGuest: Guest = {
+                    ...newGuest,
+                    id: `${Date.now()}-${i}`,
+                    name: i === 0 ? newGuest.name : `${newGuest.name} (Ticket ${i + 1})`,
+                };
+                onTicketPurchased(ticketGuest);
+            }
+        }
+
+        setShowSuccess(true);
+
+        setTimeout(() => {
+            setShowSuccess(false);
+            window.dispatchEvent(new CustomEvent("switchToDownloads"));
+        }, 3000);
+    };
+
+    const closeCheckout = () => {
+        setShowCheckout(false);
+    };
+
+    const addPurchasedTicket = (ticketData: Guest) => {
+        onTicketPurchased(ticketData);
+    };
+
+    return (
+        <div className="space-y-6 lg:space-y-8">
+            <div className="lg:bg-gradient-to-r lg:from-blue-50 lg:to-purple-50 dark:lg:from-slate-800 dark:lg:to-slate-700 lg:p-8 lg:rounded-2xl lg:border lg:border-slate-200 dark:lg:border-slate-600">
+                <h2 className="text-2xl lg:text-4xl font-bold text-[var(--page-text-primary)] mb-2 lg:mb-4 lg:text-center">
+                    Hope Gala 2025
+                </h2>
+                <div className="flex flex-col lg:flex-row lg:justify-center lg:items-center gap-4 lg:gap-8 text-[var(--page-text-secondary)] text-sm lg:text-base">
+                    <div className="flex items-center gap-1 lg:gap-2">
+                        <FiCalendar className="w-4 h-4 lg:w-5 lg:h-5" />
+                        <span>June 25, 2025</span>
+                    </div>
+                    <div className="flex items-center gap-1 lg:gap-2">
+                        <FiClock className="w-4 h-4 lg:w-5 lg:h-5" />
+                        <span>7:00 PM</span>
+                    </div>
+                    <div className="flex items-center gap-1 lg:gap-2">
+                        <FiMapPin className="w-4 h-4 lg:w-5 lg:h-5" />
+                        <span>Grand Ballroom</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+                <div className="lg:col-span-2 space-y-6">
+                    <h3 className="text-lg lg:text-2xl font-bold text-[var(--page-text-primary)] mb-4 lg:mb-6">Select Your Ticket</h3>
+
+                    <div className="space-y-4 lg:space-y-6" id="tickets-start">
+                        {ticketTypes.map((ticket) => (
+                            <TicketCard
+                                key={ticket.id}
+                                ticket={ticket}
+                                isSelected={selectedTicket === ticket.id}
+                                onSelect={() => setSelectedTicket(ticket.id)}
+                            />
+                        ))}
+                    </div>
+
+                    {selectedTicket && (
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 lg:space-y-6">
+                            <div className="lg:bg-white dark:lg:bg-slate-800 lg:p-6 lg:rounded-xl lg:border lg:border-slate-200 dark:lg:border-slate-700">
+                                <h4 className="text-lg lg:text-xl font-bold text-[var(--page-text-primary)] mb-3 lg:mb-4">Quantity</h4>
+                                <div className="flex items-center gap-4 lg:gap-6">
+                                    <button
+                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                        className="p-2 lg:p-3 rounded-full bg-[var(--card-bg)] border border-[var(--card-border)] cursor-pointer hover:bg-[var(--soft-blue)] transition-colors"
+                                    >
+                                        <FiMinus className="w-4 h-4 lg:w-5 lg:h-5" />
+                                    </button>
+                                    <span className="text-xl lg:text-2xl font-medium text-[var(--page-text-primary)] min-w-[3rem] text-center">
+                                        {quantity}
+                                    </span>
+                                    <button
+                                        onClick={() => setQuantity(Math.min(selectedTicketData?.maxGuests || 1, quantity + 1))}
+                                        className="p-2 lg:p-3 rounded-full bg-[var(--card-bg)] border border-[var(--card-border)] cursor-pointer hover:bg-[var(--soft-blue)] transition-colors"
+                                    >
+                                        <FiPlus className="w-4 h-4 lg:w-5 lg:h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="lg:bg-white dark:lg:bg-slate-800 lg:p-6 lg:rounded-xl lg:border lg:border-slate-200 dark:lg:border-slate-700">
+                                <h4 className="text-lg lg:text-xl font-bold text-[var(--page-text-primary)] mb-3 lg:mb-4">
+                                    Add a Donation
+                                </h4>
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+                                    {donationOptions.map((donation) => (
+                                        <DonationCard
+                                            key={donation.id}
+                                            donation={donation}
+                                            selectedAmount={selectedDonation}
+                                            onSelect={setSelectedDonation}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+
+                {selectedTicket && (
+                    <div className="lg:col-span-1 lg:relative">
+                        <div className="lg:sticky lg:top-6  lg:mt-12 mt-8">
+                            <div className="p-6 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-[var(--border-radius)] shadow-[var(--shadow-soft)] lg:shadow-[var(--shadow-medium)]">
+                                <h4 className="text-lg lg:text-xl font-bold text-[var(--page-text-primary)] mb-4 lg:mb-6">Order Summary</h4>
+                                <div className="space-y-3 lg:space-y-4">
+                                    <div className="flex justify-between items-center lg:text-lg">
+                                        <span>
+                                            {selectedTicketData?.name} × {quantity}
+                                        </span>
+                                        <span className="font-medium">${totalTicketPrice}</span>
+                                    </div>
+                                    {selectedDonation > 0 && (
+                                        <div className="flex justify-between items-center text-[var(--success-green)] lg:text-lg">
+                                            <span>Donation</span>
+                                            <span className="font-medium">${selectedDonation}</span>
+                                        </div>
+                                    )}
+                                    <div className="border-t border-[var(--card-border)] pt-3 lg:pt-4 flex justify-between font-bold text-lg lg:text-xl">
+                                        <span>Total</span>
+                                        <span className="text-[var(--primary-blue)]">${totalPrice}</span>
+                                    </div>
+                                </div>
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={proceedToCheckout}
+                                    className="w-full mt-4 lg:mt-6 py-3 lg:py-4 bg-[var(--primary-blue)] text-white rounded-[var(--border-radius)] font-medium cursor-pointer shadow-[var(--shadow-medium)] hover:shadow-[var(--shadow-large)] text-base lg:text-lg transition-all"
+                                >
+                                    Continue to Checkout
+                                </motion.button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             <AnimatePresence>
-                {isOpen && (
-                    <motion.ul
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm"
-                        role="listbox"
+                {showCheckout && (
+                    <CheckoutForm orderDetails={orderDetails} onUpdate={updateOrderDetails} onNext={completeOrder} onBack={closeCheckout} />
+                )}
+                {showSuccess && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
                     >
-                        {options.map((option) => (
-                            <motion.li
-                                key={option}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.1 }}
-                                className={`relative cursor-pointer select-none py-2 pl-10 pr-4 ${
-                                    selectedOption === option ? "bg-[#8BAAAD]/10 text-[#1C3738]" : "text-gray-900 hover:bg-gray-50"
-                                }`}
-                                onClick={() => handleSelect(option)}
-                                role="option"
-                                aria-selected={selectedOption === option}
-                            >
-                                <span className={`block truncate ${selectedOption === option ? "font-medium" : "font-normal"}`}>
-                                    {option}
-                                </span>
-                                {selectedOption === option ? (
-                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#1C3738]">
-                                        <Check className="h-5 w-5" aria-hidden="true" />
-                                    </span>
-                                ) : null}
-                            </motion.li>
-                        ))}
-                    </motion.ul>
+                        <div className="bg-[var(--card-bg)] rounded-[var(--border-radius)] p-8 w-full max-w-md text-center">
+                            <div className="w-16 h-16 mx-auto mb-6 bg-[var(--success-green)] rounded-full flex items-center justify-center">
+                                <FiStar className="w-8 h-8 text-white" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-[var(--page-text-primary)] mb-4">Order Successful!</h3>
+                            <p className="text-[var(--page-text-secondary)] mb-6 leading-relaxed">
+                                Your tickets have been processed successfully. You'll be redirected to the downloads section to get your
+                                tickets.
+                            </p>
+                            <div className="flex items-center justify-center gap-2 text-[var(--primary-blue)]">
+                                <div className="w-4 h-4 border-2 border-[var(--primary-blue)] border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-sm">Redirecting...</span>
+                            </div>
+                        </div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
     );
 };
 
-const Home = () => {
-    const [selectedShoe, setSelectedShoe] = useState<Shoe | null>(null);
-    const [selectedSize, setSelectedSize] = useState<Size | null>(null);
-    const [selectedColor, setSelectedColor] = useState<Color | null>(null);
-    const [cartItems, setCartItems] = useState<CartItem[]>([]);
-    const [isCartOpen, setIsCartOpen] = useState(false);
-    const [toast, setToast] = useState<string | null>(null);
-    const [orderConfirmed, setOrderConfirmed] = useState(false);
-    const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
-    const [isWishlistOpen, setIsWishlistOpen] = useState(false);
-    const [wishlistItems, setWishlistItems] = useState<Shoe[]>([]);
-    const [isDragging, setIsDragging] = useState(false);
-    const [position, setPosition] = useState({ x: 0, y: 0 });
-    const [isFullscreen, setIsFullscreen] = useState(false);
-    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-    const [isLoading, setIsLoading] = useState(false);
-    const [orderSuccess, setOrderSuccess] = useState(false);
-    const [productSizes, setProductSizes] = useState<Record<number, Size>>({});
+const GuestForm = ({
+    onSubmit,
+    onCancel,
+    editingGuest,
+}: {
+    onSubmit: (guest: Omit<Guest, "id">) => void;
+    onCancel: () => void;
+    editingGuest?: Guest | null;
+}) => {
+    const [formData, setFormData] = useState({
+        name: editingGuest?.name || "",
+        email: editingGuest?.email || "",
+        ticketType: editingGuest?.ticketType || "general",
+        hasPlus1: editingGuest?.hasPlus1 || false,
+        plus1Name: editingGuest?.plus1Name || "",
+        plus1Email: editingGuest?.plus1Email || "",
+    });
 
-    const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        if (editingGuest) {
+            setFormData({
+                name: editingGuest.name,
+                email: editingGuest.email,
+                ticketType: editingGuest.ticketType,
+                hasPlus1: editingGuest.hasPlus1,
+                plus1Name: editingGuest.plus1Name || "",
+                plus1Email: editingGuest.plus1Email || "",
+            });
+        }
+    }, [editingGuest]);
+
+    const validateForm = () => {
+        const newErrors: Record<string, string> = {};
+
+        if (!formData.name.trim()) newErrors.name = "Name is required";
+        if (!formData.email.trim()) newErrors.email = "Email is required";
+        else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Please enter a valid email";
+
+        if (formData.hasPlus1) {
+            if (!formData.plus1Name.trim()) newErrors.plus1Name = "Plus-one name is required";
+            if (!formData.plus1Email.trim()) newErrors.plus1Email = "Plus-one email is required";
+            else if (!/\S+@\S+\.\S+/.test(formData.plus1Email)) newErrors.plus1Email = "Please enter a valid email";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const targetElement = document.querySelector(targetId);
-        if (targetElement) {
-            targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (validateForm()) {
+            onSubmit(formData);
         }
     };
 
-    const handleAddToCart = () => {
-        if (!selectedShoe || !selectedSize || !selectedColor) return;
-        const existingItemIndex = cartItems.findIndex(
-            (item) => item.shoe.id === selectedShoe.id && item.size === selectedSize && item.color === selectedColor
-        );
-
-        if (existingItemIndex !== -1) {
-            const updatedCartItems = [...cartItems];
-            updatedCartItems[existingItemIndex].quantity += 1;
-            setCartItems(updatedCartItems);
-            setToast(`Updated ${selectedShoe.name} quantity in cart`);
-        } else {
-            const newCartItem: CartItem = {
-                shoe: selectedShoe,
-                size: selectedSize,
-                color: selectedColor,
-                quantity: 1,
-            };
-            setCartItems([...cartItems, newCartItem]);
-            setToast(`Added ${selectedShoe.name} to cart`);
+    const updateFormData = (field: string, value: any) => {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+        if (errors[field]) {
+            setErrors((prev) => ({ ...prev, [field]: "" }));
         }
-
-        setTimeout(() => {
-            setToast(null);
-        }, 3000);
-    };
-
-    const updateCartItemQuantity = (index: number, quantity: number) => {
-        if (quantity < 1) return;
-        const updatedCartItems = [...cartItems];
-        updatedCartItems[index].quantity = quantity;
-        setCartItems(updatedCartItems);
-    };
-
-    const removeCartItem = (index: number) => {
-        const updatedCartItems = [...cartItems];
-        updatedCartItems.splice(index, 1);
-        setCartItems(updatedCartItems);
-    };
-
-    const handleWishlistToggle = (shoe: Shoe) => {
-        const isInWishlist = wishlistItems.some((item) => item.id === shoe.id);
-        if (isInWishlist) {
-            setWishlistItems((prev) => prev.filter((item) => item.id !== shoe.id));
-            setToast(`Removed ${shoe.name} from wishlist`);
-        } else {
-            setWishlistItems((prev) => [...prev, shoe]);
-            setToast(`Added ${shoe.name} to wishlist`);
-        }
-
-        setTimeout(() => {
-            setToast(null);
-        }, 3000);
-    };
-
-    const handleOrderConfirmed = () => {
-        setOrderConfirmed(true);
-        setTimeout(() => {
-            setCartItems([]);
-            setIsCartOpen(false);
-
-            setOrderSuccess(true);
-
-            setTimeout(() => {
-                setOrderConfirmed(false);
-
-                setTimeout(() => {
-                    setOrderSuccess(false);
-                }, 3000);
-            }, 1000);
-        }, 2000);
-    };
-
-    const getCartCount = () => {
-        return cartItems.reduce((count, item) => count + item.quantity, 0);
-    };
-
-    const getCartTotal = () => {
-        return cartItems.reduce((total, item) => total + item.shoe.price * item.quantity, 0).toFixed(2);
-    };
-
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement);
-        };
-        document.addEventListener("fullscreenchange", handleFullscreenChange);
-        return () => {
-            document.removeEventListener("fullscreenchange", handleFullscreenChange);
-        };
-    }, []);
-
-    useEffect(() => {
-        if (selectedShoe) {
-            setSelectedSize(selectedShoe.sizes[0]);
-            setSelectedColor(selectedShoe.colors[0]);
-        }
-    }, [selectedShoe]);
-
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                setIsCartOpen(false);
-                setIsSizeGuideOpen(false);
-                setIsWishlistOpen(false);
-            }
-        };
-        document.addEventListener("keydown", handleEscape);
-        return () => document.removeEventListener("keydown", handleEscape);
-    }, []);
-
-    useEffect(() => {
-        if (isLoading) {
-            const timer = setTimeout(() => setIsLoading(false), 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [isLoading]);
-
-    useEffect(() => {
-        const hash = window.location.hash;
-        if (hash === "#size-guide") {
-            setIsSizeGuideOpen(true);
-        } else if (hash === "#wishlist") {
-            setIsWishlistOpen(true);
-        }
-    }, []);
-
-    const handleProductClick = (shoe: Shoe) => {
-        setSelectedShoe(shoe);
-        setSelectedSize(shoe.sizes[0]);
-        setSelectedColor(shoe.colors[0]);
-    };
-
-    const handleQuickAddToCart = (e: React.MouseEvent, shoe: Shoe) => {
-        e.stopPropagation();
-
-        const selectedSize = productSizes[shoe.id] || shoe.sizes[0];
-
-        const cartItem: CartItem = {
-            shoe: shoe,
-            size: selectedSize,
-            color: shoe.colors[0],
-            quantity: 1,
-        };
-
-        const existingItemIndex = cartItems.findIndex(
-            (item) => item.shoe.id === shoe.id && item.size === selectedSize && item.color === shoe.colors[0]
-        );
-
-        if (existingItemIndex !== -1) {
-            const updatedCartItems = [...cartItems];
-            updatedCartItems[existingItemIndex].quantity += 1;
-            setCartItems(updatedCartItems);
-            setToast(`Updated ${shoe.name} quantity in cart`);
-        } else {
-            setCartItems([...cartItems, cartItem]);
-            setToast(`Added ${shoe.name} to cart`);
-        }
-
-        setIsCartOpen(true);
-
-        setTimeout(() => {
-            setToast(null);
-        }, 3000);
     };
 
     return (
-        <div className={`min-h-screen bg-[#F4FFF8]/90 text-[#000F08] ${plusJakartaSans.className}`}>
-            <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center">
-                            <h1 className="text-2xl font-bold tracking-tight">
-                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#1C3738] to-[#8BAAAD]">
-                                    Sole<span className="font-sans font-bold">Fusion</span>
-                                </span>
-                            </h1>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="relative">
-                                <motion.button
-                                    onClick={() => setIsCartOpen(!isCartOpen)}
-                                    className="relative p-3 rounded-full bg-[#1C3738] text-[#F4FFF8] hover:bg-[#4D4847] transition-all duration-100 shadow-md cursor-pointer"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    aria-label="Shopping cart"
-                                >
-                                    <ShoppingBag className="w-5 h-5" />
-                                    {getCartCount() > 0 && (
-                                        <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full shadow-md">
-                                            {getCartCount()}
-                                        </span>
-                                    )}
-                                </motion.button>
-                                <AnimatePresence>
-                                    {isCartOpen && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            transition={{ duration: 0.2 }}
-                                            className="absolute right-[-4rem]  mt-3 w-[23rem] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-100"
-                                        >
-                                            <div className="max-h-[80vh] overflow-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-                                                <div className="sticky top-0 bg-gradient-to-r from-[#1C3738] to-[#4D4847] p-4 flex justify-between items-center text-[#F4FFF8] backdrop-blur-sm z-10">
-                                                    <h2 className="font-medium flex items-center">
-                                                        <ShoppingBag className="w-4 h-4 mr-2 opacity-80" />
-                                                        Your Cart
-                                                        {getCartCount() > 0 && (
-                                                            <motion.span
-                                                                initial={{ scale: 0.8, opacity: 0 }}
-                                                                animate={{ scale: 1, opacity: 1 }}
-                                                                className="ml-2 text-xs bg-white/20 py-1 px-2 rounded-full"
-                                                            >
-                                                                {getCartCount()} {getCartCount() === 1 ? "item" : "items"}
-                                                            </motion.span>
-                                                        )}
-                                                    </h2>
-                                                    <motion.button
-                                                        whileHover={{
-                                                            scale: 1.1,
-                                                            backgroundColor: "rgba(255, 255, 255, 0.2)",
-                                                        }}
-                                                        whileTap={{ scale: 0.9 }}
-                                                        onClick={() => setIsCartOpen(false)}
-                                                        className="text-white/90 hover:text-white p-1.5 rounded-full transition-colors cursor-pointer"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </motion.button>
-                                                </div>
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        >
+            <div className="bg-[var(--card-bg)] rounded-[var(--border-radius)] p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-[var(--page-text-primary)]">{editingGuest ? "Edit Guest" : "Add Guest"}</h3>
+                    <button onClick={onCancel} className="p-2 hover:bg-[var(--soft-blue)] rounded-full cursor-pointer">
+                        <FiPlus className="w-5 h-5 rotate-45 text-[var(--page-text-secondary)]" />
+                    </button>
+                </div>
 
-                                                {cartItems.length === 0 ? (
-                                                    <motion.div
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                        className="py-16 px-6 text-center"
-                                                    >
-                                                        <motion.div
-                                                            initial={{ scale: 0.8, y: 10, opacity: 0 }}
-                                                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                                                            transition={{ delay: 0.1, duration: 0.4 }}
-                                                            className="w-24 h-24 mx-auto mb-6 relative"
-                                                        >
-                                                            <div className="absolute inset-0 bg-blue-100 rounded-full opacity-60 animate-pulse-slow"></div>
-                                                            <ShoppingBag className="w-12 h-12 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-blue-600" />
-                                                        </motion.div>
-                                                        <motion.h3
-                                                            initial={{ opacity: 0, y: 10 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            transition={{ delay: 0.2 }}
-                                                            className="text-xl font-medium text-gray-900 mb-2"
-                                                        >
-                                                            Your cart is empty
-                                                        </motion.h3>
-                                                        <motion.p
-                                                            initial={{ opacity: 0, y: 10 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            transition={{ delay: 0.3 }}
-                                                            className="text-gray-500 mb-6 max-w-[240px] mx-auto"
-                                                        >
-                                                            Looks like you haven't added anything yet. Let's find some perfect shoes for
-                                                            you!
-                                                        </motion.p>
-                                                        <motion.button
-                                                            whileHover={{ scale: 1.03 }}
-                                                            whileTap={{ scale: 0.97 }}
-                                                            onClick={() => setIsCartOpen(false)}
-                                                            className="inline-flex items-center px-6 py-3 bg-[#1C3738] text-[#F4FFF8] rounded-xl hover:bg-[#4D4847] transition-colors cursor-pointer"
-                                                        >
-                                                            Continue Shopping
-                                                        </motion.button>
-                                                    </motion.div>
-                                                ) : (
-                                                    <>
-                                                        <ul className="divide-y divide-gray-100">
-                                                            {cartItems.map((item, index) => (
-                                                                <motion.li
-                                                                    key={`${item.shoe.id}-${item.size}-${item.color}`}
-                                                                    initial={{ opacity: 0, y: 10 }}
-                                                                    animate={{ opacity: 1, y: 0 }}
-                                                                    transition={{ delay: index * 0.05 }}
-                                                                    className="py-4 px-4 hover:bg-gray-50 transition-colors"
-                                                                >
-                                                                    <div className="flex justify-between items-center">
-                                                                        <div className="flex items-center">
-                                                                            <motion.div
-                                                                                whileHover={{ scale: 1.05 }}
-                                                                                className="w-16 h-16 rounded-xl overflow-hidden mr-3 bg-gray-50 relative"
-                                                                            >
-                                                                                <img
-                                                                                    src={item.shoe.image || "/placeholder.svg"}
-                                                                                    alt={item.shoe.name}
-                                                                                    className="w-full h-full object-cover"
-                                                                                />
-                                                                                {item.shoe.isNew && (
-                                                                                    <span className="absolute top-0 right-0 bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded-bl-md rounded-tr-md">
-                                                                                        NEW
-                                                                                    </span>
-                                                                                )}
-                                                                            </motion.div>
-                                                                            <div>
-                                                                                <motion.h3
-                                                                                    whileHover={{ x: 2 }}
-                                                                                    className="font-medium text-gray-900 transition-colors"
-                                                                                >
-                                                                                    {item.shoe.name}
-                                                                                </motion.h3>
-                                                                                <p className="text-sm text-gray-500">
-                                                                                    Size: {item.size} | Color: {item.color}
-                                                                                </p>
-                                                                                <div className="flex items-center mt-1">
-                                                                                    <motion.button
-                                                                                        whileTap={{ scale: 0.9 }}
-                                                                                        onClick={() =>
-                                                                                            updateCartItemQuantity(index, item.quantity - 1)
-                                                                                        }
-                                                                                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 not-disabled:hover:bg-gray-200 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                                                                                        disabled={item.quantity <= 1}
-                                                                                    >
-                                                                                        <Minus className="w-3 h-3 text-gray-600" />
-                                                                                    </motion.button>
-                                                                                    <motion.span
-                                                                                        key={item.quantity}
-                                                                                        initial={{ scale: 0.8, opacity: 0 }}
-                                                                                        animate={{ scale: 1, opacity: 1 }}
-                                                                                        className="mx-2 text-sm font-medium w-6 text-center"
-                                                                                    >
-                                                                                        {item.quantity}
-                                                                                    </motion.span>
-                                                                                    <motion.button
-                                                                                        whileTap={{ scale: 0.9 }}
-                                                                                        onClick={() =>
-                                                                                            updateCartItemQuantity(index, item.quantity + 1)
-                                                                                        }
-                                                                                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-150 cursor-pointer"
-                                                                                    >
-                                                                                        <Plus className="w-3 h-3 text-gray-600" />
-                                                                                    </motion.button>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="flex flex-col items-end">
-                                                                            <motion.button
-                                                                                whileHover={{
-                                                                                    scale: 1.1,
-                                                                                    color: "#EF4444",
-                                                                                }}
-                                                                                whileTap={{ scale: 0.9 }}
-                                                                                onClick={() => removeCartItem(index)}
-                                                                                className="text-gray-400 hover:text-red-500 transition-colors duration-150 mb-2 p-1 rounded-full hover:bg-gray-100 cursor-pointer"
-                                                                                aria-label="Remove item"
-                                                                            >
-                                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                                            </motion.button>
-                                                                            <motion.p
-                                                                                initial={{ opacity: 0, x: 10 }}
-                                                                                animate={{ opacity: 1, x: 0 }}
-                                                                                transition={{ delay: 0.1 }}
-                                                                                className="font-medium text-gray-900"
-                                                                            >
-                                                                                ${(item.shoe.price * item.quantity).toFixed(2)}
-                                                                            </motion.p>
-                                                                        </div>
-                                                                    </div>
-                                                                </motion.li>
-                                                            ))}
-                                                        </ul>
-                                                        <div className="sticky bottom-0 bg-white p-4 border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                                                            <div className="rounded-lg bg-blue-50 p-3 mb-4">
-                                                                <div className="flex justify-between text-sm text-blue-700 mb-2">
-                                                                    <span className="font-medium">Subtotal</span>
-                                                                    <span>${getCartTotal()}</span>
-                                                                </div>
-                                                                <div className="flex justify-between text-sm text-blue-700 mb-2">
-                                                                    <span className="font-medium">Shipping</span>
-                                                                    <span>Free</span>
-                                                                </div>
-                                                                <div className="flex justify-between font-medium text-blue-900 pt-2 border-t border-blue-100">
-                                                                    <span>Total</span>
-                                                                    <motion.span
-                                                                        key={getCartTotal()}
-                                                                        initial={{ scale: 0.9 }}
-                                                                        animate={{ scale: 1 }}
-                                                                        className="text-xl"
-                                                                    >
-                                                                        ${getCartTotal()}
-                                                                    </motion.span>
-                                                                </div>
-                                                            </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Full Name *</label>
+                        <input
+                            type="text"
+                            value={formData.name}
+                            onChange={(e) => updateFormData("name", e.target.value)}
+                            className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                                errors.name ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                            }`}
+                            placeholder="Enter guest name"
+                        />
+                        {errors.name && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.name}</p>}
+                    </div>
 
-                                                            <motion.button
-                                                                whileHover={{
-                                                                    scale: 1.02,
-                                                                    backgroundColor: "#1C3738",
-                                                                }}
-                                                                whileTap={{ scale: 0.98 }}
-                                                                className="w-full py-3.5 rounded-xl bg-[#1C3738] text-[#F4FFF8] font-medium flex items-center justify-center shadow-md transition-all duration-100 not-disabled:cursor-pointer"
-                                                                onClick={handleOrderConfirmed}
-                                                                disabled={orderConfirmed}
-                                                            >
-                                                                {orderConfirmed ? (
-                                                                    <motion.div
-                                                                        initial={{ scale: 0.8, opacity: 0 }}
-                                                                        animate={{ scale: 1, opacity: 1 }}
-                                                                        className="flex items-center"
-                                                                    >
-                                                                        <svg
-                                                                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                                                                            xmlns="http://www.w3.org/2000/svg"
-                                                                            fill="none"
-                                                                            viewBox="0 0 24 24"
-                                                                        >
-                                                                            <circle
-                                                                                className="opacity-25"
-                                                                                cx="12"
-                                                                                cy="12"
-                                                                                r="10"
-                                                                                stroke="currentColor"
-                                                                                strokeWidth="4"
-                                                                            ></circle>
-                                                                            <path
-                                                                                className="opacity-75"
-                                                                                fill="currentColor"
-                                                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                                                            ></path>
-                                                                        </svg>
-                                                                        Processing...
-                                                                    </motion.div>
-                                                                ) : (
-                                                                    <span className="flex items-center">
-                                                                        <ShoppingBag className="w-4 h-4 mr-2 opacity-90" />
-                                                                        Confirm Order
-                                                                    </span>
-                                                                )}
-                                                            </motion.button>
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+                    <div>
+                        <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Email Address *</label>
+                        <input
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => updateFormData("email", e.target.value)}
+                            className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                                errors.email ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                            }`}
+                            placeholder="Enter email address"
+                        />
+                        {errors.email && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.email}</p>}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Ticket Type</label>
+                        <select
+                            value={formData.ticketType}
+                            onChange={(e) => updateFormData("ticketType", e.target.value)}
+                            className="w-full p-3 border border-[var(--card-border)] rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)]"
+                        >
+                            {ticketTypes.map((ticket) => (
+                                <option key={ticket.id} value={ticket.id}>
+                                    {ticket.name} - ${ticket.price}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-4 bg-[var(--soft-blue)] rounded-[var(--border-radius-small)]">
+                        <input
+                            type="checkbox"
+                            id="hasPlus1"
+                            checked={formData.hasPlus1}
+                            onChange={(e) => updateFormData("hasPlus1", e.target.checked)}
+                            className="w-4 h-4 text-[var(--primary-blue)] border-[var(--card-border)] rounded cursor-pointer"
+                        />
+                        <label htmlFor="hasPlus1" className="text-sm font-medium text-[var(--page-text-primary)] cursor-pointer">
+                            Bring a +1 guest
+                        </label>
+                    </div>
+
+                    {formData.hasPlus1 && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="space-y-4"
+                        >
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Plus-One Name *</label>
+                                <input
+                                    type="text"
+                                    value={formData.plus1Name}
+                                    onChange={(e) => updateFormData("plus1Name", e.target.value)}
+                                    className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                                        errors.plus1Name ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                                    }`}
+                                    placeholder="Enter plus-one name"
+                                />
+                                {errors.plus1Name && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.plus1Name}</p>}
                             </div>
 
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => setIsWishlistOpen(!isWishlistOpen)}
-                                className="p-3 rounded-full bg-[#4D4847] text-[#F4FFF8] hover:bg-[#8BAAAD] transition-colors duration-150 cursor-pointer"
-                                aria-label="Wishlist"
-                            >
-                                <Heart className={`w-5 h-5 ${wishlistItems.length > 0 ? "fill-current" : ""}`} />
-                            </motion.button>
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Plus-One Email *</label>
+                                <input
+                                    type="email"
+                                    value={formData.plus1Email}
+                                    onChange={(e) => updateFormData("plus1Email", e.target.value)}
+                                    className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                                        errors.plus1Email ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                                    }`}
+                                    placeholder="Enter plus-one email"
+                                />
+                                {errors.plus1Email && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.plus1Email}</p>}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    <div className="flex gap-3 pt-4">
+                        <button
+                            type="button"
+                            onClick={onCancel}
+                            className="flex-1 py-3 px-4 border border-[var(--card-border)] text-[var(--page-text-secondary)] rounded-[var(--border-radius)] font-medium cursor-pointer hover:bg-[var(--soft-blue)]"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="flex-1 py-3 px-4 bg-[var(--primary-blue)] text-white rounded-[var(--border-radius)] font-medium cursor-pointer hover:shadow-[var(--shadow-medium)]"
+                        >
+                            {editingGuest ? "Update Guest" : "Add Guest"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </motion.div>
+    );
+};
+
+const GuestCard = ({ guest, onEdit, onDelete }: { guest: Guest; onEdit: (guest: Guest) => void; onDelete: (id: string) => void }) => {
+    const ticketType = ticketTypes.find((t) => t.id === guest.ticketType);
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-[var(--border-radius)] shadow-[var(--shadow-soft)]"
+        >
+            <div className="flex justify-between items-start mb-3">
+                <div>
+                    <h4 className="font-medium text-[var(--page-text-primary)]">{guest.name}</h4>
+                    <p className="text-sm text-[var(--page-text-secondary)]">{guest.email}</p>
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => onEdit(guest)}
+                        className="p-1.5 hover:bg-[var(--soft-blue)] rounded-[var(--border-radius-small)] cursor-pointer"
+                    >
+                        <FiStar className="w-4 h-4 text-[var(--page-text-secondary)]" />
+                    </button>
+                    <button
+                        onClick={() => onDelete(guest.id)}
+                        className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-[var(--border-radius-small)] cursor-pointer"
+                    >
+                        <FiMinus className="w-4 h-4 text-[var(--danger-red)]" />
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+                <span className="px-2 py-1 bg-[var(--soft-blue)] text-[var(--primary-blue)] rounded-full">{ticketType?.name}</span>
+                {guest.hasPlus1 && (
+                    <span className="px-2 py-1 bg-[var(--soft-purple)] text-[var(--primary-purple)] rounded-full">
+                        +1: {guest.plus1Name}
+                    </span>
+                )}
+            </div>
+        </motion.div>
+    );
+};
+
+const GuestsTab = () => {
+    const [guests, setGuests] = useState<Guest[]>([]);
+    const [showForm, setShowForm] = useState(false);
+    const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
+
+    const addGuest = (guestData: Omit<Guest, "id">) => {
+        const newGuest: Guest = {
+            ...guestData,
+            id: Date.now().toString(),
+        };
+        setGuests((prev) => [...prev, newGuest]);
+        setShowForm(false);
+    };
+
+    const editGuest = (guest: Guest) => {
+        setEditingGuest(guest);
+        setShowForm(true);
+    };
+
+    const updateGuest = (guestData: Omit<Guest, "id">) => {
+        if (editingGuest) {
+            setGuests((prev) => prev.map((g) => (g.id === editingGuest.id ? { ...guestData, id: g.id } : g)));
+            setEditingGuest(null);
+            setShowForm(false);
+        }
+    };
+
+    const deleteGuest = (id: string) => {
+        setGuests((prev) => prev.filter((g) => g.id !== id));
+    };
+
+    const closeForm = () => {
+        setShowForm(false);
+        setEditingGuest(null);
+    };
+
+    const totalCost = guests.reduce((sum, guest) => {
+        const ticket = ticketTypes.find((t) => t.id === guest.ticketType);
+        return sum + (ticket?.price || 0);
+    }, 0);
+
+    const totalAttendees = guests.reduce((sum, guest) => {
+        return sum + 1 + (guest.hasPlus1 ? 1 : 0);
+    }, 0);
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-bold text-[var(--page-text-primary)]">Guest List</h2>
+                    <p className="text-[var(--page-text-secondary)] text-sm">Manage your event attendees and +1 invitations</p>
+                </div>
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowForm(true)}
+                    className="p-3 bg-[var(--primary-blue)] text-white rounded-full shadow-[var(--shadow-medium)] cursor-pointer"
+                >
+                    <FiPlus className="w-5 h-5" />
+                </motion.button>
+            </div>
+
+            {guests.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-[var(--soft-blue)] rounded-[var(--border-radius)]">
+                    <div className="text-center">
+                        <div className="text-2xl font-bold text-[var(--primary-blue)]">{guests.length}</div>
+                        <div className="text-sm text-[var(--page-text-secondary)]">Tickets</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="text-2xl font-bold text-[var(--primary-blue)]">{totalAttendees}</div>
+                        <div className="text-sm text-[var(--page-text-secondary)]">Attendees</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="text-2xl font-bold text-[var(--primary-blue)]">${totalCost}</div>
+                        <div className="text-sm text-[var(--page-text-secondary)]">Total Cost</div>
+                    </div>
+                </div>
+            )}
+
+            {guests.length === 0 ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-[var(--soft-blue)] rounded-full flex items-center justify-center">
+                        <FiUsers className="w-8 h-8 text-[var(--primary-blue)]" />
+                    </div>
+                    <h3 className="text-lg font-medium text-[var(--page-text-primary)] mb-2">No guests added yet</h3>
+                    <p className="text-[var(--page-text-secondary)] mb-6">Start by adding your first guest to the event</p>
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setShowForm(true)}
+                        className="px-6 py-3 bg-[var(--primary-blue)] text-white rounded-[var(--border-radius)] font-medium cursor-pointer"
+                    >
+                        Add First Guest
+                    </motion.button>
+                </motion.div>
+            ) : (
+                <div className="space-y-3">
+                    {guests.map((guest) => (
+                        <GuestCard key={guest.id} guest={guest} onEdit={editGuest} onDelete={deleteGuest} />
+                    ))}
+                </div>
+            )}
+
+            <AnimatePresence>
+                {showForm && (
+                    <GuestForm onSubmit={editingGuest ? updateGuest : addGuest} onCancel={closeForm} editingGuest={editingGuest} />
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+const TicketTemplate = ({
+    sponsor,
+    guestName = "John Doe",
+    ticketType = "VIP Experience",
+    isPreview = false,
+    eventDate = "June 25, 2025",
+}: {
+    sponsor: Sponsor;
+    guestName?: string;
+    ticketType?: string;
+    isPreview?: boolean;
+    eventDate?: string;
+}) => {
+    const getTemplateStyles = () => {
+        switch (sponsor.template) {
+            case "premium-gradient":
+                return {
+                    bg: "bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700",
+                    accent: "bg-gradient-to-r from-yellow-400 to-orange-500",
+                    text: "text-white",
+                    border: "border-yellow-400",
+                };
+            case "elegant-border":
+                return {
+                    bg: "bg-gradient-to-br from-gray-900 to-gray-800",
+                    accent: "bg-gradient-to-r from-amber-400 to-yellow-500",
+                    text: "text-white",
+                    border: "border-amber-400",
+                };
+            case "simple-clean":
+                return {
+                    bg: "bg-gradient-to-br from-slate-100 to-gray-200",
+                    accent: "bg-gradient-to-r from-blue-500 to-cyan-500",
+                    text: "text-gray-900",
+                    border: "border-blue-500",
+                };
+            default:
+                return {
+                    bg: "bg-gradient-to-br from-blue-600 to-purple-600",
+                    accent: "bg-white",
+                    text: "text-white",
+                    border: "border-white",
+                };
+        }
+    };
+
+    const styles = getTemplateStyles();
+
+    return (
+        <div
+            className={`${styles.bg} p-6 rounded-[var(--border-radius)] ${styles.text} shadow-[var(--shadow-large)] ${
+                isPreview ? "transform scale-90" : ""
+            }`}
+        >
+            <div className="flex justify-between items-start mb-4">
+                <div>
+                    <h3 className="text-2xl font-bold">Hope Gala 2024</h3>
+                    <p className="text-sm opacity-90">Building brighter futures together</p>
+                </div>
+                <div className={`text-3xl`}>{sponsor.logo}</div>
+            </div>
+
+            <div className={`${styles.accent} h-1 w-full mb-4 rounded-full`}></div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <p className="text-xs opacity-75 uppercase tracking-wide">Guest</p>
+                    <p className="font-medium">{guestName}</p>
+                </div>
+                <div>
+                    <p className="text-xs opacity-75 uppercase tracking-wide">Ticket Type</p>
+                    <p className="font-medium">{ticketType}</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <p className="text-xs opacity-75 uppercase tracking-wide">Date</p>
+                    <p className="font-medium">{eventDate}</p>
+                </div>
+                <div>
+                    <p className="text-xs opacity-75 uppercase tracking-wide">Time</p>
+                    <p className="font-medium">7:00 PM</p>
+                </div>
+            </div>
+
+            <div className="flex justify-between items-center">
+                <div className={`px-3 py-1 ${styles.border} border rounded-full`}>
+                    <span className="text-xs font-medium">Sponsored by {sponsor.name}</span>
+                </div>
+                <BsQrCode className="w-8 h-8 opacity-75" />
+            </div>
+        </div>
+    );
+};
+
+const SponsorCard = ({
+    sponsor,
+    isSelected,
+    onSelect,
+    onPreview,
+}: {
+    sponsor: Sponsor;
+    isSelected: boolean;
+    onSelect: () => void;
+    onPreview: () => void;
+}) => {
+    const getTierColor = () => {
+        switch (sponsor.tier) {
+            case "platinum":
+                return "from-purple-400 to-purple-600";
+            case "gold":
+                return "from-yellow-400 to-amber-500";
+            case "silver":
+                return "from-gray-400 to-gray-600";
+            default:
+                return "from-blue-400 to-blue-600";
+        }
+    };
+
+    const getTierBadge = () => {
+        switch (sponsor.tier) {
+            case "platinum":
+                return "Platinum";
+            case "gold":
+                return "Gold";
+            case "silver":
+                return "Silver";
+            default:
+                return "Partner";
+        }
+    };
+
+    return (
+        <motion.div
+            whileHover={{ scale: 1.02, y: -4 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onSelect}
+            className={`p-6 rounded-[var(--border-radius)] border-2 cursor-pointer transition-all duration-300 ${
+                isSelected
+                    ? "border-[var(--primary-blue)] bg-[var(--soft-blue)] shadow-[var(--shadow-large)]"
+                    : "border-[var(--card-border)] bg-[var(--card-bg)] shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-medium)]"
+            }`}
+        >
+            <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="text-3xl">{sponsor.logo}</div>
+                    <div>
+                        <h3 className="font-bold text-[var(--page-text-primary)]">{sponsor.name}</h3>
+                        <div
+                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium text-white bg-gradient-to-r ${getTierColor()}`}
+                        >
+                            {getTierBadge()}
                         </div>
                     </div>
                 </div>
-            </header>
+                <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onPreview();
+                    }}
+                    className="p-2 bg-[var(--soft-blue)] hover:bg-[var(--primary-blue)] hover:text-white rounded-full transition-colors cursor-pointer"
+                >
+                    <FiEye className="w-4 h-4" />
+                </motion.button>
+            </div>
+
+            <div className="mb-4">
+                <p className="text-sm text-[var(--page-text-secondary)] mb-2">Template Style:</p>
+                <p className="text-xs font-medium text-[var(--page-text-primary)] capitalize">{sponsor.template.replace("-", " ")}</p>
+            </div>
+
+            <div className="flex items-center justify-between">
+                <span className="text-sm text-[var(--page-text-secondary)]">Custom branding included</span>
+                <motion.div
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                        isSelected ? "border-[var(--primary-blue)] bg-[var(--primary-blue)]" : "border-[var(--card-border)]"
+                    }`}
+                >
+                    {isSelected && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                </motion.div>
+            </div>
+        </motion.div>
+    );
+};
+
+const SponsorsTab = ({ selectedSponsor, onSponsorSelect }: { selectedSponsor: Sponsor; onSponsorSelect: (sponsor: Sponsor) => void }) => {
+    const [previewSponsor, setPreviewSponsor] = useState<Sponsor | null>(null);
+    const [showPreview, setShowPreview] = useState(false);
+
+    const openPreview = (sponsor: Sponsor) => {
+        setPreviewSponsor(sponsor);
+        setShowPreview(true);
+    };
+
+    const closePreview = () => {
+        setShowPreview(false);
+        setPreviewSponsor(null);
+    };
+
+    return (
+        <div className="space-y-6">
+            <div>
+                <h2 className="text-2xl font-bold text-[var(--page-text-primary)] mb-2">Sponsor Templates</h2>
+                <p className="text-[var(--page-text-secondary)] text-sm">Choose from our premium sponsor-branded ticket templates</p>
+            </div>
+
+            <div className="space-y-4">
+                {sponsors.map((sponsor) => (
+                    <SponsorCard
+                        key={sponsor.id}
+                        sponsor={sponsor}
+                        isSelected={selectedSponsor.id === sponsor.id}
+                        onSelect={() => onSponsorSelect(sponsor)}
+                        onPreview={() => openPreview(sponsor)}
+                    />
+                ))}
+            </div>
+
+            {selectedSponsor && selectedSponsor.id !== sponsors[0].id && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-6 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-[var(--border-radius)] shadow-[var(--shadow-soft)]"
+                >
+                    <h4 className="text-lg font-bold text-[var(--page-text-primary)] mb-4">Template Selected</h4>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-medium text-[var(--page-text-primary)]">
+                                {selectedSponsor.name}
+                            </p>
+                            <p className="text-sm text-[var(--page-text-secondary)]">Your tickets will feature this sponsor's branding</p>
+                        </div>
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => {
+                                if (selectedSponsor) openPreview(selectedSponsor);
+                            }}
+                            className="px-4 py-2 bg-[var(--primary-blue)] text-white rounded-[var(--border-radius)] font-medium cursor-pointer"
+                        >
+                            Preview Ticket
+                        </motion.button>
+                    </div>
+                </motion.div>
+            )}
 
             <AnimatePresence>
-                {isWishlistOpen && (
+                {showPreview && previewSponsor && (
                     <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="fixed inset-0 bg-white z-50 p-4 md:p-6 lg:p-8 overflow-auto"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
                     >
-                        <div className="max-w-7xl mx-auto">
-                            <div className="flex justify-between items-center mb-8">
-                                <h2 className="text-2xl font-bold text-gray-900">My Wishlist</h2>
-                                <motion.button
-                                    whileHover={{
-                                        scale: 1.1,
-                                        backgroundColor: "rgba(0, 0, 0, 0.05)",
-                                    }}
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => setIsWishlistOpen(false)}
-                                    className="p-2 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
-                                >
-                                    <X className="w-5 h-5 text-gray-600" />
-                                </motion.button>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-[var(--card-bg)] rounded-[var(--border-radius)] p-6 w-full max-w-md"
+                        >
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-[var(--page-text-primary)]">Ticket Preview</h3>
+                                <button onClick={closePreview} className="p-2 hover:bg-[var(--soft-blue)] rounded-full cursor-pointer">
+                                    <FiPlus className="w-5 h-5 rotate-45 text-[var(--page-text-secondary)]" />
+                                </button>
                             </div>
 
-                            {wishlistItems.length === 0 ? (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-16 px-6 text-center">
-                                    <motion.div
-                                        initial={{ scale: 0.8, y: 10, opacity: 0 }}
-                                        animate={{ scale: 1, y: 0, opacity: 1 }}
-                                        transition={{ delay: 0.1, duration: 0.4 }}
-                                        className="w-24 h-24 mx-auto mb-6 relative"
-                                    >
-                                        <div className="absolute inset-0 bg-pink-100 rounded-full opacity-60 animate-pulse-slow"></div>
-                                        <Heart className="w-12 h-12 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-pink-600 fill-current" />
-                                    </motion.div>
-                                    <motion.h3
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.2 }}
-                                        className="text-xl font-medium text-gray-900 mb-2"
-                                    >
-                                        Your wishlist is empty
-                                    </motion.h3>
-                                    <motion.p
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.3 }}
-                                        className="text-gray-500 mb-6 max-w-[240px] mx-auto"
-                                    >
-                                        Looks like you haven't added anything yet. Let's find some perfect shoes for you!
-                                    </motion.p>
-                                    <motion.button
-                                        whileHover={{ scale: 1.03 }}
-                                        whileTap={{ scale: 0.97 }}
-                                        onClick={() => setIsWishlistOpen(false)}
-                                        className="inline-flex items-center px-6 py-3 bg-[#4D4847] text-[#F4FFF8] rounded-xl hover:bg-[#8BAAAD] transition-colors cursor-pointer"
-                                    >
-                                        Continue Shopping
-                                    </motion.button>
-                                </motion.div>
-                            ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {wishlistItems.map((shoe) => (
-                                        <motion.div
-                                            key={shoe.id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.4 }}
-                                            whileHover={{
-                                                y: -10,
-                                                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-                                            }}
-                                            className="bg-white rounded-2xl shadow-sm transition-all duration-150 flex flex-col"
-                                        >
-                                            <div className="relative h-72 bg-gray-50 overflow-hidden">
-                                                <motion.div whileHover={{ scale: 1.05 }} className="w-full h-full">
-                                                    <img
-                                                        src={shoe.image}
-                                                        alt={shoe.name}
-                                                        className="w-full h-full object-cover transition-transform duration-150 rounded-t-2xl"
-                                                    />
-                                                </motion.div>
+                            <div className="mb-6">
+                                <TicketTemplate
+                                    sponsor={previewSponsor}
+                                    guestName="John Doe"
+                                    ticketType="VIP Experience"
+                                    isPreview={true}
+                                />
+                            </div>
 
-                                                {shoe.isNew && (
-                                                    <motion.span
-                                                        initial={{ opacity: 0, x: -10 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        className="absolute top-4 left-4 bg-[#F4FFF8] text-[#1C3738] text-xs font-medium px-3 py-1 rounded-full shadow-sm"
-                                                    >
-                                                        NEW
-                                                    </motion.span>
-                                                )}
-
-                                                {shoe.isBestSeller && (
-                                                    <motion.span
-                                                        initial={{ opacity: 0, x: -10 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ delay: 0.1 }}
-                                                        className="absolute top-4 right-4 bg-[#4D4847] text-[#F4FFF8] text-xs font-medium px-3 py-1 rounded-full shadow-sm"
-                                                    >
-                                                        BEST SELLER
-                                                    </motion.span>
-                                                )}
-
-                                                <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-                                                    <motion.button
-                                                        whileHover={{
-                                                            scale: 1.1,
-                                                            backgroundColor: "rgba(255, 255, 255, 0.3)",
-                                                        }}
-                                                        whileTap={{ scale: 0.9 }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleWishlistToggle(shoe);
-                                                        }}
-                                                        className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:shadow-lg transition-all duration-150 cursor-pointer"
-                                                    >
-                                                        <Heart
-                                                            className={`w-4 h-4 text-[#4D4847] ${
-                                                                wishlistItems.some((item) => item.id === shoe.id) ? "fill-current" : ""
-                                                            }`}
-                                                        />
-                                                    </motion.button>
-                                                </div>
-                                            </div>
-
-                                            <div className="p-5 flex-1 flex flex-col">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <h3 className="text-gray-900 font-medium">{shoe.name}</h3>
-                                                    <span className="text-lg font-bold">${shoe.price}</span>
-                                                </div>
-
-                                                <div className="flex items-center mb-3">
-                                                    <div className="flex items-center">
-                                                        {[...Array(5)].map((_, i) => (
-                                                            <Star
-                                                                key={i}
-                                                                className={`w-3.5 h-3.5 ${
-                                                                    i < Math.floor(shoe.rating)
-                                                                        ? "text-amber-400 fill-current"
-                                                                        : "text-gray-300"
-                                                                }`}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                    <span className="ml-2 text-xs text-gray-500">({shoe.reviews})</span>
-                                                </div>
-
-                                                <div className="flex flex-wrap gap-1.5 mb-4">
-                                                    {shoe.sizes.slice(0, 3).map((size) => (
-                                                        <span key={size} className="text-xs px-2 py-1 bg-gray-100 rounded-md text-gray-700">
-                                                            {size}
-                                                        </span>
-                                                    ))}
-                                                    {shoe.sizes.length > 3 && (
-                                                        <span className="text-xs px-2 py-1 bg-gray-100 rounded-md text-gray-700">
-                                                            +{shoe.sizes.length - 3}
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                <div className="mb-4 flex-1">
-                                                    <CustomDropdown
-                                                        options={shoe.sizes}
-                                                        selectedOption={productSizes[shoe.id] || null}
-                                                        onSelectOption={(size) => {
-                                                            setProductSizes((prev) => ({
-                                                                ...prev,
-                                                                [shoe.id]: size,
-                                                            }));
-                                                        }}
-                                                        placeholder="Select size"
-                                                        label="Size"
-                                                    />
-                                                </div>
-
-                                                <div className="flex gap-1.5 mt-auto">
-                                                    <motion.button
-                                                        whileHover={{
-                                                            scale: 1.03,
-                                                        }}
-                                                        whileTap={{ scale: 0.97 }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleQuickAddToCart(e, shoe);
-                                                        }}
-                                                        disabled={!productSizes[shoe.id]}
-                                                        className="flex-1 py-2 px-4 bg-[#1C3738] text-[#F4FFF8] rounded-lg not-disabled:hover:bg-[#4D4847] transition-colors duration-50 flex items-center justify-center not-disabled:cursor-pointer"
-                                                    >
-                                                        <ShoppingBag className="w-3.5 h-3.5 mr-2 opacity-90" />
-                                                        Add to Cart
-                                                    </motion.button>
-
-                                                    <motion.button
-                                                        whileHover={{
-                                                            scale: 1.1,
-                                                            backgroundColor: "rgba(139, 170, 173, 0.2)",
-                                                        }}
-                                                        whileTap={{ scale: 0.9 }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleWishlistToggle(shoe);
-                                                        }}
-                                                        className="p-2 rounded-lg bg-[#8BAAAD]/10 hover:bg-[#8BAAAD]/20 transition-colors cursor-pointer"
-                                                    >
-                                                        <Heart
-                                                            className={`w-4 h-4 text-[#4D4847] ${
-                                                                wishlistItems.some((item) => item.id === shoe.id) ? "fill-current" : ""
-                                                            }`}
-                                                        />
-                                                    </motion.button>
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                            <div className="text-center">
+                                <p className="text-sm text-[var(--page-text-secondary)] mb-4">
+                                    This is how your tickets will look with {previewSponsor.name}'s branding
+                                </p>
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => {
+                                        onSponsorSelect(previewSponsor);
+                                        closePreview();
+                                    }}
+                                    className="px-6 py-3 bg-[var(--primary-blue)] text-white rounded-[var(--border-radius)] font-medium cursor-pointer"
+                                >
+                                    Select This Template
+                                </motion.button>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
+        </div>
+    );
+};
 
-            <main>
-                <section id="home" className="relative overflow-hidden bg-gradient-to-br from-[#F4FFF8] via-[#8BAAAD]/20 to-[#8BAAAD]/40">
-                    <div className="max-w-7xl mx-auto px-4 py-12 md:py-16 lg:py-20">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                            <motion.div
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.6 }}
-                                className="order-2 lg:order-1"
+const DownloadableTicket = ({ guest, sponsor }: { guest: Guest; sponsor?: Sponsor }) => {
+    const ticketType = ticketTypes.find((t) => t.id === guest.ticketType);
+    const defaultSponsor = sponsors[0];
+    const activeSponsor = sponsor || defaultSponsor;
+
+    return (
+        <div className="bg-white">
+            <TicketTemplate
+                sponsor={activeSponsor}
+                guestName={guest.name}
+                ticketType={ticketType?.name || "General Admission"}
+                eventDate="June 25, 2025"
+            />
+            {guest.hasPlus1 && guest.plus1Name && (
+                <div className="mt-4">
+                    <TicketTemplate
+                        sponsor={activeSponsor}
+                        guestName={guest.plus1Name}
+                        ticketType={ticketType?.name || "General Admission"}
+                        eventDate="June 25, 2025"
+                    />
+                </div>
+            )}
+        </div>
+    );
+};
+
+const DownloadCard = ({
+    guest,
+    onDownload,
+    isDownloading,
+}: {
+    guest: Guest;
+    onDownload: (guest: Guest) => void;
+    isDownloading: boolean;
+}) => {
+    const ticketType = ticketTypes.find((t) => t.id === guest.ticketType);
+    const attendeeCount = 1 + (guest.hasPlus1 ? 1 : 0);
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-[var(--border-radius)] shadow-[var(--shadow-soft)]"
+        >
+            <div className="flex justify-between items-start mb-3">
+                <div>
+                    <h4 className="font-medium text-[var(--page-text-primary)]">{guest.name}</h4>
+                    <p className="text-sm text-[var(--page-text-secondary)]">{guest.email}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="px-2 py-1 bg-[var(--soft-blue)] text-[var(--primary-blue)] rounded-full text-xs">
+                            {ticketType?.name}
+                        </span>
+                        <span className="text-xs text-[var(--page-text-secondary)]">
+                            {attendeeCount} ticket{attendeeCount > 1 ? "s" : ""}
+                        </span>
+                    </div>
+                </div>
+                <motion.button
+                    whileHover={{ scale: isDownloading ? 1 : 1.05 }}
+                    whileTap={{ scale: isDownloading ? 1 : 0.95 }}
+                    onClick={() => onDownload(guest)}
+                    disabled={isDownloading}
+                    className={`p-3 rounded-full cursor-pointer transition-all ${
+                        isDownloading
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-[var(--primary-blue)] text-white shadow-[var(--shadow-medium)] hover:shadow-[var(--shadow-large)]"
+                    }`}
+                >
+                    {isDownloading ? (
+                        <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                        <FiDownload className="w-5 h-5" />
+                    )}
+                </motion.button>
+            </div>
+
+            {guest.hasPlus1 && (
+                <div className="mt-3 p-2 bg-[var(--soft-purple)] rounded-[var(--border-radius-small)]">
+                    <p className="text-sm text-[var(--primary-purple)]">
+                        <FiPlus className="w-3 h-3 inline mr-1" />
+                        Plus-one: {guest.plus1Name}
+                    </p>
+                </div>
+            )}
+        </motion.div>
+    );
+};
+
+const SimpleTicketTemplate = ({ guest, sponsor }: { guest: Guest; sponsor: Sponsor }) => {
+    const ticketType = ticketTypes.find((t) => t.id === guest.ticketType);
+
+    const getTemplateColors = () => {
+        switch (sponsor.template) {
+            case "premium-gradient":
+                return {
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    accentColor: "#fbbf24",
+                    textColor: "#ffffff",
+                    secondaryBg: "rgba(255, 255, 255, 0.1)",
+                };
+            case "elegant-border":
+                return {
+                    background: "linear-gradient(135deg, #1f2937 0%, #111827 100%)",
+                    accentColor: "#fbbf24",
+                    textColor: "#ffffff",
+                    secondaryBg: "rgba(255, 255, 255, 0.1)",
+                };
+            case "simple-clean":
+                return {
+                    background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
+                    accentColor: "#3b82f6",
+                    textColor: "#1f2937",
+                    secondaryBg: "rgba(59, 130, 246, 0.1)",
+                };
+            default:
+                return {
+                    background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
+                    accentColor: "#fbbf24",
+                    textColor: "#ffffff",
+                    secondaryBg: "rgba(255, 255, 255, 0.1)",
+                };
+        }
+    };
+
+    const colors = getTemplateColors();
+
+    return (
+        <div
+            style={{
+                width: "500px",
+                height: "300px",
+                background: colors.background,
+                color: colors.textColor,
+                borderRadius: "16px",
+                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                boxSizing: "border-box",
+                position: "relative",
+                overflow: "hidden",
+                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            }}
+        >
+            <div
+                style={{
+                    position: "absolute",
+                    top: "0",
+                    right: "0",
+                    width: "200px",
+                    height: "200px",
+                    background: colors.secondaryBg,
+                    borderRadius: "50%",
+                    transform: "translate(50px, -50px)",
+                }}
+            />
+
+            <div style={{ padding: "32px", position: "relative", zIndex: 1, height: "100%", display: "flex", flexDirection: "column" }}>
+                <div style={{ marginBottom: "24px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                        <div>
+                            <h1
+                                style={{
+                                    fontSize: "32px",
+                                    fontWeight: "800",
+                                    margin: "0 0 4px 0",
+                                    letterSpacing: "0.5px",
+                                    lineHeight: "1",
+                                }}
                             >
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.2, duration: 0.5 }}
-                                    className="inline-block mb-6 px-4 py-1 bg-[#1C3738] text-[#F4FFF8] rounded-full text-sm font-medium"
-                                >
-                                    NEW COLLECTION
-                                </motion.div>
+                                HOPE GALA
+                            </h1>
+                            <div
+                                style={{
+                                    fontSize: "20px",
+                                    fontWeight: "300",
+                                    margin: "0 0 8px 0",
+                                    letterSpacing: "0.5px",
+                                }}
+                            >
+                                2025
+                            </div>
+                            <p
+                                style={{
+                                    fontSize: "13px",
+                                    margin: "0",
+                                    opacity: "0.9",
+                                    fontWeight: "400",
+                                }}
+                            >
+                                Building Brighter Futures Together
+                            </p>
+                        </div>
 
-                                <motion.h1
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.3, duration: 0.5 }}
-                                    className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4"
-                                >
-                                    Elevate Your <br />
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1C3738] to-[#8BAAAD]">
-                                        Running Experience
-                                    </span>
-                                </motion.h1>
+                        <div
+                            style={{
+                                width: "50px",
+                                height: "50px",
+                                backgroundColor: colors.accentColor,
+                                borderRadius: "12px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "24px",
+                                fontWeight: "bold",
+                                color: colors.textColor === "#1f2937" ? "#ffffff" : "#1f2937",
+                                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                            }}
+                        >
+                            {sponsor.name.charAt(0)}
+                        </div>
+                    </div>
 
-                                <motion.p
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.4, duration: 0.5 }}
-                                    className="text-lg text-gray-600 mb-8"
-                                >
-                                    Discover our latest collection of premium running shoes, designed for comfort and performance.
-                                    Engineered with advanced technology to help you push your limits and achieve your goals.
-                                </motion.p>
+                    <div
+                        style={{
+                            height: "2px",
+                            background: colors.accentColor,
+                            borderRadius: "1px",
+                            width: "100%",
+                        }}
+                    />
+                </div>
 
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.5, duration: 0.5 }}
-                                    className="flex flex-wrap gap-3"
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <div style={{ marginBottom: "20px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                            <div style={{ flex: 1 }}>
+                                <p
+                                    style={{
+                                        fontSize: "11px",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "1.5px",
+                                        margin: "0 0 6px 0",
+                                        opacity: "0.8",
+                                        fontWeight: "600",
+                                    }}
                                 >
-                                    <motion.a
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        href="#best-sellers"
-                                        onClick={(e) => handleSmoothScroll(e, "#best-sellers")}
-                                        className="inline-flex items-center px-8 py-4 bg-[#1C3738] text-[#F4FFF8] rounded-xl hover:bg-[#4D4847] transition-all cursor-pointer"
-                                    >
-                                        Shop Now
-                                        <ChevronDown className="w-5 h-5 ml-2" />
-                                    </motion.a>
-                                </motion.div>
+                                    ADMIT ONE
+                                </p>
+                                <p
+                                    style={{
+                                        fontSize: "24px",
+                                        fontWeight: "700",
+                                        margin: "0 0 4px 0",
+                                        lineHeight: "1.1",
+                                    }}
+                                >
+                                    {guest.name}
+                                </p>
+                                <p
+                                    style={{
+                                        fontSize: "14px",
+                                        fontWeight: "500",
+                                        margin: "0",
+                                        opacity: "0.9",
+                                    }}
+                                >
+                                    {ticketType?.name || "General Admission"}
+                                </p>
+                            </div>
 
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.6, duration: 0.5 }}
-                                    className="flex flex-wrap gap-6 mt-12"
+                            <div
+                                style={{
+                                    backgroundColor: colors.secondaryBg,
+                                    padding: "8px 12px",
+                                    borderRadius: "8px",
+                                    textAlign: "center",
+                                }}
+                            >
+                                <p
+                                    style={{
+                                        fontSize: "10px",
+                                        margin: "0 0 2px 0",
+                                        opacity: "0.7",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "1px",
+                                    }}
                                 >
-                                    <div className="flex items-center">
-                                        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center mr-3 shadow-sm">
-                                            <Truck className="w-6 h-6 text-[#1C3738]" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">Free Shipping</p>
-                                            <p className="text-xs text-gray-500">On orders over $100</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center">
-                                        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center mr-3 shadow-sm">
-                                            <Shield className="w-6 h-6 text-[#1C3738]" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">30-Day Returns</p>
-                                            <p className="text-xs text-gray-500">No questions asked</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center">
-                                        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center mr-3 shadow-sm">
-                                            <Zap className="w-6 h-6 text-[#1C3738]" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">Premium Quality</p>
-                                            <p className="text-xs text-gray-500">Guaranteed durability</p>
-                                        </div>
-                                    </div>
-                                </motion.div>
+                                    Ticket
+                                </p>
+                                <p style={{ fontSize: "14px", margin: "0", fontWeight: "700" }}>#{guest.id.slice(-4).toUpperCase()}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr 1fr",
+                            gap: "16px",
+                            marginBottom: "20px",
+                        }}
+                    >
+                        <div>
+                            <p
+                                style={{
+                                    fontSize: "10px",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "1.2px",
+                                    margin: "0 0 4px 0",
+                                    opacity: "0.7",
+                                    fontWeight: "600",
+                                }}
+                            >
+                                DATE
+                            </p>
+                            <p style={{ fontSize: "14px", fontWeight: "600", margin: "0", lineHeight: "1.2" }}>
+                                June 25
+                                <br />
+                                2025
+                            </p>
+                        </div>
+                        <div>
+                            <p
+                                style={{
+                                    fontSize: "10px",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "1.2px",
+                                    margin: "0 0 4px 0",
+                                    opacity: "0.7",
+                                    fontWeight: "600",
+                                }}
+                            >
+                                TIME
+                            </p>
+                            <p style={{ fontSize: "14px", fontWeight: "600", margin: "0", lineHeight: "1.2" }}>
+                                7:00 PM
+                                <br />
+                                EST
+                            </p>
+                        </div>
+                        <div>
+                            <p
+                                style={{
+                                    fontSize: "10px",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "1.2px",
+                                    margin: "0 0 4px 0",
+                                    opacity: "0.7",
+                                    fontWeight: "600",
+                                }}
+                            >
+                                VENUE
+                            </p>
+                            <p style={{ fontSize: "14px", fontWeight: "600", margin: "0", lineHeight: "1.2" }}>
+                                Grand
+                                <br />
+                                Ballroom
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                        }}
+                    >
+                        <div
+                            style={{
+                                fontSize: "11px",
+                                fontWeight: "500",
+                                opacity: "0.8",
+                            }}
+                        >
+                            Sponsored by {sponsor.name}
+                        </div>
+
+                        <div
+                            style={{
+                                width: "36px",
+                                height: "36px",
+                                backgroundColor: colors.textColor,
+                                borderRadius: "6px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "20px",
+                                color: colors.background.includes("gradient") ? "#3b82f6" : colors.background,
+                                fontWeight: "bold",
+                            }}
+                        >
+                            ⚬
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const DownloadsTab = ({ purchasedTickets, selectedSponsor }: { purchasedTickets: Guest[]; selectedSponsor: Sponsor }) => {
+    const [downloadingGuest, setDownloadingGuest] = useState<string | null>(null);
+    const [downloadingAll, setDownloadingAll] = useState(false);
+    const ticketRef = useRef<HTMLDivElement | null>(null);
+
+    const generatePDFTicket = async (guest: Guest) => {
+        setDownloadingGuest(guest.id);
+
+        try {
+            await new Promise((resolve) => setTimeout(resolve, 200));
+
+            if (!ticketRef.current) {
+                console.error("Ticket template not found");
+                alert("Error: Unable to generate ticket. Please try again.");
+                return;
+            }
+
+            console.log("Generating PDF ticket for:", guest.name);
+
+            const canvas = await html2canvas(ticketRef.current, {
+                backgroundColor: "#ffffff",
+                scale: 2,
+                useCORS: true,
+                allowTaint: false,
+                logging: false,
+                width: 500,
+                height: 300,
+                foreignObjectRendering: false,
+                scrollX: 0,
+                scrollY: 0,
+                removeContainer: true,
+            });
+
+            const pdf = new jsPDF({
+                orientation: "landscape",
+                unit: "mm",
+                format: [150, 100],
+            });
+
+            const imgData = canvas.toDataURL("image/png");
+
+            pdf.addImage(imgData, "PNG", 5, 5, 140, 90);
+
+            if (guest.hasPlus1 && guest.plus1Name) {
+                pdf.addPage();
+
+                pdf.addImage(imgData, "PNG", 5, 5, 140, 90);
+            }
+
+            pdf.save(`Hope-Gala-Ticket-${guest.name.replace(/\s+/g, "-")}.pdf`);
+
+            console.log("PDF ticket generated successfully");
+        } catch (error) {
+            console.error("Error generating PDF ticket:", error);
+            alert("Error generating ticket PDF. Please try again.");
+        } finally {
+            setDownloadingGuest(null);
+        }
+    };
+
+    const downloadAllTickets = async () => {
+        setDownloadingAll(true);
+
+        try {
+            for (const guest of purchasedTickets) {
+                await generatePDFTicket(guest);
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+        } catch (error) {
+            console.error("Error downloading all tickets:", error);
+            alert("Error downloading tickets. Please try again.");
+        } finally {
+            setDownloadingAll(false);
+        }
+    };
+
+    const totalTickets = purchasedTickets.reduce((sum, guest) => sum + 1 + (guest.hasPlus1 ? 1 : 0), 0);
+
+    const currentGuest = downloadingGuest ? purchasedTickets.find((g) => g.id === downloadingGuest) : purchasedTickets[0];
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-bold text-[var(--page-text-primary)]">Download Tickets</h2>
+                    <p className="text-[var(--page-text-secondary)] text-sm">Download PDF tickets for your guests</p>
+                </div>
+                {purchasedTickets.length > 0 && (
+                    <motion.button
+                        whileHover={{ scale: downloadingAll ? 1 : 1.05 }}
+                        whileTap={{ scale: downloadingAll ? 1 : 0.95 }}
+                        onClick={downloadAllTickets}
+                        disabled={downloadingAll}
+                        className={`px-4 py-2 rounded-[var(--border-radius)] font-medium cursor-pointer transition-all ${
+                            downloadingAll
+                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                : "bg-[var(--success-green)] text-white shadow-[var(--shadow-medium)]"
+                        }`}
+                    >
+                        {downloadingAll ? (
+                            <div className="flex items-center justify-center gap-2">
+                                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                Downloading...
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <FiDownload className="w-4 h-4" />
+                                Download All PDFs
+                            </div>
+                        )}
+                    </motion.button>
+                )}
+            </div>
+
+            {purchasedTickets.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-[var(--soft-blue)] rounded-[var(--border-radius)]">
+                    <div className="text-center">
+                        <div className="text-2xl font-bold text-[var(--primary-blue)]">{purchasedTickets.length}</div>
+                        <div className="text-sm text-[var(--page-text-secondary)]">Guests</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="text-2xl font-bold text-[var(--primary-blue)]">{totalTickets}</div>
+                        <div className="text-sm text-[var(--page-text-secondary)]">Total Tickets</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="text-2xl font-bold text-[var(--success-green)]">PDF Ready</div>
+                        <div className="text-sm text-[var(--page-text-secondary)]">Status</div>
+                    </div>
+                </div>
+            )}
+
+            {purchasedTickets.length === 0 ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-[var(--soft-blue)] rounded-full flex items-center justify-center">
+                        <FiDownload className="w-8 h-8 text-[var(--primary-blue)]" />
+                    </div>
+                    <h3 className="text-lg font-medium text-[var(--page-text-primary)] mb-2">No tickets to download</h3>
+                    <p className="text-[var(--page-text-secondary)]">Purchase tickets first to generate downloadable PDFs</p>
+                </motion.div>
+            ) : (
+                <div className="space-y-3">
+                    {purchasedTickets.map((guest) => (
+                        <DownloadCard
+                            key={guest.id}
+                            guest={guest}
+                            onDownload={generatePDFTicket}
+                            isDownloading={downloadingGuest === guest.id}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {purchasedTickets.length > 0 && currentGuest && (
+                <div
+                    style={{
+                        position: "fixed",
+                        top: "-1000px",
+                        left: "0",
+                        width: "500px",
+                        height: "300px",
+                        backgroundColor: "white",
+                        zIndex: -1000,
+                        pointerEvents: "none",
+                    }}
+                >
+                    <div ref={ticketRef} style={{ width: "500px", height: "300px", padding: "20px" }}>
+                        <SimpleTicketTemplate guest={currentGuest} sponsor={selectedSponsor} />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+type CheckoutStep = "details" | "payment" | "confirmation";
+
+type OrderDetails = {
+    tickets: { type: string; quantity: number; price: number }[];
+    donation: number;
+    total: number;
+    guestInfo: {
+        name?: string;
+        email?: string;
+        phone?: string;
+        organization?: string;
+    };
+    paymentInfo: {
+        cardNumber?: string;
+        expiryDate?: string;
+        cvv?: string;
+        name?: string;
+        billingAddress?: {
+            street?: string;
+            city?: string;
+            state?: string;
+            zipCode?: string;
+        };
+    };
+};
+
+const CheckoutForm = ({
+    orderDetails,
+    onUpdate,
+    onNext,
+    onBack,
+}: {
+    orderDetails: Partial<OrderDetails>;
+    onUpdate: (details: Partial<OrderDetails>) => void;
+    onNext: () => void;
+    onBack: () => void;
+}) => {
+    const [currentStep, setCurrentStep] = useState<CheckoutStep>("details");
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const validateStep = (step: CheckoutStep) => {
+        const newErrors: Record<string, string> = {};
+
+        if (step === "details") {
+            if (!orderDetails.guestInfo?.name?.trim()) newErrors.name = "Name is required";
+            if (!orderDetails.guestInfo?.email?.trim()) newErrors.email = "Email is required";
+            else if (!/\S+@\S+\.\S+/.test(orderDetails.guestInfo.email)) newErrors.email = "Invalid email";
+            if (!orderDetails.guestInfo?.phone?.trim()) newErrors.phone = "Phone is required";
+        }
+
+        if (step === "payment") {
+            if (!orderDetails.paymentInfo?.cardNumber?.replace(/\s/g, "")) newErrors.cardNumber = "Card number is required";
+            if (!orderDetails.paymentInfo?.expiryDate) newErrors.expiryDate = "Expiry date is required";
+            if (!orderDetails.paymentInfo?.cvv) newErrors.cvv = "CVV is required";
+            if (!orderDetails.paymentInfo?.name?.trim()) newErrors.cardName = "Cardholder name is required";
+            if (!orderDetails.paymentInfo?.billingAddress?.street?.trim()) newErrors.street = "Street address is required";
+            if (!orderDetails.paymentInfo?.billingAddress?.city?.trim()) newErrors.city = "City is required";
+            if (!orderDetails.paymentInfo?.billingAddress?.zipCode?.trim()) newErrors.zipCode = "ZIP code is required";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const proceedToNext = () => {
+        if (validateStep(currentStep)) {
+            if (currentStep === "details") {
+                setCurrentStep("payment");
+            } else if (currentStep === "payment") {
+                setCurrentStep("confirmation");
+            }
+        }
+    };
+
+    const goBack = () => {
+        if (currentStep === "payment") {
+            setCurrentStep("details");
+        } else if (currentStep === "confirmation") {
+            setCurrentStep("payment");
+        } else {
+            onBack();
+        }
+    };
+
+    const processPayment = async () => {
+        if (!validateStep("payment")) return;
+
+        setIsProcessing(true);
+
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        setIsProcessing(false);
+        onNext();
+    };
+
+    const updateGuestInfo = (field: string, value: string) => {
+        onUpdate({
+            ...orderDetails,
+            guestInfo: {
+                ...orderDetails.guestInfo,
+                [field]: value,
+            },
+        });
+        if (errors[field]) {
+            setErrors((prev) => ({ ...prev, [field]: "" }));
+        }
+    };
+
+    const updatePaymentInfo = (field: string, value: string) => {
+        const newPaymentInfo = { ...orderDetails.paymentInfo };
+
+        if (field.includes(".")) {
+            const [parent, child] = field.split(".");
+            newPaymentInfo[parent as keyof typeof newPaymentInfo] = {
+                ...(newPaymentInfo[parent as keyof typeof newPaymentInfo] as any),
+                [child]: value,
+            };
+        } else {
+            (newPaymentInfo as any)[field] = value;
+        }
+
+        onUpdate({
+            ...orderDetails,
+            paymentInfo: newPaymentInfo,
+        });
+
+        if (errors[field]) {
+            setErrors((prev) => ({ ...prev, [field]: "" }));
+        }
+    };
+
+    const formatCardNumber = (value: string) => {
+        return value
+            .replace(/\s/g, "")
+            .replace(/(.{4})/g, "$1 ")
+            .trim();
+    };
+
+    const renderStepIndicator = () => (
+        <div className="flex items-center justify-center mb-8">
+            {["details", "payment", "confirmation"].map((step, index) => (
+                <div key={step} className="flex items-center">
+                    <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                            currentStep === step
+                                ? "bg-[var(--primary-blue)] text-white"
+                                : index < ["details", "payment", "confirmation"].indexOf(currentStep)
+                                ? "bg-[var(--success-green)] text-white"
+                                : "bg-[var(--card-border)] text-[var(--page-text-secondary)]"
+                        }`}
+                    >
+                        {index < ["details", "payment", "confirmation"].indexOf(currentStep) ? "✓" : index + 1}
+                    </div>
+                    {index < 2 && (
+                        <div
+                            className={`w-12 h-0.5 mx-2 ${
+                                index < ["details", "payment", "confirmation"].indexOf(currentStep)
+                                    ? "bg-[var(--success-green)]"
+                                    : "bg-[var(--card-border)]"
+                            }`}
+                        />
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+
+    const renderDetailsStep = () => (
+        <div className="space-y-4">
+            <h3 className="text-lg font-bold text-[var(--page-text-primary)] mb-4">Contact Information</h3>
+
+            <div>
+                <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Full Name *</label>
+                <input
+                    type="text"
+                    value={orderDetails.guestInfo?.name || ""}
+                    onChange={(e) => updateGuestInfo("name", e.target.value)}
+                    className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                        errors.name ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                    }`}
+                    placeholder="Enter your full name"
+                />
+                {errors.name && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.name}</p>}
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Email Address *</label>
+                <input
+                    type="email"
+                    value={orderDetails.guestInfo?.email || ""}
+                    onChange={(e) => updateGuestInfo("email", e.target.value)}
+                    className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                        errors.email ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                    }`}
+                    placeholder="Enter your email"
+                />
+                {errors.email && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.email}</p>}
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Phone Number *</label>
+                <input
+                    type="tel"
+                    value={orderDetails.guestInfo?.phone || ""}
+                    onChange={(e) => updateGuestInfo("phone", e.target.value)}
+                    className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                        errors.phone ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                    }`}
+                    placeholder="Enter your phone number"
+                />
+                {errors.phone && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.phone}</p>}
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Organization (Optional)</label>
+                <input
+                    type="text"
+                    value={orderDetails.guestInfo?.organization || ""}
+                    onChange={(e) => updateGuestInfo("organization", e.target.value)}
+                    className="w-full p-3 border border-[var(--card-border)] rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)]"
+                    placeholder="Company or organization name"
+                />
+            </div>
+        </div>
+    );
+
+    const renderPaymentStep = () => (
+        <div className="space-y-4">
+            <h3 className="text-lg font-bold text-[var(--page-text-primary)] mb-4">Payment Information</h3>
+
+            <div>
+                <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Card Number *</label>
+                <input
+                    type="text"
+                    value={formatCardNumber(orderDetails.paymentInfo?.cardNumber || "")}
+                    onChange={(e) => updatePaymentInfo("cardNumber", e.target.value.replace(/\s/g, ""))}
+                    maxLength={19}
+                    className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                        errors.cardNumber ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                    }`}
+                    placeholder="1234 5678 9012 3456"
+                />
+                {errors.cardNumber && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.cardNumber}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Expiry Date *</label>
+                    <input
+                        type="text"
+                        value={orderDetails.paymentInfo?.expiryDate || ""}
+                        onChange={(e) => updatePaymentInfo("expiryDate", e.target.value)}
+                        placeholder="MM/YY"
+                        maxLength={5}
+                        className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                            errors.expiryDate ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                        }`}
+                    />
+                    {errors.expiryDate && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.expiryDate}</p>}
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">CVV *</label>
+                    <input
+                        type="text"
+                        value={orderDetails.paymentInfo?.cvv || ""}
+                        onChange={(e) => updatePaymentInfo("cvv", e.target.value)}
+                        maxLength={4}
+                        className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                            errors.cvv ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                        }`}
+                        placeholder="123"
+                    />
+                    {errors.cvv && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.cvv}</p>}
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Cardholder Name *</label>
+                <input
+                    type="text"
+                    value={orderDetails.paymentInfo?.name || ""}
+                    onChange={(e) => updatePaymentInfo("name", e.target.value)}
+                    className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                        errors.cardName ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                    }`}
+                    placeholder="Name on card"
+                />
+                {errors.cardName && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.cardName}</p>}
+            </div>
+
+            <h4 className="text-md font-medium text-[var(--page-text-primary)] mt-6 mb-3">Billing Address</h4>
+
+            <div>
+                <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">Street Address *</label>
+                <input
+                    type="text"
+                    value={orderDetails.paymentInfo?.billingAddress?.street || ""}
+                    onChange={(e) => updatePaymentInfo("billingAddress.street", e.target.value)}
+                    className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                        errors.street ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                    }`}
+                    placeholder="123 Main Street"
+                />
+                {errors.street && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.street}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">City *</label>
+                    <input
+                        type="text"
+                        value={orderDetails.paymentInfo?.billingAddress?.city || ""}
+                        onChange={(e) => updatePaymentInfo("billingAddress.city", e.target.value)}
+                        className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                            errors.city ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                        }`}
+                        placeholder="City"
+                    />
+                    {errors.city && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.city}</p>}
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-[var(--page-text-primary)] mb-2">ZIP Code *</label>
+                    <input
+                        type="text"
+                        value={orderDetails.paymentInfo?.billingAddress?.zipCode || ""}
+                        onChange={(e) => updatePaymentInfo("billingAddress.zipCode", e.target.value)}
+                        className={`w-full p-3 border rounded-[var(--border-radius-small)] bg-[var(--card-bg)] text-[var(--page-text-primary)] focus:outline-none focus:border-[var(--primary-blue)] ${
+                            errors.zipCode ? "border-[var(--danger-red)]" : "border-[var(--card-border)]"
+                        }`}
+                        placeholder="12345"
+                    />
+                    {errors.zipCode && <p className="text-[var(--danger-red)] text-xs mt-1">{errors.zipCode}</p>}
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderConfirmationStep = () => (
+        <div className="space-y-6">
+            <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-[var(--success-green)] rounded-full flex items-center justify-center">
+                    <FiStar className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-[var(--page-text-primary)] mb-2">Order Summary</h3>
+                <p className="text-[var(--page-text-secondary)]">Please review your order before completing payment</p>
+            </div>
+
+            <div className="p-4 bg-[var(--soft-blue)] rounded-[var(--border-radius)]">
+                <h4 className="font-medium text-[var(--page-text-primary)] mb-3">Contact Information</h4>
+                <div className="space-y-1 text-sm">
+                    <p>
+                        <span className="font-medium">Name:</span> {orderDetails.guestInfo?.name}
+                    </p>
+                    <p>
+                        <span className="font-medium">Email:</span> {orderDetails.guestInfo?.email}
+                    </p>
+                    <p>
+                        <span className="font-medium">Phone:</span> {orderDetails.guestInfo?.phone}
+                    </p>
+                    {orderDetails.guestInfo?.organization && (
+                        <p>
+                            <span className="font-medium">Organization:</span> {orderDetails.guestInfo.organization}
+                        </p>
+                    )}
+                </div>
+            </div>
+
+            <div className="p-4 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-[var(--border-radius)]">
+                <h4 className="font-medium text-[var(--page-text-primary)] mb-3">Order Details</h4>
+                <div className="space-y-2">
+                    {orderDetails.tickets?.map((ticket, index) => (
+                        <div key={index} className="flex justify-between text-sm">
+                            <span>
+                                {ticket.type} × {ticket.quantity}
+                            </span>
+                            <span>${ticket.price * ticket.quantity}</span>
+                        </div>
+                    ))}
+                    {orderDetails.donation && orderDetails.donation > 0 && (
+                        <div className="flex justify-between text-sm text-[var(--success-green)]">
+                            <span>Donation</span>
+                            <span>${orderDetails.donation}</span>
+                        </div>
+                    )}
+                    <div className="border-t border-[var(--card-border)] pt-2 flex justify-between font-bold">
+                        <span>Total</span>
+                        <span className="text-[var(--primary-blue)]">${orderDetails.total}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        >
+            <div className="bg-[var(--card-bg)] rounded-[var(--border-radius)] p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-[var(--page-text-primary)]">Checkout</h2>
+                    <button onClick={onBack} className="p-2 hover:bg-[var(--soft-blue)] rounded-full cursor-pointer">
+                        <FiPlus className="w-5 h-5 rotate-45 text-[var(--page-text-secondary)]" />
+                    </button>
+                </div>
+
+                {renderStepIndicator()}
+
+                <div className="mb-6">
+                    {currentStep === "details" && renderDetailsStep()}
+                    {currentStep === "payment" && renderPaymentStep()}
+                    {currentStep === "confirmation" && renderConfirmationStep()}
+                </div>
+
+                <div className="flex gap-3">
+                    <button
+                        onClick={goBack}
+                        className="flex-1 py-3 px-4 border border-[var(--card-border)] text-[var(--page-text-secondary)] rounded-[var(--border-radius)] font-medium cursor-pointer hover:bg-[var(--soft-blue)]"
+                    >
+                        {currentStep === "details" ? "Cancel" : "Back"}
+                    </button>
+                    <button
+                        onClick={currentStep === "confirmation" ? processPayment : proceedToNext}
+                        disabled={isProcessing}
+                        className={`flex-1 py-3 px-4 rounded-[var(--border-radius)] font-medium cursor-pointer transition-all ${
+                            isProcessing
+                                ? "bg-gray-400 text-white cursor-not-allowed"
+                                : "bg-[var(--primary-blue)] text-white hover:shadow-[var(--shadow-medium)]"
+                        }`}
+                    >
+                        {isProcessing ? (
+                            <div className="flex items-center justify-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                Processing...
+                            </div>
+                        ) : currentStep === "confirmation" ? (
+                            "Complete Payment"
+                        ) : (
+                            "Continue"
+                        )}
+                    </button>
+                </div>
+            </div>
+        </motion.div>
+    );
+};
+
+const LandingPage = ({ onEnterTickets }: { onEnterTickets: () => void }) => {
+    return (
+        <div className="min-h-screen bg-[var(--page-bg)]">
+            <header className="absolute top-0 left-0 right-0 z-20 p-6">
+                <div className="max-w-7xl mx-auto flex justify-between items-center">
+                    <div className="flex items-center">
+                        <h1 className="text-2xl font-bold text-white">
+                            Hope <span className="font-light">Gala</span>
+                        </h1>
+                    </div>
+                    <nav className="hidden md:flex items-center gap-8 text-white/90">
+                        <a href="#about" className="hover:text-white transition-colors cursor-pointer">
+                            About
+                        </a>
+                        <a href="#mission" className="hover:text-white transition-colors cursor-pointer">
+                            Mission
+                        </a>
+                        <a href="#impact" className="hover:text-white transition-colors cursor-pointer">
+                            Impact
+                        </a>
+                        <a href="#sponsors" className="hover:text-white transition-colors cursor-pointer">
+                            Sponsors
+                        </a>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={onEnterTickets}
+                            className="px-6 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full hover:bg-white/30 transition-all cursor-pointer"
+                        >
+                            Get Tickets
+                        </motion.button>
+                    </nav>
+                    <ThemeToggle />
+                </div>
+            </header>
+
+            <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                    style={{
+                        backgroundImage: `url('https://images.unsplash.com/photo-1536392706976-e486e2ba97af?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')`,
+                    }}
+                >
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50"></div>
+                </div>
+
+                <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
+                    <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}>
+                        <h2 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+                            Come Together to <span className="font-light italic">Make a Difference</span>
+                        </h2>
+                    </motion.div>
+
+                    <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}>
+                        <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
+                            Join us for an unforgettable evening of hope, community, and impact. Together, we'll celebrate progress and
+                            build brighter futures for those who need it most.
+                        </p>
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.6 }}
+                        className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+                    >
+                        <motion.button
+                            whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 1)" }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={onEnterTickets}
+                            className="px-8 py-4 bg-white text-gray-900 rounded-xl font-medium text-lg shadow-xl hover:shadow-2xl transition-all cursor-pointer flex items-center gap-2"
+                        >
+                            Secure Your Seat
+                            <div className="w-5 h-5 bg-gray-900 rounded-full flex items-center justify-center">
+                                <span className="text-white text-sm">→</span>
+                            </div>
+                        </motion.button>
+
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="px-6 py-4 bg-transparent border-2 border-white text-white rounded-xl font-medium text-lg hover:bg-white/10 transition-all cursor-pointer"
+                        >
+                            Learn More
+                        </motion.button>
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.8 }}
+                        className="mt-16 flex flex-wrap justify-center gap-8 text-white/80"
+                    >
+                        <div className="flex items-center gap-2">
+                            <FiCalendar className="w-5 h-5" />
+                            <span className="text-lg">June 25, 2025</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <FiClock className="w-5 h-5" />
+                            <span className="text-lg">7:00 PM - 11:00 PM</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <FiMapPin className="w-5 h-5" />
+                            <span className="text-lg">Grand Ballroom</span>
+                        </div>
+                    </motion.div>
+                </div>
+
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 1, delay: 1.2 }}
+                    className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
+                >
+                    <div className="w-6 h-10 border-2 border-white/60 rounded-full flex justify-center">
+                        <motion.div
+                            animate={{ y: [0, 8, 0] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                            className="w-1 h-2 bg-white/60 rounded-full mt-2"
+                        />
+                    </div>
+                </motion.div>
+            </section>
+
+            <section id="mission" className="py-20 bg-[var(--card-bg)]">
+                <div className="max-w-6xl mx-auto px-6 text-center">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.8 }}
+                    >
+                        <h3 className="text-4xl font-bold text-[var(--page-text-primary)] mb-8">Building Brighter Futures</h3>
+                        <p className="text-xl text-[var(--page-text-secondary)] leading-relaxed max-w-4xl mx-auto mb-12">
+                            Our mission is simple yet profound: to create lasting change in our community through education, healthcare, and
+                            opportunity. Every ticket purchased, every donation made, and every moment shared brings us closer to a world
+                            where everyone has the chance to thrive.
+                        </p>
+                    </motion.div>
+
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {[
+                            {
+                                icon: FiHeart,
+                                title: "Healthcare Access",
+                                description: "Providing medical care and wellness programs to underserved communities",
+                            },
+                            {
+                                icon: FiStar,
+                                title: "Education Support",
+                                description: "Funding scholarships and educational resources for children and families",
+                            },
+                            {
+                                icon: FiUsers,
+                                title: "Community Building",
+                                description: "Creating programs that bring people together and strengthen our bonds",
+                            },
+                        ].map((item, index) => (
+                            <motion.div
+                                key={index}
+                                initial={{ opacity: 0, y: 30 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.8, delay: index * 0.2 }}
+                                className="p-8 bg-[var(--soft-blue)] rounded-2xl"
+                            >
+                                <div className="w-16 h-16 bg-[var(--primary-blue)] rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <item.icon className="w-8 h-8 text-white" />
+                                </div>
+                                <h4 className="text-xl font-bold text-[var(--page-text-primary)] mb-4">{item.title}</h4>
+                                <p className="text-[var(--page-text-secondary)]">{item.description}</p>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            <section id="about" className="py-20 bg-[var(--page-bg)]">
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="grid lg:grid-cols-2 gap-16 items-center">
+                        <motion.div
+                            initial={{ opacity: 0, x: -30 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.8 }}
+                        >
+                            <h3 className="text-4xl font-bold text-[var(--page-text-primary)] mb-8">About Hope Gala</h3>
+                            <div className="space-y-6 text-lg text-[var(--page-text-secondary)] leading-relaxed">
+                                <p>
+                                    For over a decade, Hope Gala has been more than just an event—it's been a catalyst for transformative
+                                    change in our community. What started as a small gathering of passionate individuals has grown into the
+                                    region's premier charitable event.
+                                </p>
+                                <p>
+                                    Each year, we bring together business leaders, philanthropists, community advocates, and caring
+                                    individuals who share a common vision: creating opportunities for those who need them most. Our elegant
+                                    evening combines fine dining, inspiring stories, and meaningful connections.
+                                </p>
+                                <p>
+                                    This year's gala promises to be our most impactful yet, featuring keynote speakers who have experienced
+                                    firsthand the power of community support, live entertainment that celebrates our shared humanity, and
+                                    opportunities to make a direct difference in someone's life.
+                                </p>
+                            </div>
+
+                            <div className="mt-12 grid grid-cols-2 gap-8">
+                                <div className="text-center">
+                                    <div className="text-3xl font-bold text-[var(--primary-blue)] mb-2">12+</div>
+                                    <div className="text-sm text-[var(--page-text-secondary)]">Years of Impact</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-3xl font-bold text-[var(--primary-blue)] mb-2">500+</div>
+                                    <div className="text-sm text-[var(--page-text-secondary)]">Expected Attendees</div>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, x: 30 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.8 }}
+                            className="relative"
+                        >
+                            <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+                                <img
+                                    src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=2069&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                                    alt="Hope Gala Event"
+                                    className="w-full h-96 object-cover"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                            </div>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.8, delay: 0.4 }}
+                                className="absolute -bottom-6 -left-6 bg-white dark:bg-[var(--card-bg)] p-6 rounded-xl shadow-xl border border-[var(--card-border)]"
+                            >
+                                <div className="text-2xl font-bold text-[var(--primary-blue)] mb-1">$2.3M</div>
+                                <div className="text-sm text-[var(--page-text-secondary)]">Raised Last Year</div>
                             </motion.div>
 
                             <motion.div
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.6 }}
-                                className="order-1 lg:order-2 relative hidden lg:block"
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.8, delay: 0.6 }}
+                                className="absolute -top-6 -right-6 bg-white dark:bg-[var(--card-bg)] p-6 rounded-xl shadow-xl border border-[var(--card-border)]"
                             >
-                                <div className="relative md:absolute md:inset-0 flex items-center justify-center">
-                                    <div className="relative grid grid-cols-2 gap-6 transform md:translate-x-6 scale-110">
-                                        {[
-                                            {
-                                                image: "https://images.unsplash.com/photo-1560769629-975ec94e6a86?q=80&w=2864&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                                                name: "SkyStep Air Flow 270",
-                                                price: "$129.99",
-                                            },
-                                            {
-                                                image: "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?q=80&w=2798&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                                                name: "UrbanStride UltraMax",
-                                                price: "$149.99",
-                                            },
-                                            {
-                                                image: "https://images.unsplash.com/photo-1575537302964-96cd47c06b1b?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                                                name: "BalanceCore Classic 574",
-                                                price: "$79.99",
-                                            },
-                                            {
-                                                image: "https://images.unsplash.com/photo-1562183241-b937e95585b6?q=80&w=3165&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=735&q=80",
-                                                name: "ToughTread Outdoor Boots",
-                                                price: "$129.99",
-                                            },
-                                        ].map((item, index) => (
-                                            <motion.div
-                                                key={index}
-                                                initial={{ y: 30 * (index % 2), opacity: 0 }}
-                                                animate={{ y: 20 * (index % 2), opacity: 0.85 }}
-                                                transition={{
-                                                    delay: 0.3 + (index % 2) * 0.1,
-                                                    y: {
-                                                        duration: 2.5,
-                                                        repeat: Number.POSITIVE_INFINITY,
-                                                        repeatType: "reverse",
-                                                        ease: "easeInOut",
-                                                    },
-                                                }}
-                                                className="bg-white rounded-2xl shadow-2xl overflow-hidden transform rotate-[-2deg] hover:rotate-0 transition-all duration-300"
-                                            >
-                                                <div className="h-40 overflow-hidden">
-                                                    <img
-                                                        src={item.image}
-                                                        alt={item.name}
-                                                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                                                    />
-                                                </div>
-                                                <div className="p-4">
-                                                    <h3 className="font-medium text-gray-900">{item.name}</h3>
-                                                    <p className="text-blue-600 font-medium">{item.price}</p>
-                                                </div>
-                                            </motion.div>
-                                        ))}
+                                <div className="text-2xl font-bold text-[var(--success-green)] mb-1">1,200+</div>
+                                <div className="text-sm text-[var(--page-text-secondary)]">Lives Changed</div>
+                            </motion.div>
+                        </motion.div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="impact" className="py-20 bg-[var(--soft-blue)]">
+                <div className="max-w-6xl mx-auto px-6">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.8 }}
+                        className="text-center mb-16"
+                    >
+                        <h3 className="text-4xl font-bold text-[var(--page-text-primary)] mb-8">Our Impact in Numbers</h3>
+                        <p className="text-xl text-[var(--page-text-secondary)] leading-relaxed max-w-3xl mx-auto">
+                            Every donation, every ticket, every moment of generosity creates ripples of positive change. Here's how we've
+                            been making a difference together.
+                        </p>
+                    </motion.div>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+                        {[
+                            {
+                                number: "25,000+",
+                                label: "Meals Provided",
+                                description: "Nutritious meals delivered to families in need",
+                                color: "text-[var(--success-green)]",
+                            },
+                            {
+                                number: "350",
+                                label: "Scholarships Funded",
+                                description: "Educational opportunities for deserving students",
+                                color: "text-[var(--primary-blue)]",
+                            },
+                            {
+                                number: "180",
+                                label: "Medical Checkups",
+                                description: "Free healthcare services in underserved areas",
+                                color: "text-[var(--primary-purple)]",
+                            },
+                            {
+                                number: "50+",
+                                label: "Community Programs",
+                                description: "Ongoing initiatives supporting local families",
+                                color: "text-[var(--warning-amber)]",
+                            },
+                        ].map((stat, index) => (
+                            <motion.div
+                                key={index}
+                                initial={{ opacity: 0, y: 30 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.8, delay: index * 0.1 }}
+                                className="bg-white dark:bg-[var(--card-bg)] p-8 rounded-2xl shadow-lg text-center"
+                            >
+                                <div className={`text-4xl font-bold mb-2 ${stat.color}`}>{stat.number}</div>
+                                <div className="text-lg font-medium text-[var(--page-text-primary)] mb-3">{stat.label}</div>
+                                <div className="text-sm text-[var(--page-text-secondary)]">{stat.description}</div>
+                            </motion.div>
+                        ))}
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                        <motion.div
+                            initial={{ opacity: 0, x: -30 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.8 }}
+                            className="bg-white dark:bg-[var(--card-bg)] p-8 rounded-2xl shadow-lg"
+                        >
+                            <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 bg-[var(--primary-blue)] rounded-full flex items-center justify-center flex-shrink-0">
+                                    <FiStar className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <h4 className="text-xl font-bold text-[var(--page-text-primary)] mb-3">Maria's Journey</h4>
+                                    <p className="text-[var(--page-text-secondary)] leading-relaxed">
+                                        "Thanks to the scholarship program, I was able to complete nursing school. Now I'm giving back to my
+                                        community as a healthcare worker, helping others just like Hope Gala helped me."
+                                    </p>
+                                    <div className="mt-4 text-sm font-medium text-[var(--primary-blue)]">
+                                        — Maria Santos, Scholarship Recipient 2019
                                     </div>
                                 </div>
-                            </motion.div>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="best-sellers" className="py-20 bg-gradient-to-b from-gray-50 to-[#F4FFF8] border-t border-gray-200">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            className="text-center mb-12"
-                        >
-                            <div className="inline-block mb-6 px-4 py-1 bg-[#1C3738] text-[#F4FFF8] rounded-full text-sm font-medium">
-                                FEATURED PRODUCTS
                             </div>
-                            <h2 className="text-3xl font-bold text-[#000F08] mb-4">
-                                Our <span className="text-[#1C3738]">Best Sellers</span>
-                            </h2>
-                            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                                Discover our top-selling shoes, loved by customers worldwide for their quality and comfort.
-                            </p>
                         </motion.div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {shoes
-                                .filter((shoe) => shoe.isBestSeller)
-                                .map((shoe, index) => (
-                                    <motion.div
-                                        key={shoe.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        whileInView={{ opacity: 1, y: 0 }}
-                                        viewport={{ once: true }}
-                                        transition={{ delay: index * 0.1 }}
-                                        whileHover={{
-                                            y: -10,
-                                            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-                                        }}
-                                        className="bg-white rounded-2xl shadow-sm transition-all duration-150 flex flex-col"
-                                    >
-                                        <div className="relative h-72 bg-gray-50 overflow-hidden">
-                                            <motion.div whileHover={{ scale: 1.05 }} className="w-full h-full">
-                                                <img
-                                                    src={shoe.image}
-                                                    alt={shoe.name}
-                                                    className="w-full h-full object-cover transition-transform duration-150 rounded-t-2xl"
-                                                />
-                                            </motion.div>
-
-                                            {shoe.isNew && (
-                                                <motion.span
-                                                    initial={{ opacity: 0, x: -10 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    className="absolute top-4 left-4 bg-[#F4FFF8] text-[#1C3738] text-xs font-medium px-3 py-1 rounded-full shadow-sm"
-                                                >
-                                                    NEW
-                                                </motion.span>
-                                            )}
-
-                                            {shoe.isBestSeller && (
-                                                <motion.span
-                                                    initial={{ opacity: 0, x: -10 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ delay: 0.1 }}
-                                                    className="absolute top-4 right-4 bg-[#4D4847] text-[#F4FFF8] text-xs font-medium px-3 py-1 rounded-full shadow-sm"
-                                                >
-                                                    BEST SELLER
-                                                </motion.span>
-                                            )}
-
-                                            <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-                                                <motion.button
-                                                    whileHover={{
-                                                        scale: 1.1,
-                                                        backgroundColor: "rgba(255, 255, 255, 0.3)",
-                                                    }}
-                                                    whileTap={{ scale: 0.9 }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleWishlistToggle(shoe);
-                                                    }}
-                                                    className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:shadow-lg transition-all duration-150 cursor-pointer"
-                                                >
-                                                    <Heart
-                                                        className={`w-4 h-4 text-[#4D4847] ${
-                                                            wishlistItems.some((item) => item.id === shoe.id) ? "fill-current" : ""
-                                                        }`}
-                                                    />
-                                                </motion.button>
-                                            </div>
-                                        </div>
-
-                                        <div className="p-5 flex-1 flex flex-col">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <h3 className="text-gray-900 font-medium">{shoe.name}</h3>
-                                                <span className="text-lg font-bold">${shoe.price}</span>
-                                            </div>
-
-                                            <div className="flex items-center mb-3">
-                                                <div className="flex items-center">
-                                                    {[...Array(5)].map((_, i) => (
-                                                        <Star
-                                                            key={i}
-                                                            className={`w-3.5 h-3.5 ${
-                                                                i < Math.floor(shoe.rating)
-                                                                    ? "text-amber-400 fill-current"
-                                                                    : "text-gray-300"
-                                                            }`}
-                                                        />
-                                                    ))}
-                                                </div>
-                                                <span className="ml-2 text-xs text-gray-500">({shoe.reviews})</span>
-                                            </div>
-
-                                            <div className="flex flex-wrap gap-1.5 mb-4">
-                                                {shoe.sizes.slice(0, 3).map((size) => (
-                                                    <span key={size} className="text-xs px-2 py-1 bg-gray-100 rounded-md text-gray-700">
-                                                        {size}
-                                                    </span>
-                                                ))}
-                                                {shoe.sizes.length > 3 && (
-                                                    <span className="text-xs px-2 py-1 bg-gray-100 rounded-md text-gray-700">
-                                                        +{shoe.sizes.length - 3}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div className="mb-4 flex-1">
-                                                <CustomDropdown
-                                                    options={shoe.sizes}
-                                                    selectedOption={productSizes[shoe.id] || null}
-                                                    onSelectOption={(size) => {
-                                                        setProductSizes((prev) => ({
-                                                            ...prev,
-                                                            [shoe.id]: size,
-                                                        }));
-                                                    }}
-                                                    placeholder="Select size"
-                                                    label="Size"
-                                                />
-                                            </div>
-
-                                            <div className="flex gap-1.5 mt-auto">
-                                                <motion.button
-                                                    whileHover={{
-                                                        scale: 1.03,
-                                                    }}
-                                                    whileTap={{ scale: 0.97 }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleQuickAddToCart(e, shoe);
-                                                    }}
-                                                    disabled={!productSizes[shoe.id]}
-                                                    className="flex-1 py-2 px-4 bg-[#1C3738] text-[#F4FFF8] rounded-lg not-disabled:hover:bg-[#4D4847] transition-colors duration-50 flex items-center justify-center not-disabled:cursor-pointer"
-                                                >
-                                                    <ShoppingBag className="w-3.5 h-3.5 mr-2 opacity-90" />
-                                                    Add to Cart
-                                                </motion.button>
-
-                                                <motion.button
-                                                    whileHover={{
-                                                        scale: 1.1,
-                                                        backgroundColor: "rgba(139, 170, 173, 0.2)",
-                                                    }}
-                                                    whileTap={{ scale: 0.9 }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleWishlistToggle(shoe);
-                                                    }}
-                                                    className="p-2 rounded-lg bg-[#8BAAAD]/10 hover:bg-[#8BAAAD]/20 transition-colors cursor-pointer"
-                                                >
-                                                    <Heart
-                                                        className={`w-4 h-4 text-[#4D4847] ${
-                                                            wishlistItems.some((item) => item.id === shoe.id) ? "fill-current" : ""
-                                                        }`}
-                                                    />
-                                                </motion.button>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                        </div>
-                    </div>
-                </section>
-
-                <section id="new-arrivals" className="py-20 bg-white border-t border-[#8BAAAD]/20">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
+                            initial={{ opacity: 0, x: 30 }}
+                            whileInView={{ opacity: 1, x: 0 }}
                             viewport={{ once: true }}
-                            className="text-center mb-12"
+                            transition={{ duration: 0.8 }}
+                            className="bg-white dark:bg-[var(--card-bg)] p-8 rounded-2xl shadow-lg"
                         >
-                            <div className="inline-block mb-6 px-4 py-1 bg-[#1C3738] text-[#F4FFF8] rounded-full text-sm font-medium">
-                                NEW ARRIVALS
+                            <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 bg-[var(--success-green)] rounded-full flex items-center justify-center flex-shrink-0">
+                                    <FiHeart className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <h4 className="text-xl font-bold text-[var(--page-text-primary)] mb-3">The Johnson Family</h4>
+                                    <p className="text-[var(--page-text-secondary)] leading-relaxed">
+                                        "When my husband lost his job, we didn't know how we'd feed our three kids. The meal program kept us
+                                        going during our hardest months. We're forever grateful."
+                                    </p>
+                                    <div className="mt-4 text-sm font-medium text-[var(--success-green)]">
+                                        — Sarah Johnson, Program Beneficiary
+                                    </div>
+                                </div>
                             </div>
-                            <h2 className="text-3xl font-bold text-[#000F08] mb-4">
-                                Just <span className="text-[#1C3738]">Dropped</span>
-                            </h2>
-                            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                                Check out our latest additions, featuring the most comfortable and stylish shoes.
-                            </p>
                         </motion.div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {shoes
-                                .filter((shoe) => shoe.isNew)
-                                .map((shoe, index) => (
-                                    <motion.div
-                                        key={shoe.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        whileInView={{ opacity: 1, y: 0 }}
-                                        viewport={{ once: true }}
-                                        transition={{ delay: index * 0.1 }}
-                                        whileHover={{
-                                            y: -10,
-                                            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-                                        }}
-                                        className="bg-white rounded-2xl shadow-sm transition-all duration-150 flex flex-col"
-                                    >
-                                        <div className="relative h-72 bg-gray-50 overflow-hidden">
-                                            <motion.div whileHover={{ scale: 1.05 }} className="w-full h-full">
-                                                <img
-                                                    src={shoe.image}
-                                                    alt={shoe.name}
-                                                    className="w-full h-full object-cover transition-transform duration-150 rounded-t-2xl"
-                                                />
-                                            </motion.div>
-
-                                            {shoe.isNew && (
-                                                <motion.span
-                                                    initial={{ opacity: 0, x: -10 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    className="absolute top-4 left-4 bg-[#F4FFF8] text-[#1C3738] text-xs font-medium px-3 py-1 rounded-full shadow-sm"
-                                                >
-                                                    NEW
-                                                </motion.span>
-                                            )}
-
-                                            {shoe.isBestSeller && (
-                                                <motion.span
-                                                    initial={{ opacity: 0, x: -10 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ delay: 0.1 }}
-                                                    className="absolute top-4 right-4 bg-[#4D4847] text-[#F4FFF8] text-xs font-medium px-3 py-1 rounded-full shadow-sm"
-                                                >
-                                                    BEST SELLER
-                                                </motion.span>
-                                            )}
-
-                                            <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-                                                <motion.button
-                                                    whileHover={{
-                                                        scale: 1.1,
-                                                        backgroundColor: "rgba(255, 255, 255, 0.3)",
-                                                    }}
-                                                    whileTap={{ scale: 0.9 }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleWishlistToggle(shoe);
-                                                    }}
-                                                    className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:shadow-lg transition-all duration-150 cursor-pointer"
-                                                >
-                                                    <Heart
-                                                        className={`w-4 h-4 text-[#4D4847] ${
-                                                            wishlistItems.some((item) => item.id === shoe.id) ? "fill-current" : ""
-                                                        }`}
-                                                    />
-                                                </motion.button>
-                                            </div>
-                                        </div>
-
-                                        <div className="p-5 flex-1 flex flex-col">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <h3 className="text-gray-900 font-medium">{shoe.name}</h3>
-                                                <span className="text-lg font-bold">${shoe.price}</span>
-                                            </div>
-
-                                            <div className="flex items-center mb-3">
-                                                <div className="flex items-center">
-                                                    {[...Array(5)].map((_, i) => (
-                                                        <Star
-                                                            key={i}
-                                                            className={`w-3.5 h-3.5 ${
-                                                                i < Math.floor(shoe.rating)
-                                                                    ? "text-amber-400 fill-current"
-                                                                    : "text-gray-300"
-                                                            }`}
-                                                        />
-                                                    ))}
-                                                </div>
-                                                <span className="ml-2 text-xs text-gray-500">({shoe.reviews})</span>
-                                            </div>
-
-                                            <div className="flex flex-wrap gap-1.5 mb-4">
-                                                {shoe.sizes.slice(0, 3).map((size) => (
-                                                    <span key={size} className="text-xs px-2 py-1 bg-gray-100 rounded-md text-gray-700">
-                                                        {size}
-                                                    </span>
-                                                ))}
-                                                {shoe.sizes.length > 3 && (
-                                                    <span className="text-xs px-2 py-1 bg-gray-100 rounded-md text-gray-700">
-                                                        +{shoe.sizes.length - 3}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div className="mb-4 flex-1">
-                                                <CustomDropdown
-                                                    options={shoe.sizes}
-                                                    selectedOption={productSizes[shoe.id] || null}
-                                                    onSelectOption={(size) => {
-                                                        setProductSizes((prev) => ({
-                                                            ...prev,
-                                                            [shoe.id]: size,
-                                                        }));
-                                                    }}
-                                                    placeholder="Select size"
-                                                    label="Size"
-                                                />
-                                            </div>
-
-                                            <div className="flex gap-1.5">
-                                                <motion.button
-                                                    whileHover={{
-                                                        scale: !productSizes[shoe.id] ? 1 : 1.03,
-                                                    }}
-                                                    whileTap={{ scale: 0.97 }}
-                                                    disabled={!productSizes[shoe.id]}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleQuickAddToCart(e, shoe);
-                                                    }}
-                                                    className="flex-1 py-2 px-4 bg-[#1C3738] text-[#F4FFF8] rounded-lg not-disabled:hover:bg-[#4D4847] transition-colors duration-50 flex items-center justify-center not-disabled:cursor-pointer"
-                                                >
-                                                    <ShoppingBag className="w-3.5 h-3.5 mr-2 opacity-90" />
-                                                    Add to Cart
-                                                </motion.button>
-
-                                                <motion.button
-                                                    whileHover={{
-                                                        scale: 1.1,
-                                                        backgroundColor: "rgba(139, 170, 173, 0.2)",
-                                                    }}
-                                                    whileTap={{ scale: 0.9 }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleWishlistToggle(shoe);
-                                                    }}
-                                                    className="p-2 rounded-lg bg-[#8BAAAD]/10 hover:bg-[#8BAAAD]/20 transition-colors cursor-pointer"
-                                                >
-                                                    <Heart
-                                                        className={`w-4 h-4 text-[#4D4847] ${
-                                                            wishlistItems.some((item) => item.id === shoe.id) ? "fill-current" : ""
-                                                        }`}
-                                                    />
-                                                </motion.button>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                        </div>
                     </div>
-                </section>
+                </div>
+            </section>
 
-                <section id="about-us" className="py-20 bg-gradient-to-t from-gray-50 to-[#F4FFF8] border-t border-[#8BAAAD]/20">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            className="text-center mb-12"
-                        >
-                            <div className="inline-block mb-6 px-4 py-1 bg-[#1C3738] text-[#F4FFF8] rounded-full text-sm font-medium">
-                                TESTIMONIALS
+            <section id="sponsors" className="py-20" style={{ background: "var(--sponsors-bg)" }}>
+                <div className="max-w-6xl mx-auto px-8">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                        className="text-center mb-16"
+                    >
+                        <h3 className="text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--sponsors-title)" }}>
+                            Our Valued Partners
+                        </h3>
+                        <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: "var(--sponsors-subtitle)" }}>
+                            Trusted organizations supporting our mission to create positive change in the community
+                        </p>
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6, delay: 0.1 }}
+                        className="mb-16"
+                    >
+                        <div className="flex items-center justify-center mb-10">
+                            <div
+                                className="flex items-center gap-3 px-6 py-3 rounded-full border"
+                                style={{
+                                    background: "var(--sponsors-badge-bg)",
+                                    borderColor: "var(--sponsors-badge-border)",
+                                    boxShadow: "var(--sponsors-card-shadow)",
+                                }}
+                            >
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "var(--sponsors-dot-purple)" }}></div>
+                                <span className="text-sm font-semibold tracking-wide" style={{ color: "var(--sponsors-badge-text)" }}>
+                                    PLATINUM PARTNERS
+                                </span>
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "var(--sponsors-dot-purple)" }}></div>
                             </div>
-                            <h2 className="text-3xl font-bold text-[#000F08] mb-4">
-                                What Our <span className="text-[#1C3738]">Customers</span> Say
-                            </h2>
-                            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                                Hear from our satisfied customers who have experienced the comfort and quality of our shoes.
-                            </p>
-                        </motion.div>
+                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid md:grid-cols-2 gap-8">
                             {[
                                 {
-                                    name: "Sarah Johnson",
-                                    role: "Marathon Runner",
-                                    rating: 5,
-                                    comment:
-                                        "These shoes have been a game-changer for my training. The cushioning is perfect and they look great too!",
-                                    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cHJvZmlsZSUyMHBpY3R1cmV8ZW58MHx8MHx8fDA%3D",
+                                    name: "Tech Innovations Corp",
+                                    logo: <FiHome className="w-8 h-8 text-blue-600" />,
+                                    description:
+                                        "Leading technology solutions provider committed to digital equity and community development.",
+                                    contribution: "$50,000 Annual Support",
                                 },
                                 {
-                                    name: "Michael Chen",
-                                    role: "Fitness Enthusiast",
-                                    rating: 4.5,
-                                    comment:
-                                        "I was impressed by the quality and comfort of these shoes. They're perfect for my daily gym sessions.",
-                                    image: "https://plus.unsplash.com/premium_photo-1689539137236-b68e436248de?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8cHJvZmlsZSUyMHBpY3R1cmV8ZW58MHx8MHx8fDA%3D",
+                                    name: "Metro Health System",
+                                    logo: <FiActivity className="w-8 h-8 text-purple-600" />,
+                                    description:
+                                        "Comprehensive healthcare services ensuring accessible medical care for all community members.",
+                                    contribution: "Free Medical Services",
                                 },
-                                {
-                                    name: "Emily Rodriguez",
-                                    role: "Casual Walker",
-                                    rating: 5,
-                                    comment:
-                                        "I bought these shoes for everyday wear and I'm so glad I did. They're incredibly comfortable and stylish!",
-                                    image: "https://images.unsplash.com/photo-1568743296270-9cc798164b3b?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cHJvZmlsZSUyMHBpY3R1cmUlMjB3b21hbiUyQ3xlbnwwfHwwfHx8MA%3D%3D",
-                                },
-                            ].map((testimonial, index) => (
+                            ].map((sponsor, index) => (
                                 <motion.div
                                     key={index}
                                     initial={{ opacity: 0, y: 20 }}
                                     whileInView={{ opacity: 1, y: 0 }}
                                     viewport={{ once: true }}
-                                    transition={{ delay: index * 0.1 }}
-                                    whileHover={{
-                                        y: -5,
-                                        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                                    className="p-8 rounded-2xl border transition-shadow duration-300 cursor-pointer"
+                                    style={{
+                                        background: "var(--sponsors-card-bg)",
+                                        borderColor: "var(--sponsors-card-border)",
+                                        boxShadow: "var(--sponsors-card-shadow)",
                                     }}
-                                    className="bg-white rounded-2xl shadow-sm p-6 transition-all duration-150"
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.boxShadow = "var(--sponsors-card-shadow-hover)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.boxShadow = "var(--sponsors-card-shadow)";
+                                    }}
                                 >
-                                    <div className="flex items-center mb-4">
-                                        <div className="w-12 h-12 rounded-full overflow-hidden mr-3">
-                                            <img src={testimonial.image} alt={testimonial.name} className="w-full h-full object-cover" />
+                                    <div className="flex items-start gap-6">
+                                        <div
+                                            className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
+                                            style={{
+                                                background: "var(--sponsors-icon-bg)",
+                                                boxShadow: "var(--sponsors-icon-shadow)",
+                                            }}
+                                        >
+                                            {sponsor.logo}
                                         </div>
-                                        <div>
-                                            <h4 className="font-medium text-gray-900">{testimonial.name}</h4>
-                                            <p className="text-sm text-gray-500">{testimonial.role}</p>
+                                        <div className="flex-1">
+                                            <h4 className="text-xl font-bold mb-3" style={{ color: "var(--sponsors-title)" }}>
+                                                {sponsor.name}
+                                            </h4>
+                                            <p className="leading-relaxed mb-4" style={{ color: "var(--sponsors-subtitle)" }}>
+                                                {sponsor.description}
+                                            </p>
+                                            <div
+                                                className="inline-flex items-center px-4 py-2 rounded-lg"
+                                                style={{
+                                                    background: "var(--sponsors-contribution-bg)",
+                                                    boxShadow: "var(--sponsors-icon-shadow)",
+                                                }}
+                                            >
+                                                <span
+                                                    className="text-sm font-medium"
+                                                    style={{ color: "var(--sponsors-contribution-text)" }}
+                                                >
+                                                    {sponsor.contribution}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    <div className="flex mb-3">
-                                        {[...Array(5)].map((_, i) => (
-                                            <Star
-                                                key={i}
-                                                className={`w-4 h-4 ${
-                                                    i < Math.floor(testimonial.rating) ? "text-amber-400 fill-current" : "text-gray-300"
-                                                }`}
-                                            />
-                                        ))}
-                                    </div>
-
-                                    <p className="text-gray-600 leading-relaxed">{testimonial.comment}</p>
                                 </motion.div>
                             ))}
                         </div>
-                    </div>
-                </section>
+                    </motion.div>
 
-                <footer className="bg-gray-50 border-t border-gray-200">
-                    <div className="max-w-7xl mx-auto px-4 py-12">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div>
-                                <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-4">
-                                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#1C3738] to-[#8BAAAD]">
-                                        Sole<span className="font-sans font-bold">Fusion</span>
-                                    </span>
-                                </h2>
-                                <p className="text-gray-600 mb-4">
-                                    Elevate your shoe game with our premium collection. Comfort meets style in every step.
-                                </p>
-                                <div className="flex space-x-4 mt-4">
-                                    <a href="#" className="text-gray-400 hover:text-[#1C3738] transition-colors">
-                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                            <path
-                                                fillRule="evenodd"
-                                                d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"
-                                                clipRule="evenodd"
-                                            />
-                                        </svg>
-                                    </a>
-                                    <a href="#" className="text-gray-400 hover:text-[#1C3738] transition-colors">
-                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                            <path
-                                                fillRule="evenodd"
-                                                d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858-.182-.466-.398-.8-.748-1.15-.35-.35-.683-.566-1.15-.748-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z"
-                                                clipRule="evenodd"
-                                            />
-                                        </svg>
-                                    </a>
-                                    <a href="#" className="text-gray-400 hover:text-[#1C3738] transition-colors">
-                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
-                                        </svg>
-                                    </a>
-                                </div>
-                            </div>
-
-                            <div>
-                                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Quick Links</h3>
-                                <ul className="space-y-2">
-                                    <li>
-                                        <a
-                                            href="#home"
-                                            onClick={(e) => handleSmoothScroll(e, "#home")}
-                                            className="text-gray-600 hover:text-[#1C3738] transition-colors duration-150"
-                                        >
-                                            Home
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a
-                                            href="#best-sellers"
-                                            onClick={(e) => handleSmoothScroll(e, "#best-sellers")}
-                                            className="text-gray-600 hover:text-[#1C3738] transition-colors duration-150"
-                                        >
-                                            Best Sellers
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a
-                                            href="#new-arrivals"
-                                            onClick={(e) => handleSmoothScroll(e, "#new-arrivals")}
-                                            className="text-gray-600 hover:text-[#1C3738] transition-colors duration-150"
-                                        >
-                                            New Arrivals
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <div>
-                                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Contact</h3>
-                                <ul className="space-y-2 text-gray-600">
-                                    <li className="flex items-start">
-                                        <svg
-                                            className="w-5 h-5 text-[#1C3738] mt-0.5 mr-2"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth="2"
-                                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                            ></path>
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth="2"
-                                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                            ></path>
-                                        </svg>
-                                        <span>123 Fashion Street, New York, NY 10001</span>
-                                    </li>
-                                    <li className="flex items-center">
-                                        <svg
-                                            className="w-5 h-5 text-[#1C3738] mr-2"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth="2"
-                                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                            ></path>
-                                        </svg>
-                                        <a 
-                                            href="mailto:contact@solefusion.com"
-                                            className="hover:text-[#1C3738] transition-colors duration-150 cursor-pointer hover:underline"
-                                        >
-                                            contact@solefusion.com
-                                        </a>
-                                    </li>
-                                    <li className="flex items-center">
-                                        <svg
-                                            className="w-5 h-5 text-[#1C3738] mr-2"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth="2"
-                                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                                            ></path>
-                                        </svg>
-                                        <a 
-                                            href="tel:+15551234567"
-                                            className="hover:text-[#1C3738] transition-colors duration-150 cursor-pointer hover:underline"
-                                        >
-                                            +1 (555) 123-4567
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-200 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-                            <p className="text-gray-500 text-sm mb-4 md:mb-0">© 2023 SoleFusion. All rights reserved.</p>
-                            <div className="flex space-x-6">
-                                <a href="#" className="text-gray-500 hover:text-[#1C3738] text-sm transition-colors duration-150">
-                                    Privacy Policy
-                                </a>
-                                <a href="#" className="text-gray-500 hover:text-[#1C3738] text-sm transition-colors duration-150">
-                                    Terms of Service
-                                </a>
-                                <a href="#" className="text-gray-500 hover:text-[#1C3738] text-sm transition-colors duration-150">
-                                    Shipping
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </footer>
-            </main>
-
-            <AnimatePresence>
-                {selectedShoe && (
                     <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 overflow-y-auto"
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
+                        className="mb-16"
                     >
-                        <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-                                <div className="absolute inset-0 bg-gray-900 opacity-75"></div>
-                            </div>
-
-                            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
-                                &#8203;
-                            </span>
-
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                transition={{ duration: 0.15 }}
-                                className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full"
+                        <div className="flex items-center justify-center mb-10">
+                            <div
+                                className="flex items-center gap-3 px-6 py-3 rounded-full border"
+                                style={{
+                                    background: "var(--sponsors-badge-bg)",
+                                    borderColor: "var(--sponsors-badge-border)",
+                                    boxShadow: "var(--sponsors-card-shadow)",
+                                }}
                             >
-                                <div className="absolute top-4 right-4 z-10">
-                                    <motion.button
-                                        whileHover={{
-                                            scale: 1.1,
-                                            backgroundColor: "rgba(0, 0, 0, 0.1)",
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "var(--sponsors-dot-blue)" }}></div>
+                                <span className="text-sm font-semibold tracking-wide" style={{ color: "var(--sponsors-badge-text)" }}>
+                                    GOLD SUPPORTERS
+                                </span>
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "var(--sponsors-dot-blue)" }}></div>
+                            </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-3 gap-6">
+                            {[
+                                {
+                                    name: "Community First Bank",
+                                    logo: <FiDollarSign className="w-6 h-6 text-blue-600" />,
+                                    specialty: "Financial Services",
+                                },
+                                {
+                                    name: "Green Valley Foods",
+                                    logo: <FiTrendingUp className="w-6 h-6 text-green-600" />,
+                                    specialty: "Sustainable Agriculture",
+                                },
+                                {
+                                    name: "Sunrise Real Estate",
+                                    logo: <FiHome className="w-6 h-6 text-purple-600" />,
+                                    specialty: "Community Development",
+                                },
+                            ].map((sponsor, index) => (
+                                <motion.div
+                                    key={index}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                                    className="p-6 rounded-xl border text-center transition-shadow duration-300 cursor-pointer"
+                                    style={{
+                                        background: "var(--sponsors-card-bg)",
+                                        borderColor: "var(--sponsors-card-border)",
+                                        boxShadow: "var(--sponsors-card-shadow)",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.boxShadow = "var(--sponsors-card-shadow-hover)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.boxShadow = "var(--sponsors-card-shadow)";
+                                    }}
+                                >
+                                    <div
+                                        className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4"
+                                        style={{
+                                            background: "var(--sponsors-icon-bg)",
+                                            boxShadow: "var(--sponsors-icon-shadow)",
                                         }}
-                                        whileTap={{ scale: 0.9 }}
-                                        onClick={() => setSelectedShoe(null)}
-                                        className="p-2 rounded-full bg-white/80 hover:bg-white text-gray-500 hover:text-gray-700 backdrop-blur-sm shadow-md transition-all duration-150 cursor-pointer"
                                     >
-                                        <X className="w-5 h-5" />
+                                        {sponsor.logo}
+                                    </div>
+                                    <h5 className="text-lg font-bold mb-2" style={{ color: "var(--sponsors-title)" }}>
+                                        {sponsor.name}
+                                    </h5>
+                                    <p className="text-sm" style={{ color: "var(--sponsors-subtitle)" }}>
+                                        {sponsor.specialty}
+                                    </p>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6, delay: 0.3 }}
+                    >
+                        <div className="flex items-center justify-center mb-10">
+                            <div
+                                className="flex items-center gap-3 px-6 py-3 rounded-full border"
+                                style={{
+                                    background: "var(--sponsors-badge-bg)",
+                                    borderColor: "var(--sponsors-badge-border)",
+                                    boxShadow: "var(--sponsors-card-shadow)",
+                                }}
+                            >
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "var(--sponsors-dot-purple)" }}></div>
+                                <span className="text-sm font-semibold tracking-wide" style={{ color: "var(--sponsors-badge-text)" }}>
+                                    COMMUNITY CONTRIBUTORS
+                                </span>
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "var(--sponsors-dot-purple)" }}></div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-12">
+                            {[
+                                { name: "Local Café", logo: <FiCoffee className="w-5 h-5 text-amber-600" /> },
+                                { name: "Fitness Plus", logo: <FiZap className="w-5 h-5 text-green-600" /> },
+                                { name: "Art Studio", logo: <FiImage className="w-5 h-5 text-purple-600" /> },
+                                { name: "Book Corner", logo: <FiBook className="w-5 h-5 text-blue-600" /> },
+                                { name: "Flower Shop", logo: <FiHeart className="w-5 h-5 text-pink-600" /> },
+                                { name: "Music Academy", logo: <FiMusic className="w-5 h-5 text-indigo-600" /> },
+                            ].map((sponsor, index) => (
+                                <motion.div
+                                    key={index}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    whileInView={{ opacity: 1, scale: 1 }}
+                                    viewport={{ once: true }}
+                                    transition={{ duration: 0.4, delay: index * 0.05 }}
+                                    className="p-5 rounded-xl border text-center transition-all duration-300 cursor-pointer"
+                                    style={{
+                                        background: "var(--sponsors-card-bg)",
+                                        borderColor: "var(--sponsors-card-border)",
+                                        boxShadow: "var(--sponsors-card-shadow)",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.boxShadow = "var(--sponsors-card-shadow-hover)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.boxShadow = "var(--sponsors-card-shadow)";
+                                    }}
+                                >
+                                    <div
+                                        className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-3"
+                                        style={{
+                                            background: "var(--sponsors-icon-bg)",
+                                            boxShadow: "var(--sponsors-icon-shadow)",
+                                        }}
+                                    >
+                                        {sponsor.logo}
+                                    </div>
+                                    <h6 className="text-sm font-semibold" style={{ color: "var(--sponsors-badge-text)" }}>
+                                        {sponsor.name}
+                                    </h6>
+                                </motion.div>
+                            ))}
+                        </div>
+
+                        <div className="text-center">
+                            <div
+                                className="p-6 rounded-xl border max-w-2xl mx-auto"
+                                style={{
+                                    background: "var(--sponsors-description-bg)",
+                                    borderColor: "var(--sponsors-card-border)",
+                                    boxShadow: "var(--sponsors-card-shadow)",
+                                }}
+                            >
+                                <p className="leading-relaxed" style={{ color: "var(--sponsors-subtitle)" }}>
+                                    These local businesses are the backbone of our community, providing essential services and unwavering
+                                    support for our mission to create positive change.
+                                </p>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
+
+            <section className="py-20 bg-gradient-to-r from-[var(--primary-blue)] to-[var(--primary-purple)]">
+                <div className="max-w-4xl mx-auto px-6 text-center">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.8 }}
+                    >
+                        <h3 className="text-4xl font-bold text-white mb-6">Ready to Make a Difference?</h3>
+                        <p className="text-xl text-white/90 mb-8">
+                            Join hundreds of changemakers for an evening that will inspire, connect, and create lasting impact.
+                        </p>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={onEnterTickets}
+                            className="px-12 py-4 bg-white text-[var(--primary-blue)] rounded-xl font-bold text-xl shadow-xl hover:shadow-2xl transition-all cursor-pointer"
+                        >
+                            Get Your Tickets Now
+                        </motion.button>
+                    </motion.div>
+                </div>
+            </section>
+
+            <footer className="bg-[#1e293b] text-white">
+                <div className="max-w-7xl mx-auto px-6 py-16">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.8 }}
+                            className="lg:col-span-2"
+                        >
+                            <h3 className="text-3xl font-bold mb-6">
+                                Hope <span className="font-light">Gala</span>
+                            </h3>
+                            <p className="text-white/80 leading-relaxed mb-8 max-w-lg">
+                                Building brighter futures together through community, compassion, and collective action. Join us in creating
+                                lasting change that transforms lives and strengthens our community bonds.
+                            </p>
+
+                            <div className="mb-8">
+                                <h4 className="font-semibold mb-4">Stay Connected</h4>
+                                <div className="flex gap-3">
+                                    <input
+                                        type="email"
+                                        placeholder="Enter your email"
+                                        className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-white/60 focus:outline-none focus:border-white/40 focus:bg-white/15"
+                                    />
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className="px-6 py-3 bg-white text-[#1e293b] rounded-xl font-medium hover:bg-white/90 transition-all cursor-pointer"
+                                    >
+                                        Subscribe
                                     </motion.button>
                                 </div>
+                                <p className="text-xs text-white/60 mt-2">Get updates on our programs, events, and impact stories.</p>
+                            </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2">
-                                    <div className="relative h-full bg-gray-100">
-                                        <img
-                                            src={selectedShoe.image}
-                                            alt={selectedShoe.name}
-                                            className="w-full h-full object-cover object-center"
-                                        />
-                                        {selectedShoe.isNew && (
-                                            <span className="absolute top-4 left-4 bg-white text-[#1C3738] text-xs font-medium px-3 py-1 rounded-full shadow-sm">
-                                                NEW
-                                            </span>
+                            <div>
+                                <h4 className="font-semibold mb-4">Follow Us</h4>
+                                <div className="flex gap-4">
+                                    {[
+                                        {
+                                            icon: <FaFacebook className="w-5 h-5" />,
+                                            name: "Facebook",
+                                            handle: "@HopeGala",
+                                            url: "https://facebook.com/HopeGala",
+                                        },
+                                        {
+                                            icon: <FaInstagram className="w-5 h-5" />,
+                                            name: "Instagram",
+                                            handle: "@HopeGala2025",
+                                            url: "https://instagram.com/HopeGala2025",
+                                        },
+                                        {
+                                            icon: <FaTwitter className="w-5 h-5" />,
+                                            name: "Twitter",
+                                            handle: "@HopeGala",
+                                            url: "https://twitter.com/HopeGala",
+                                        },
+                                        {
+                                            icon: <FaLinkedin className="w-5 h-5" />,
+                                            name: "LinkedIn",
+                                            handle: "Hope Gala Foundation",
+                                            url: "https://linkedin.com/company/hope-gala-foundation",
+                                        },
+                                    ].map((social, index) => (
+                                        <motion.a
+                                            key={index}
+                                            whileHover={{ scale: 1.1, y: -2 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            href={social.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center hover:bg-white/20 transition-all cursor-pointer group"
+                                            title={`Follow us on ${social.name}: ${social.handle}`}
+                                        >
+                                            <span className="group-hover:scale-110 transition-transform">{social.icon}</span>
+                                        </motion.a>
+                                    ))}
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.8, delay: 0.1 }}
+                        >
+                            <h4 className="font-semibold mb-6">Quick Links</h4>
+                            <div className="space-y-3">
+                                {[
+                                    { label: "About Hope Gala", href: "#about" },
+                                    { label: "Our Impact", href: "#impact" },
+                                    { label: "Our Partners", href: "#sponsors" },
+                                    { label: "Get Tickets", action: () => onEnterTickets() },
+                                    { label: "Volunteer", href: "#volunteer" },
+                                    { label: "Donate", href: "#donate" },
+                                ].map((link, index) => (
+                                    <motion.div key={index} whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
+                                        {link.action ? (
+                                            <button
+                                                onClick={link.action}
+                                                className="text-white/80 hover:text-white transition-colors cursor-pointer"
+                                            >
+                                                {link.label}
+                                            </button>
+                                        ) : (
+                                            <a href={link.href} className="text-white/80 hover:text-white transition-colors cursor-pointer">
+                                                {link.label}
+                                            </a>
                                         )}
-                                        {selectedShoe.isBestSeller && (
-                                            <span className="absolute top-4 right-4 bg-[#4D4847] text-[#F4FFF8] text-xs font-medium px-3 py-1 rounded-full shadow-sm">
-                                                BEST SELLER
-                                            </span>
-                                        )}
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.8, delay: 0.2 }}
+                        >
+                            <h4 className="font-semibold mb-6">Contact Info</h4>
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-6 h-6 flex items-center justify-center mt-0.5">
+                                        <FiMapPin className="w-5 h-5 text-white/60" />
                                     </div>
-
-                                    <div className="p-6 md:p-8 flex flex-col h-full">
-                                        <div>
-                                            <h2 className="text-2xl font-semibold text-gray-900 mb-1">{selectedShoe.name}</h2>
-                                            <p className="text-gray-600 mb-4">{selectedShoe.brand}</p>
-                                            <div className="flex items-center mb-5">
-                                                <div className="flex items-center">
-                                                    {[...Array(5)].map((_, i) => (
-                                                        <Star
-                                                            key={i}
-                                                            className={`w-4 h-4 ${
-                                                                i < Math.floor(selectedShoe.rating)
-                                                                    ? "text-amber-400 fill-current"
-                                                                    : "text-gray-300"
-                                                            }`}
-                                                        />
-                                                    ))}
-                                                </div>
-                                                <span className="ml-2 text-sm text-gray-500">({selectedShoe.reviews} reviews)</span>
-                                            </div>
-
-                                            <div className="mb-6">
-                                                <div className="flex items-center">
-                                                    <span className="text-3xl font-bold text-gray-900">
-                                                        ${selectedShoe.price.toFixed(2)}
-                                                    </span>
-                                                    {selectedShoe.originalPrice && (
-                                                        <span className="ml-3 text-lg text-gray-500 line-through">
-                                                            ${selectedShoe.originalPrice.toFixed(2)}
-                                                        </span>
-                                                    )}
-                                                    {selectedShoe.discount && (
-                                                        <span className="ml-3 text-sm font-medium text-green-600">
-                                                            Save {selectedShoe.discount}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="mb-6">
-                                                <h3 className="text-sm font-medium text-gray-900 mb-2">Select Size</h3>
-                                                <CustomDropdown
-                                                    options={selectedShoe.sizes}
-                                                    selectedOption={selectedSize}
-                                                    onSelectOption={(size) => setSelectedSize(size)}
-                                                    label="Size"
-                                                />
-                                            </div>
-
-                                            <div className="mb-8">
-                                                <h3 className="text-sm font-medium text-gray-900 mb-2">Select Color</h3>
-                                                <CustomDropdown
-                                                    options={selectedShoe.colors}
-                                                    selectedOption={selectedColor}
-                                                    onSelectOption={(color) => setSelectedColor(color)}
-                                                    label="Color"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="flex gap-4 mt-auto">
-                                            <motion.button
-                                                whileHover={{ scale: 1.03, backgroundColor: "#1C3738" }}
-                                                whileTap={{ scale: 0.97 }}
-                                                onClick={handleAddToCart}
-                                                disabled={!selectedSize || !selectedColor}
-                                                className={`flex-1 py-4 px-8 rounded-xl font-medium text-[#F4FFF8] flex items-center justify-center shadow-md ${
-                                                    !selectedSize || !selectedColor
-                                                        ? "bg-[#8BAAAD] cursor-not-allowed"
-                                                        : "bg-[#1C3738] hover:bg-[#4D4847] cursor-pointer"
-                                                }`}
-                                            >
-                                                <ShoppingBag className="w-5 h-5 mr-2 opacity-90" />
-                                                Add to Cart
-                                            </motion.button>
-
-                                            <motion.button
-                                                whileHover={{ scale: 1.05 }}
-                                                whileTap={{ scale: 0.95 }}
-                                                onClick={() => handleWishlistToggle(selectedShoe)}
-                                                className="p-4 rounded-xl bg-[#8BAAAD]/10 hover:bg-[#8BAAAD]/20 transition-colors duration-150 cursor-pointer"
-                                            >
-                                                <Heart
-                                                    className={`w-5 h-5 ${
-                                                        wishlistItems.some((item) => item.id === selectedShoe.id)
-                                                            ? "text-[#4D4847] fill-current"
-                                                            : "text-[#4D4847]"
-                                                    }`}
-                                                />
-                                            </motion.button>
-                                        </div>
-
-                                        <div className="mt-8 grid grid-cols-3 gap-4">
-                                            <div className="text-center">
-                                                <div className="w-10 h-10 mx-auto bg-[#8BAAAD]/20 rounded-full flex items-center justify-center mb-2">
-                                                    <Truck className="w-5 h-5 text-[#1C3738]" />
-                                                </div>
-                                                <p className="text-xs text-gray-600">Free Shipping</p>
-                                            </div>
-                                            <div className="text-center">
-                                                <div className="w-10 h-10 mx-auto bg-[#8BAAAD]/20 rounded-full flex items-center justify-center mb-2">
-                                                    <Clock className="w-5 h-5 text-[#1C3738]" />
-                                                </div>
-                                                <p className="text-xs text-gray-600">30-Day Returns</p>
-                                            </div>
-                                            <div className="text-center">
-                                                <div className="w-10 h-10 mx-auto bg-[#8BAAAD]/20 rounded-full flex items-center justify-center mb-2">
-                                                    <Shield className="w-5 h-5 text-[#1C3738]" />
-                                                </div>
-                                                <p className="text-xs text-gray-600">Secure Checkout</p>
-                                            </div>
-                                        </div>
+                                    <div>
+                                        <p className="text-white/80">
+                                            123 Community Drive
+                                            <br />
+                                            Hope City, HC 12345
+                                        </p>
                                     </div>
                                 </div>
-                            </motion.div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
-            <AnimatePresence>
-                {orderSuccess && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 50 }}
-                        className="fixed bottom-4 right-4 bg-green-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center z-50 max-w-[calc(100%-2rem)]"
-                    >
-                        <Check className="w-5 h-5 mr-2 text-green-400 flex-shrink-0" />
-                        <span className="line-clamp-2">Order confirmed successfully!</span>
-                        <button
-                            onClick={() => setOrderSuccess(false)}
-                            className="ml-4 text-green-400 hover:text-white cursor-pointer flex-shrink-0"
-                            aria-label="Close notification"
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 flex items-center justify-center">
+                                        <FiPhone className="w-5 h-5 text-white/60" />
+                                    </div>
+                                    <a href="tel:+15551234567" className="text-white/80 hover:text-white transition-colors cursor-pointer">
+                                        (555) 123-4567
+                                    </a>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 flex items-center justify-center">
+                                        <FiMail className="w-5 h-5 text-white/60" />
+                                    </div>
+                                    <a
+                                        href="mailto:info@hopegala.org"
+                                        className="text-white/80 hover:text-white transition-colors cursor-pointer"
+                                    >
+                                        info@hopegala.org
+                                    </a>
+                                </div>
+
+                                <div className="mt-6 p-4 bg-white/5 rounded-xl border border-white/10">
+                                    <h5 className="font-medium mb-2">Event Details</h5>
+                                    <div className="text-sm text-white/80 space-y-1">
+                                        <p className="flex items-center gap-2">
+                                            <FiCalendar className="w-4 h-4" /> June 25, 2025
+                                        </p>
+                                        <p className="flex items-center gap-2">
+                                            <FiClock className="w-4 h-4" /> 7:00 PM - 11:00 PM
+                                        </p>
+                                        <p className="flex items-center gap-2">
+                                            <FiMapPin className="w-4 h-4" /> Grand Ballroom
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
+
+                <div className="border-t border-white/10">
+                    <div className="max-w-7xl mx-auto px-6 py-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            whileInView={{ opacity: 1 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.8 }}
+                            className="flex flex-col md:flex-row justify-between items-center gap-4"
                         >
-                            <X className="w-4 h-4" />
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                            <div className="text-white/60 text-sm">
+                                © 2024 Hope Gala Foundation. All rights reserved. | 501(c)(3) Non-Profit Organization
+                            </div>
 
-            <AnimatePresence>{toast && <Toast message={toast} onClose={() => setToast(null)} />}</AnimatePresence>
+                            <div className="flex items-center gap-6 text-sm">
+                                <a href="#privacy" className="text-white/60 hover:text-white transition-colors cursor-pointer">
+                                    Privacy Policy
+                                </a>
+                                <a href="#terms" className="text-white/60 hover:text-white transition-colors cursor-pointer">
+                                    Terms of Service
+                                </a>
+                                <a href="#accessibility" className="text-white/60 hover:text-white transition-colors cursor-pointer">
+                                    Accessibility
+                                </a>
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
+            </footer>
         </div>
+    );
+};
+
+const CharityGalaApp = () => {
+    const [showLanding, setShowLanding] = useState(true);
+    const [activeTab, setActiveTab] = useState("tickets");
+    const [purchasedTickets, setPurchasedTickets] = useState<Guest[]>([]);
+    const [selectedSponsor, setSelectedSponsor] = useState<Sponsor>(sponsors[0]);
+
+    const enterTicketSystem = () => {
+        setShowLanding(false);
+    };
+
+    const returnToLanding = () => {
+        setShowLanding(true);
+    };
+
+    const addPurchasedTicket = (ticketData: Guest) => {
+        setPurchasedTickets((prev) => [...prev, ticketData]);
+    };
+
+    const handleSponsorSelection = (sponsor: Sponsor) => {
+        setSelectedSponsor(sponsor);
+    };
+
+    useEffect(() => {
+        const handleSwitchToDownloads = () => {
+            setActiveTab("downloads");
+        };
+
+        window.addEventListener("switchToDownloads", handleSwitchToDownloads);
+
+        return () => {
+            window.removeEventListener("switchToDownloads", handleSwitchToDownloads);
+        };
+    }, []);
+
+    if (showLanding) {
+        return <LandingPage onEnterTickets={enterTicketSystem} />;
+    }
+
+    const renderTabContent = () => {
+        switch (activeTab) {
+            case "tickets":
+                return <TicketsTab onTicketPurchased={addPurchasedTicket} />;
+            case "guests":
+                return <GuestsTab />;
+            case "sponsors":
+                return <SponsorsTab selectedSponsor={selectedSponsor} onSponsorSelect={handleSponsorSelection} />;
+            case "downloads":
+                return <DownloadsTab purchasedTickets={purchasedTickets} selectedSponsor={selectedSponsor} />;
+            default:
+                return <TicketsTab onTicketPurchased={addPurchasedTicket} />;
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-[var(--page-bg)] pb-safe">
+            <div className="max-w-md lg:max-w-none mx-auto lg:container lg:mx-auto lg:px-6 xl:px-8">
+                <header className="p-6 lg:py-8 lg:px-0 border-b border-[var(--card-border)]">
+                    <div className="flex justify-between items-center mb-4 lg:mb-6">
+                        <div className="flex items-center gap-4">
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={returnToLanding}
+                                className="p-2 lg:p-3 rounded-full bg-[var(--card-bg)] border border-[var(--card-border)] shadow-[var(--shadow-soft)] cursor-pointer hover:bg-[var(--soft-blue)] transition-colors"
+                            >
+                                <div className="w-5 h-5 lg:w-6 lg:h-6 flex items-center justify-center">
+                                    <span className="text-[var(--page-text-primary)] text-lg lg:text-xl">←</span>
+                                </div>
+                            </motion.button>
+                            <div>
+                                <h1 className="text-3xl lg:text-4xl xl:text-5xl font-bold gradient-text">Hope Gala</h1>
+                                <p className="text-[var(--page-text-secondary)] text-sm lg:text-base xl:text-lg">
+                                    Building brighter futures together
+                                </p>
+                            </div>
+                        </div>
+                        <ThemeToggle />
+                    </div>
+                    <div className="lg:max-w-md lg:mx-auto xl:max-w-lg">
+                        <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+                    </div>
+                </header>
+
+                <main className="p-6 lg:py-12 lg:px-0">
+                    <div className="lg:max-w-6xl lg:mx-auto xl:max-w-7xl">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeTab}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                {renderTabContent()}
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
+                </main>
+            </div>
+        </div>
+    );
+};
+
+const Home = () => {
+    return (
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+            <GlobalThemeStyles />
+            <CharityGalaApp />
+        </ThemeProvider>
     );
 };
 
