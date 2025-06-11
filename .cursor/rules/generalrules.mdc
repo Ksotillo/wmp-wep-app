@@ -194,6 +194,19 @@ const GlobalThemeStyles = () => (
 
 By following these rules, we ensure a consistent, maintainable, and self-contained theming approach within `app/page.tsx`.
 
+### Functionality Completeness and State Consistency
+
+To ensure a seamless user experience and accurate evaluation, follow these additional rules:
+
+- All interactive elements (buttons, links, forms, toggles) must be **fully functional**, regardless of whether their behavior is central to the current prompt.
+- Inputs must not retain stale or unintended values across routes. Ensure **proper state resets** on navigation (e.g., using route change listeners or unmount lifecycle).
+- Implement **form input validation** on all text fields (e.g., email must follow proper format like `user@example.com`, passwords must meet strength criteria). Display **clear and accessible error messages**.
+- Buttons such as “Subscribe”, “RSVP”, “Return to Home”, or “Send” must perform **visible and testable actions**. If the action involves submission, display confirmation feedback (e.g., toast, modal, inline success message).
+- Avoid **placeholder-only functionality**. Implement core logic even for minor components (e.g., even if RSVP is not the main feature, it should work if included).
+- UI elements such as calendars should use a **consistent locale and language** with the rest of the site (e.g., avoid displaying calendar in another language unless specified).
+- Prevent UI elements from persisting across unrelated views (e.g., typing indicators, form states, modals) by using proper **component cleanup and scoped state management** (e.g., `useEffect` cleanup, resetting local state, route change resets).
+- Contrast issues in dark/light mode must be avoided. Always test for **readability and color accessibility** in both themes.
+- Include **aria-live** or similar attributes when appropriate for real-time user feedback (e.g., “message sent”, “subscription failed”).
 
 
 
